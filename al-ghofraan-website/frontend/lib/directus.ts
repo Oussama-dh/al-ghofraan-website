@@ -70,10 +70,10 @@ export async function getUpcomingActivities(limit = 6) {
 
   return directusServer.request(
     readItems("activities", {
-      filter: {
-        status:     { _eq: "published" },
-        start_date: { _gte: today },
-      },
+     filter: {
+  status: { _eq: "published" },
+  start_date: { _gte: today },
+} as any,
       sort:   ["start_date"],
       limit,
       fields: [

@@ -54,26 +54,27 @@ services:
       - alghofraan_network
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: node:20-alpine
     container_name: alghofraan_frontend
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0"
     restart: unless-stopped
     ports:
       - "3000:3000"
-    depends_on:
-      - directus
-    environment:
-      NEXT_PUBLIC_DIRECTUS_URL: ${NEXT_PUBLIC_DIRECTUS_URL:-http://localhost:8055}
-      DIRECTUS_TOKEN: ${DIRECTUS_TOKEN:-}
-      NODE_ENV: development
     volumes:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_DIRECTUS_URL: http://localhost:8055
+      DIRECTUS_URL: http://directus:8055
+      DIRECTUS_TOKEN: ${DIRECTUS_TOKEN:-}
+    depends_on:
+      - directus
     networks:
       - alghofraan_network
-
+  
 volumes:
   postgres_data:
   directus_uploads:
