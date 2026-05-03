@@ -1,0 +1,84 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: alghofraan_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-alghofraan}
+      POSTGRES_USER: ${POSTGRES_USER:-alghofraan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-alghofraan_secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - alghofraan_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-alghofraan}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  directus:
+    image: directus/directus:11
+    container_name: alghofraan_directus
+    restart: unless-stopped
+    ports:
+      - "8055:8055"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SECRET: ${DIRECTUS_SECRET:-change_this_in_production_random_string}
+      DB_CLIENT: pg
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB:-alghofraan}
+      DB_USER: ${POSTGRES_USER:-alghofraan}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-alghofraan_secret}
+      ADMIN_EMAIL: ${DIRECTUS_ADMIN_EMAIL:-admin@al-ghofraan.com}
+      ADMIN_PASSWORD: ${DIRECTUS_ADMIN_PASSWORD:-Admin1234!}
+      PUBLIC_URL: ${DIRECTUS_PUBLIC_URL:-http://localhost:8055}
+      CORS_ENABLED: "true"
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      CORS_METHODS: GET,POST,PATCH,DELETE
+      CORS_ALLOWED_HEADERS: Content-Type,Authorization
+      STORAGE_LOCATIONS: local
+      STORAGE_LOCAL_ROOT: /directus/uploads
+      EXTENSIONS_PATH: /directus/extensions
+      MAX_PAYLOAD_SIZE: 50mb
+    volumes:
+      - directus_uploads:/directus/uploads
+      - directus_extensions:/directus/extensions
+    networks:
+      - alghofraan_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: alghofraan_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - directus
+    environment:
+      NEXT_PUBLIC_DIRECTUS_URL: ${NEXT_PUBLIC_DIRECTUS_URL:-http://localhost:8055}
+      DIRECTUS_TOKEN: ${DIRECTUS_TOKEN:-}
+      NODE_ENV: development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - alghofraan_network
+
+volumes:
+  postgres_data:
+  directus_uploads:
+  directus_extensions:
+
+networks:
+  alghofraan_network:
+    driver: bridge

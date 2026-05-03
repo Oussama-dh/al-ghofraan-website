@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ──────────────────────────────────────────
+   Google Fonts — geladen via next/font in layout.tsx
+   ────────────────────────────────────────── */
+
+@layer base {
+  :root {
+    --color-sand:        #ece5df;
+    --color-sand-light:  #f9f7f5;
+    --color-taupe:       #a99d85;
+    --color-slate:       #4d5b6f;
+    --color-ink:         #1a1a1a;
+    --color-white:       #ffffff;
+
+    --font-display: var(--font-amiri);
+    --font-body:    var(--font-outfit);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-sand-50 text-ink font-body antialiased;
+    font-feature-settings: "kern" 1, "liga" 1;
+  }
+
+  h1, h2, h3 {
+    @apply font-display;
+    font-feature-settings: "kern" 1;
+  }
+
+  h4, h5, h6 {
+    @apply font-body font-semibold;
+  }
+
+  /* Arabische tekst */
+  [lang="ar"], .arabic {
+    @apply font-arabic;
+    direction: rtl;
+    font-feature-settings: "kern" 1;
+  }
+
+  /* Selectie kleur */
+  ::selection {
+    background-color: #4d5b6f;
+    color: #fff;
+  }
+}
+
+@layer components {
+  /* Geometrisch patroon overlay */
+  .pattern-overlay {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23a99d85' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  /* Sierlijke arabesque-lijn */
+  .divider-ornament {
+    @apply flex items-center gap-4 my-8;
+  }
+  .divider-ornament::before,
+  .divider-ornament::after {
+    content: "";
+    @apply flex-1 h-px bg-taupe/30;
+  }
+
+  /* Sectie-overgang */
+  .section-wave {
+    clip-path: ellipse(100% 55% at 50% 100%);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animation-delay-100 { animation-delay: 100ms; }
+  .animation-delay-200 { animation-delay: 200ms; }
+  .animation-delay-300 { animation-delay: 300ms; }
+  .animation-delay-400 { animation-delay: 400ms; }
+}
