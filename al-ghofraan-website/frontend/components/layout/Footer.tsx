@@ -1,65 +1,72 @@
 // components/layout/Footer.tsx
 
-import Link           from "next/link";
-import type { SiteSettings } from "@/types/directus";
+import Link from "next/link";
+import type { NavigationItem, SiteSettings } from "@/types/directus";
 
 interface FooterProps {
-  settings: SiteSettings | null;
+  settings:  SiteSettings | null;
+  navItems?: NavigationItem[];
 }
 
-export default function Footer({ settings }: FooterProps) {
-  const year        = new Date().getFullYear();
-  const siteName    = settings?.site_name    || "Al-Ghofraan";
-  const email       = settings?.contact_email || "el-masoudi@hotmail.com";
-  const phone       = settings?.phone;
-  const address     = settings?.address;
-  const socialLinks = settings?.social_links  || {};
+const FALLBACK_NAV: NavigationItem[] = [
+  { id: "f1", label: "Home",                       href: "/",               sort: 10, highlight: false, external: false, active: true },
+  { id: "f2", label: "Over de DawahCommissie",     href: "/dawahcommissie", sort: 20, highlight: false, external: false, active: true },
+  { id: "f3", label: "Agenda & Activiteiten",      href: "/agenda",         sort: 30, highlight: false, external: false, active: true },
+  { id: "f4", label: "Gebedstijden",               href: "/gebedstijden",   sort: 40, highlight: false, external: false, active: true },
+  { id: "f5", label: "Doneren",                    href: "/doneren",        sort: 50, highlight: true,  external: false, active: true },
+];
+
+export default function Footer({ settings, navItems }: FooterProps) {
+  const year     = new Date().getFullYear();
+  const siteName = settings?.site_name    || "Al-Ghofraan";
+  const email    = settings?.contact_email || "el-masoudi@hotmail.com";
+  const phone    = settings?.phone        || null;
+  const address  = settings?.address      || null;
+  const social   = settings?.social_links || {};
+
+  const items = (navItems && navItems.length > 0 ? navItems : FALLBACK_NAV)
+    .slice()
+    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
 
   return (
     <footer className="bg-slate-mosque text-white">
-      {/* Geometrisch patroon boven footer */}
       <div className="h-1 bg-taupe/60" />
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          {/* Kolom 1: Branding */}
+          {/* Branding */}
           <div className="flex flex-col gap-4">
             <div>
-              <div className="font-display text-2xl text-white mb-1">
-                {siteName}
-              </div>
-              <div
-                className="font-arabic text-lg text-sand/70"
-                lang="ar"
-              >
+              <div className="font-display text-2xl text-white mb-1">{siteName}</div>
+              <div className="font-arabic text-lg text-sand/70" lang="ar">
                 المسجد الغفران
               </div>
             </div>
             <p className="font-body text-sm text-sand/70 leading-relaxed max-w-xs">
               De DawahCommissie van moskee Al-Ghofraan organiseert lezingen,
-              activiteiten en programma's voor de moslimgemeenschap.
+              activiteiten en programma&apos;s voor de moslimgemeenschap.
             </p>
 
-            {/* Sociale media */}
-            {Object.keys(socialLinks).length > 0 && (
+            {/* Sociale media — alleen tonen als er links zijn */}
+            {social && Object.values(social).some((v) => !!v) && (
               <div className="flex gap-3 mt-2">
-                {socialLinks.facebook && (
-                  <SocialLink href={socialLinks.facebook} label="Facebook">
+                {social.facebook && (
+                  <SocialLink href={social.facebook} label="Facebook">
                     <FacebookIcon />
                   </SocialLink>
                 )}
-                {socialLinks.instagram && (
-                  <SocialLink href={socialLinks.instagram} label="Instagram">
+                {social.instagram && (
+                  <SocialLink href={social.instagram} label="Instagram">
                     <InstagramIcon />
                   </SocialLink>
                 )}
-                {socialLinks.youtube && (
-                  <SocialLink href={socialLinks.youtube} label="YouTube">
+                {social.youtube && (
+                  <SocialLink href={social.youtube} label="YouTube">
                     <YouTubeIcon />
                   </SocialLink>
                 )}
-                {socialLinks.whatsapp && (
-                  <SocialLink href={socialLinks.whatsapp} label="WhatsApp">
+                {social.whatsapp && (
+                  <SocialLink href={social.whatsapp} label="WhatsApp">
                     <WhatsAppIcon />
                   </SocialLink>
                 )}
@@ -67,32 +74,37 @@ export default function Footer({ settings }: FooterProps) {
             )}
           </div>
 
-          {/* Kolom 2: Navigatie */}
+          {/* Navigatie */}
           <div>
             <h3 className="font-body text-sm uppercase tracking-widest text-taupe mb-4 font-semibold">
               Navigatie
             </h3>
             <ul className="flex flex-col gap-2">
-              {[
-                { href: "/",               label: "Home" },
-                { href: "/dawahcommissie", label: "Over de DawahCommissie" },
-                { href: "/agenda",         label: "Agenda & Activiteiten" },
-                { href: "/gebedstijden",   label: "Gebedstijden" },
-                { href: "/doneren",        label: "Doneren" },
-              ].map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className="font-body text-sm text-sand/70 hover:text-white transition-colors"
-                  >
-                    {item.label}
-                  </Link>
+              {items.map((item) => (
+                <li key={item.id}>
+                  {item.external ? (
+                    <a
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-body text-sm text-sand/70 hover:text-white transition-colors"
+                    >
+                      {item.label}
+                    </a>
+                  ) : (
+                    <Link
+                      href={item.href}
+                      className="font-body text-sm text-sand/70 hover:text-white transition-colors"
+                    >
+                      {item.label}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Kolom 3: Contact */}
+          {/* Contact */}
           <div>
             <h3 className="font-body text-sm uppercase tracking-widest text-taupe mb-4 font-semibold">
               Contact
@@ -101,33 +113,29 @@ export default function Footer({ settings }: FooterProps) {
               {address && (
                 <li className="flex items-start gap-2 text-sm text-sand/70">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-0.5 shrink-0">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                    <circle cx="12" cy="10" r="3"/>
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                    <circle cx="12" cy="10" r="3" />
                   </svg>
-                  <span>{address}</span>
+                  <span className="whitespace-pre-line">{address}</span>
                 </li>
               )}
-              <li className="flex items-center gap-2 text-sm text-sand/70">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                  <polyline points="22,6 12,13 2,6"/>
-                </svg>
-                <a
-                  href={`mailto:${email}`}
-                  className="hover:text-white transition-colors"
-                >
-                  {email}
-                </a>
-              </li>
+              {email && (
+                <li className="flex items-center gap-2 text-sm text-sand/70">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <polyline points="22,6 12,13 2,6" />
+                  </svg>
+                  <a href={`mailto:${email}`} className="hover:text-white transition-colors">
+                    {email}
+                  </a>
+                </li>
+              )}
               {phone && (
                 <li className="flex items-center gap-2 text-sm text-sand/70">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6.29 6.29l1.9-1.9a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6.29 6.29l1.9-1.9a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
                   </svg>
-                  <a
-                    href={`tel:${phone}`}
-                    className="hover:text-white transition-colors"
-                  >
+                  <a href={`tel:${phone}`} className="hover:text-white transition-colors">
                     {phone}
                   </a>
                 </li>
@@ -138,27 +146,16 @@ export default function Footer({ settings }: FooterProps) {
 
         {/* Onderbalk */}
         <div className="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-sand/50 font-body">
-          <span>
-            © {year} {siteName} — DawahCommissie. Alle rechten voorbehouden.
-          </span>
-          <span className="font-arabic text-sm" lang="ar">
-            بسم الله الرحمن الرحيم
-          </span>
+          <span>© {year} {siteName} — DawahCommissie. Alle rechten voorbehouden.</span>
+          <span className="font-arabic text-sm" lang="ar">بسم الله الرحمن الرحيم</span>
         </div>
       </div>
     </footer>
   );
 }
 
-function SocialLink({
-  href,
-  label,
-  children,
-}: {
-  href: string;
-  label: string;
-  children: React.ReactNode;
-}) {
+// ─── icons ───────────────────────────────────────────────────
+function SocialLink({ href, label, children }: { href: string; label: string; children: React.ReactNode }) {
   return (
     <a
       href={href}
@@ -179,7 +176,6 @@ function FacebookIcon() {
     </svg>
   );
 }
-
 function InstagramIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -189,7 +185,6 @@ function InstagramIcon() {
     </svg>
   );
 }
-
 function YouTubeIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -197,7 +192,6 @@ function YouTubeIcon() {
     </svg>
   );
 }
-
 function WhatsAppIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">

@@ -5,7 +5,7 @@ import { Amiri, Outfit } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { getSiteSettings } from "@/lib/directus";
+import { getSiteSettings, getNavigationItems } from "@/lib/directus";
 
 const amiri = Amiri({
   subsets:  ["arabic", "latin"],
@@ -43,14 +43,18 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const settings = await getSiteSettings().catch(() => null);
+  // Beide parallel ophalen — sneller en faalt elk apart-veilig
+  const [settings, navItems] = await Promise.all([
+    getSiteSettings(),
+    getNavigationItems(),
+  ]);
 
   return (
     <html lang="nl" className={`${amiri.variable} ${outfit.variable}`}>
       <body className="min-h-screen flex flex-col">
-        <Header settings={settings} />
+        <Header settings={settings} navItems={navItems} />
         <main className="flex-1">{children}</main>
-        <Footer settings={settings} />
+        <Footer settings={settings} navItems={navItems} />
       </body>
     </html>
   );

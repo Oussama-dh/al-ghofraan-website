@@ -1,140 +1,191 @@
-// app/dawahcommissie/page.tsx
+// app/page.tsx
+// Homepagina — content uit page_content (slug: "home"), activiteiten uit activities.
 
-import type { Metadata }   from "next";
-import Container           from "@/components/ui/Container";
-import SectionTitle        from "@/components/ui/SectionTitle";
-import CTASection          from "@/components/sections/CTASection";
-import { getPageBySlug }   from "@/lib/directus";
+import type { Metadata }     from "next";
+import HeroSection           from "@/components/sections/HeroSection";
+import CTASection            from "@/components/sections/CTASection";
+import SectionTitle          from "@/components/ui/SectionTitle";
+import ActivityCard          from "@/components/ui/ActivityCard";
+import Container             from "@/components/ui/Container";
+import Button                from "@/components/ui/Button";
+import { getUpcomingActivities, getPageContent } from "@/lib/directus";
+import type { Activity }     from "@/types/directus";
 
-export const metadata: Metadata = {
-  title: "Over de DawahCommissie",
-  description: "Leer meer over de DawahCommissie van moskee Al-Ghofraan — onze missie, visie en activiteiten.",
-};
+export const revalidate = 600;
 
-export const revalidate = 3600;
+// Fallback-activiteiten als activities-tabel leeg is
+const FALLBACK_ACTIVITIES: Activity[] = [
+  {
+    id: "1", status: "published", featured: true,  registration_enabled: false,
+    title: "Vrijdagslezing", slug: "vrijdagslezing",
+    description: "Wekelijkse lezing na de vrijdagssalaat. Iedereen is welkom.",
+    start_date: new Date(Date.now() + 7 * 86400000).toISOString(),
+    location: "Moskee Al-Ghofraan",
+  },
+  {
+    id: "2", status: "published", featured: false, registration_enabled: false,
+    title: "Islamitische cursus voor beginners", slug: "islamitische-cursus-beginners",
+    description: "Een toegankelijke introductiecursus over de grondbeginselen van de islam.",
+    start_date: new Date(Date.now() + 14 * 86400000).toISOString(),
+    location: "Moskee Al-Ghofraan",
+  },
+  {
+    id: "3", status: "published", featured: false, registration_enabled: false,
+    title: "Open dag voor niet-moslims", slug: "open-dag-niet-moslims",
+    description: "Kom meer te weten over de islam, bezoek de moskee en stel al uw vragen.",
+    start_date: new Date(Date.now() + 21 * 86400000).toISOString(),
+    location: "Moskee Al-Ghofraan",
+  },
+];
 
-export default async function DawahcommissiePage() {
-  let pageContent = null;
+export async function generateMetadata(): Promise<Metadata> {
+  const page = await getPageContent("home");
+  return {
+    title:       page?.seo_title       || "Home",
+    description: page?.seo_description || "De DawahCommissie van moskee Al-Ghofraan — lezingen, activiteiten en programma's voor de moslimgemeenschap.",
+  };
+}
 
-  try {
-    pageContent = await getPageBySlug("dawahcommissie");
-  } catch {
-    // Fallback naar statische content
-  }
+export default async function HomePage() {
+  // Parallel ophalen
+  const [page, activities] = await Promise.all([
+    getPageContent("home"),
+    getUpcomingActivities(6),
+  ]);
+
+  const list      = activities.length > 0 ? activities : FALLBACK_ACTIVITIES;
+  const featured  = list.filter((a) => a.featured).slice(0, 1);
+  const remaining = list.filter((a) => !a.featured).slice(0, 5);
+  const shown     = [...featured, ...remaining].slice(0, 6);
 
   return (
     <>
-      {/* Header */}
-      <section className="bg-slate-mosque py-16 relative overflow-hidden">
-        <div className="absolute inset-0 pattern-overlay" />
-        <Container className="relative z-10">
-          <SectionTitle
-            title={pageContent?.title || "Over de DawahCommissie"}
-            arabic="لجنة الدعوة"
-            subtitle="Wie zijn wij en wat drijft ons"
-            light
-          />
+      <HeroSection
+        title={page?.title    || undefined}
+        subtitle={page?.subtitle || undefined}
+        intro={page?.intro    || undefined}
+      />
+
+      {/* Optioneel paginalichaam uit CMS */}
+      {page?.body && (
+        <section className="bg-sand-50 py-16 lg:py-20">
+          <Container narrow>
+            <div
+              className="prose prose-lg max-w-none font-body text-ink leading-relaxed prose-headings:font-display prose-headings:text-ink prose-a:text-slate-mosque"
+              dangerouslySetInnerHTML={{ __html: page.body }}
+            />
+          </Container>
+        </section>
+      )}
+
+      {/* Missie-sectie — blijft statisch, dit is design-content geen redactie-content */}
+      <section className="bg-sand-50 py-16 lg:py-24">
+        <Container>
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <SectionTitle
+                title="Onze missie"
+                arabic="رسالتنا"
+                align="left"
+                subtitle="Wij geloven dat kennis, gemeenschap en dienstbaarheid de pijlers zijn van een bloeiende moslimgemeenschap."
+              />
+              <div className="mt-8 space-y-4">
+                {[
+                  { icon: "📖", title: "Kennis verspreiden", text: "Door lezingen en cursussen de kennis over de islam toegankelijk maken voor iedereen." },
+                  { icon: "🤝", title: "Gemeenschap bouwen", text: "Bruggen slaan binnen en buiten de moslimgemeenschap door ontmoeting en dialoog." },
+                  { icon: "💛", title: "Dienend zijn",       text: "De samenleving dienen met oprechtheid en toewijding, zoals de Profeet ﷺ ons leerde." },
+                ].map((item) => (
+                  <div key={item.title} className="flex gap-4">
+                    <span className="text-2xl mt-1 shrink-0">{item.icon}</span>
+                    <div>
+                      <h3 className="font-body font-semibold text-ink mb-1">{item.title}</h3>
+                      <p className="font-body text-taupe-dark text-sm leading-relaxed">{item.text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative hidden md:block">
+              <div className="aspect-square rounded-3xl bg-slate-mosque/10 border border-taupe/20 flex items-center justify-center p-8">
+                <div className="text-center">
+                  <div className="font-arabic text-6xl text-slate-mosque mb-4" lang="ar">
+                    الدعوة
+                  </div>
+                  <div className="font-body text-taupe-dark text-sm">
+                    Ad-Da&apos;wa — De Uitnodiging
+                  </div>
+                  <div className="mt-6 grid grid-cols-3 gap-3">
+                    {["الإيمان", "العلم", "العمل"].map((word) => (
+                      <div key={word} className="bg-white rounded-xl p-2 text-center border border-sand-200">
+                        <div className="font-arabic text-lg text-slate-mosque" lang="ar">{word}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="absolute -top-4 -right-4 w-24 h-24 rounded-full bg-taupe/20 -z-10" />
+              <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full bg-slate-mosque/20 -z-10" />
+            </div>
+          </div>
         </Container>
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 40" fill="none" preserveAspectRatio="none" className="w-full">
-            <path d="M0,40 C360,0 1080,0 1440,40 L1440,40 L0,40 Z" fill="#f9f7f5" />
-          </svg>
-        </div>
       </section>
 
-      <section className="bg-sand-50 py-12 lg:py-16">
-        <Container narrow>
-          {pageContent?.content ? (
-            /* Content uit Directus */
-            <div
-              className="prose prose-lg max-w-none font-body text-ink leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: pageContent.content }}
-            />
-          ) : (
-            /* Statische fallback-content */
-            <div className="space-y-10">
-              <div>
-                <h2 className="font-display text-3xl text-ink mb-4">
-                  Wie zijn wij?
-                </h2>
-                <p className="font-body text-taupe-dark text-lg leading-relaxed">
-                  De DawahCommissie is een groep toegewijde vrijwilligers verbonden
-                  aan moskee Al-Ghofraan. Ons doel is om de kennis over de islam
-                  te verspreiden op een toegankelijke, authentieke en inspirerende
-                  manier.
-                </p>
-              </div>
-
-              <div className="bg-white rounded-3xl border border-sand-200 p-8">
-                <div className="font-arabic text-3xl text-slate-mosque mb-3 text-center" lang="ar">
-                  ادْعُ إِلَىٰ سَبِيلِ رَبِّكَ بِالْحِكْمَةِ
-                </div>
-                <p className="font-body text-center text-taupe-dark text-sm italic">
-                  "Nodig uit naar de weg van uw Heer met wijsheid en schone vermaning."
-                  <br />— Soera An-Nahl 16:125
-                </p>
-              </div>
-
-              <div>
-                <h2 className="font-display text-3xl text-ink mb-4">Onze missie</h2>
-                <p className="font-body text-taupe-dark text-lg leading-relaxed">
-                  Wij geloven dat Da'wa — de uitnodiging tot de islam — begint met
-                  het goede voorbeeld geven. Door middel van educatieve programma's,
-                  dialoog en gemeenschapsactiviteiten willen wij een brug slaan
-                  tussen de moslimgemeenschap en de bredere samenleving.
-                </p>
-              </div>
-
-              <div>
-                <h2 className="font-display text-3xl text-ink mb-6">Wat wij doen</h2>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  {[
-                    { titel: "Wekelijkse lezingen",     beschrijving: "Elke vrijdag na de gebedstijden verzorgen wij toegankelijke lezingen over diverse islamitische onderwerpen." },
-                    { titel: "Islamitische cursussen",   beschrijving: "Cursussen voor beginners en gevorderden over Tawheed, Fiqh, Arabisch en Qur'aanrecitatie." },
-                    { titel: "Open dagen",               beschrijving: "Regelmatig verwelkomen wij niet-moslims en geïnteresseerden in de moskee voor een ontmoeting en gesprek." },
-                    { titel: "Jeugdprogramma's",         beschrijving: "Activiteiten en programma's speciaal voor jongeren om hen te verbinden met hun identiteit en geloof." },
-                  ].map((item) => (
-                    <div
-                      key={item.titel}
-                      className="bg-white rounded-2xl border border-sand-200 p-6"
-                    >
-                      <h3 className="font-body font-semibold text-ink mb-2">
-                        {item.titel}
-                      </h3>
-                      <p className="font-body text-taupe-dark text-sm leading-relaxed">
-                        {item.beschrijving}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-slate-mosque/5 border border-slate-mosque/15 rounded-2xl p-6">
-                <h3 className="font-body font-semibold text-ink mb-2">Contact</h3>
-                <p className="font-body text-taupe-dark text-sm">
-                  Heeft u vragen of wilt u samenwerken? Neem contact met ons op via{" "}
-                  <a
-                    href="mailto:el-masoudi@hotmail.com"
-                    className="text-slate-mosque underline hover:no-underline"
-                  >
-                    el-masoudi@hotmail.com
-                  </a>
-                </p>
-              </div>
-
-              <p className="font-body text-xs text-taupe-dark italic">
-                💡 Beheerder: bewerk deze pagina via Directus → Pagina's → slug: "dawahcommissie"
-              </p>
+      {/* Activiteiten */}
+      {shown.length > 0 && (
+        <section className="bg-white py-16 lg:py-24">
+          <Container>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+              <SectionTitle
+                title="Aankomende activiteiten"
+                subtitle="Ontdek onze lezingen, cursussen en evenementen."
+                align="left"
+              />
+              <Button href="/agenda" variant="outline" size="sm" className="shrink-0">
+                Alle activiteiten
+              </Button>
             </div>
-          )}
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {shown.map((activity) => (
+                <ActivityCard
+                  key={activity.id}
+                  activity={activity}
+                  featured={activity.featured}
+                />
+              ))}
+            </div>
+          </Container>
+        </section>
+      )}
+
+      {/* Gebedstijden-banner */}
+      <section className="bg-sand py-12">
+        <Container>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-white rounded-3xl p-6 sm:p-8 border border-sand-200 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-slate-mosque/10 rounded-2xl flex items-center justify-center text-3xl shrink-0">
+                🕌
+              </div>
+              <div>
+                <h3 className="font-display text-xl text-ink">Gebedstijden</h3>
+                <p className="font-body text-sm text-taupe-dark mt-0.5">
+                  Bekijk de actuele gebedstijden voor uw regio
+                </p>
+              </div>
+            </div>
+            <Button href="/gebedstijden" size="md">
+              Bekijk gebedstijden
+            </Button>
+          </div>
         </Container>
       </section>
 
       <CTASection
-        title="Doe mee met de DawahCommissie"
-        subtitle="Bekijk onze agenda voor aankomende lezingen en activiteiten."
-        primaryCta={{ label: "Bekijk de agenda", href: "/agenda" }}
-        secondaryCta={{ label: "Doneer aan ons werk", href: "/doneren" }}
+        title="Steun het werk van de DawahCommissie"
+        subtitle="Uw bijdrage helpt ons om de gemeenschap te blijven dienen met lezingen, activiteiten en educatieve programma's."
+        primaryCta={{ label: "Doneer hier",     href: "/doneren" }}
+        secondaryCta={{ label: "Meer over ons", href: "/dawahcommissie" }}
       />
     </>
   );

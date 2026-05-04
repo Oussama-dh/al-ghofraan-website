@@ -1,140 +1,192 @@
-// app/doneren/page.tsx
-// Placeholder-pagina voor donaties — Stripe nog NIET geïmplementeerd
+// app/page.tsx
+// Homepagina — content uit page_content (slug: "home"), activiteiten uit activities.
 
-import type { Metadata } from "next";
-import Container         from "@/components/ui/Container";
-import SectionTitle      from "@/components/ui/SectionTitle";
+import type { Metadata }     from "next";
+import HeroSection           from "@/components/sections/HeroSection";
+import CTASection            from "@/components/sections/CTASection";
+import SectionTitle          from "@/components/ui/SectionTitle";
+import ActivityCard          from "@/components/ui/ActivityCard";
+import Container             from "@/components/ui/Container";
+import Button                from "@/components/ui/Button";
+import { getUpcomingActivities, getPageContent } from "@/lib/directus";
+import type { Activity }     from "@/types/directus";
 
-export const metadata: Metadata = {
-  title: "Doneren",
-  description: "Steun de DawahCommissie van moskee Al-Ghofraan met een donatie.",
-};
+export const revalidate = 600;
 
-// ─────────────────────────────────────────────────────────────
-// TODO: Stripe-integratie
-//
-// Wanneer Stripe API-sleutels beschikbaar zijn:
-// 1. Voeg toe aan .env:
-//    STRIPE_PUBLIC_KEY=pk_live_...
-//    STRIPE_SECRET_KEY=sk_live_...
-//    STRIPE_WEBHOOK_SECRET=whsec_...
-//
-// 2. Installeer Stripe:
-//    npm install stripe @stripe/stripe-js @stripe/react-stripe-js
-//
-// 3. Maak aan:
-//    - app/api/create-payment-intent/route.ts  (server-side)
-//    - app/api/webhook/route.ts                (Stripe webhook handler)
-//    - components/DonationForm.tsx             (client component met Stripe Elements)
-//
-// 4. Vervang de placeholder hieronder door <DonationForm />
-// ─────────────────────────────────────────────────────────────
-
-const DONATIE_DOELEN = [
-  { emoji: "📚", titel: "Educatieve programma's", beschrijving: "Lezingen, cursussen en studiemateriaal" },
-  { emoji: "🕌", titel: "Moskee-activiteiten",    beschrijving: "Evenementen, open dagen en gemeenschapsbijeenkomsten" },
-  { emoji: "🌍", titel: "Da'wa & outreach",        beschrijving: "Informatieverspreiding en interfaith dialoog" },
+// Fallback-activiteiten als activities-tabel leeg is
+const FALLBACK_ACTIVITIES: Activity[] = [
+  {
+    id: "1", status: "published", featured: true,  registration_enabled: false,
+    title: "Vrijdagslezing", slug: "vrijdagslezing",
+    description: "Wekelijkse lezing na de vrijdagssalaat. Iedereen is welkom.",
+    start_date: new Date(Date.now() + 7 * 86400000).toISOString(),
+    location: "Moskee Al-Ghofraan",
+  },
+  {
+    id: "2", status: "published", featured: false, registration_enabled: false,
+    title: "Islamitische cursus voor beginners", slug: "islamitische-cursus-beginners",
+    description: "Een toegankelijke introductiecursus over de grondbeginselen van de islam.",
+    start_date: new Date(Date.now() + 14 * 86400000).toISOString(),
+    location: "Moskee Al-Ghofraan",
+  },
+  {
+    id: "3", status: "published", featured: false, registration_enabled: false,
+    title: "Open dag voor niet-moslims", slug: "open-dag-niet-moslims",
+    description: "Kom meer te weten over de islam, bezoek de moskee en stel al uw vragen.",
+    start_date: new Date(Date.now() + 21 * 86400000).toISOString(),
+    location: "Moskee Al-Ghofraan",
+  },
 ];
 
-export default function DonerenPage() {
+export async function generateMetadata(): Promise<Metadata> {
+  const page = await getPageContent("home");
+  return {
+    title:       page?.seo_title       || "Home",
+    description: page?.seo_description || "De DawahCommissie van moskee Al-Ghofraan — lezingen, activiteiten en programma's voor de moslimgemeenschap.",
+  };
+}
+
+export default async function HomePage() {
+  // Parallel ophalen
+  const [page, activities] = await Promise.all([
+    getPageContent("home"),
+    getUpcomingActivities(6),
+  ]);
+
+  const list      = activities.length > 0 ? activities : FALLBACK_ACTIVITIES;
+  const featured  = list.filter((a) => a.featured).slice(0, 1);
+  const remaining = list.filter((a) => !a.featured).slice(0, 5);
+  const shown     = [...featured, ...remaining].slice(0, 6);
+
   return (
     <>
-      {/* Header */}
-      <section className="bg-slate-mosque py-16 relative overflow-hidden">
-        <div className="absolute inset-0 pattern-overlay" />
-        <Container className="relative z-10">
-          <SectionTitle
-            title="Steun de DawahCommissie"
-            arabic="ادعم لجنة الدعوة"
-            subtitle="Uw bijdrage maakt een verschil voor de gehele gemeenschap"
-            light
-          />
+      <HeroSection
+        title={page?.title    || undefined}
+        subtitle={page?.subtitle || undefined}
+        intro={page?.intro    || undefined}
+      />
+
+      {/* Optioneel paginalichaam uit CMS */}
+      {page?.body && (
+        <section className="bg-sand-50 py-16 lg:py-20">
+          <Container narrow>
+            <div
+              className="prose prose-lg max-w-none font-body text-ink leading-relaxed prose-headings:font-display prose-headings:text-ink prose-a:text-slate-mosque"
+              dangerouslySetInnerHTML={{ __html: page.body }}
+            />
+          </Container>
+        </section>
+      )}
+
+      {/* Missie-sectie — blijft statisch, dit is design-content geen redactie-content */}
+      <section className="bg-sand-50 py-16 lg:py-24">
+        <Container>
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <SectionTitle
+                title="Onze missie"
+                arabic="رسالتنا"
+                align="left"
+                subtitle="Wij geloven dat kennis, gemeenschap en dienstbaarheid de pijlers zijn van een bloeiende moslimgemeenschap."
+              />
+              <div className="mt-8 space-y-4">
+                {[
+                  { icon: "📖", title: "Kennis verspreiden", text: "Door lezingen en cursussen de kennis over de islam toegankelijk maken voor iedereen." },
+                  { icon: "🤝", title: "Gemeenschap bouwen", text: "Bruggen slaan binnen en buiten de moslimgemeenschap door ontmoeting en dialoog." },
+                  { icon: "💛", title: "Dienend zijn",       text: "De samenleving dienen met oprechtheid en toewijding, zoals de Profeet ﷺ ons leerde." },
+                ].map((item) => (
+                  <div key={item.title} className="flex gap-4">
+                    <span className="text-2xl mt-1 shrink-0">{item.icon}</span>
+                    <div>
+                      <h3 className="font-body font-semibold text-ink mb-1">{item.title}</h3>
+                      <p className="font-body text-taupe-dark text-sm leading-relaxed">{item.text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative hidden md:block">
+              <div className="aspect-square rounded-3xl bg-slate-mosque/10 border border-taupe/20 flex items-center justify-center p-8">
+                <div className="text-center">
+                  <div className="font-arabic text-6xl text-slate-mosque mb-4" lang="ar">
+                    الدعوة
+                  </div>
+                  <div className="font-body text-taupe-dark text-sm">
+                    Ad-Da&apos;wa — De Uitnodiging
+                  </div>
+                  <div className="mt-6 grid grid-cols-3 gap-3">
+                    {["الإيمان", "العلم", "العمل"].map((word) => (
+                      <div key={word} className="bg-white rounded-xl p-2 text-center border border-sand-200">
+                        <div className="font-arabic text-lg text-slate-mosque" lang="ar">{word}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="absolute -top-4 -right-4 w-24 h-24 rounded-full bg-taupe/20 -z-10" />
+              <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full bg-slate-mosque/20 -z-10" />
+            </div>
+          </div>
         </Container>
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 40" fill="none" preserveAspectRatio="none" className="w-full">
-            <path d="M0,40 C360,0 1080,0 1440,40 L1440,40 L0,40 Z" fill="#f9f7f5" />
-          </svg>
-        </div>
       </section>
 
-      <section className="bg-sand-50 py-12 lg:py-20">
-        <Container narrow>
-          {/* Placeholder donatie-blok */}
-          <div className="bg-white rounded-3xl border border-sand-200 shadow-sm p-8 sm:p-12 text-center mb-10">
-            {/* Islamitisch icoon */}
-            <div className="w-20 h-20 bg-slate-mosque/10 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">
-              💛
+      {/* Activiteiten */}
+      {shown.length > 0 && (
+        <section className="bg-white py-16 lg:py-24">
+          <Container>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+              <SectionTitle
+                title="Aankomende activiteiten"
+                subtitle="Ontdek onze lezingen, cursussen en evenementen."
+                align="left"
+              />
+              <Button href="/agenda" variant="outline" size="sm" className="shrink-0">
+                Alle activiteiten
+              </Button>
             </div>
 
-            <div className="font-arabic text-2xl text-taupe mb-3" lang="ar">
-              وَمَا تُنفِقُوا مِنْ خَيْرٍ فَلِأَنفُسِكُمْ
-            </div>
-            <p className="font-body text-xs text-taupe-dark mb-6 italic">
-              "En wat u ook aan goeds uitgeeft, dat is voor uzelf." — Soera Al-Baqara 2:272
-            </p>
-
-            <h2 className="font-display text-3xl text-ink mb-4">
-              Binnenkort kunt u hier veilig doneren
-            </h2>
-            <p className="font-body text-taupe-dark text-lg leading-relaxed max-w-md mx-auto mb-8">
-              We werken aan een veilige en eenvoudige donatiemogelijkheid.
-              Uw bijdrage is van onschatbare waarde voor ons werk.
-            </p>
-
-            {/* Placeholder button */}
-            <div className="inline-flex items-center gap-2 bg-taupe/20 text-taupe-dark px-8 py-4 rounded-full font-body font-medium cursor-default text-base">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                <line x1="1" y1="10" x2="23" y2="10"/>
-              </svg>
-              Online doneren — binnenkort beschikbaar
-            </div>
-
-            <p className="font-body text-xs text-taupe mt-4">
-              Wilt u nu al bijdragen? Neem contact met ons op via{" "}
-              <a
-                href="mailto:el-masoudi@hotmail.com"
-                className="text-slate-mosque underline hover:no-underline"
-              >
-                el-masoudi@hotmail.com
-              </a>
-            </p>
-          </div>
-
-          {/* Waarvoor wordt uw donatie gebruikt */}
-          <div>
-            <h3 className="font-display text-2xl text-ink mb-6 text-center">
-              Waarvoor wordt uw bijdrage gebruikt?
-            </h3>
-            <div className="grid sm:grid-cols-3 gap-4">
-              {DONATIE_DOELEN.map((doel) => (
-                <div
-                  key={doel.titel}
-                  className="bg-white rounded-2xl border border-sand-200 p-6 text-center"
-                >
-                  <div className="text-4xl mb-3">{doel.emoji}</div>
-                  <h4 className="font-body font-semibold text-ink mb-2">
-                    {doel.titel}
-                  </h4>
-                  <p className="font-body text-taupe-dark text-sm leading-relaxed">
-                    {doel.beschrijving}
-                  </p>
-                </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {shown.map((activity) => (
+                <ActivityCard
+                  key={activity.id}
+                  activity={activity}
+                  featured={activity.featured}
+                />
               ))}
             </div>
-          </div>
+          </Container>
+        </section>
+      )}
 
-          {/* Jazakallah */}
-          <div className="mt-10 text-center">
-            <p className="font-arabic text-3xl text-slate-mosque" lang="ar">
-              جزاكم الله خيرًا
-            </p>
-            <p className="font-body text-taupe-dark text-sm mt-1">
-              Moge Allah u belonen met het goede
-            </p>
+      {/* Gebedstijden-banner */}
+      <section className="bg-sand py-12">
+        <Container>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-white rounded-3xl p-6 sm:p-8 border border-sand-200 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-slate-mosque/10 rounded-2xl flex items-center justify-center text-3xl shrink-0">
+                🕌
+              </div>
+              <div>
+                <h3 className="font-display text-xl text-ink">Gebedstijden</h3>
+                <p className="font-body text-sm text-taupe-dark mt-0.5">
+                  Bekijk de actuele gebedstijden voor uw regio
+                </p>
+              </div>
+            </div>
+            <Button href="/gebedstijden" size="md">
+              Bekijk gebedstijden
+            </Button>
           </div>
         </Container>
       </section>
+
+      <CTASection
+        title="Steun het werk van de DawahCommissie"
+        subtitle="Uw bijdrage helpt ons om de gemeenschap te blijven dienen met lezingen, activiteiten en educatieve programma's."
+        primaryCta={{ label: "Doneer hier",     href: "/doneren" }}
+        secondaryCta={{ label: "Meer over ons", href: "/dawahcommissie" }}
+      />
     </>
   );
 }
