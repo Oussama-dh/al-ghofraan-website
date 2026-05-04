@@ -29,10 +29,10 @@ async function directusFetch<T>(path: string): Promise<T | null> {
       headers.Authorization = `Bearer ${process.env.DIRECTUS_TOKEN}`;
     }
 
-    const response = await fetch(url, {
-      headers,
-      next: { revalidate: 60 },
-    });
+  const response = await fetch(url, {
+  headers,
+  cache: "no-store",
+  });
 
     if (!response.ok) {
       console.warn(`Directus request failed: ${response.status} ${url}`);

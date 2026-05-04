@@ -103,8 +103,8 @@ async function directusFetch<T>(path: string): Promise<T | null> {
     }
 
     const response = await fetch(url, {
-      headers,
-      next: { revalidate: 60 },
+    headers,
+    cache: "no-store",
     });
 
     if (!response.ok) {
