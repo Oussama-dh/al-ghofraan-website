@@ -5,7 +5,14 @@ import { notFound }               from "next/navigation";
 import Image                      from "next/image";
 import Container                  from "@/components/ui/Container";
 import Button                     from "@/components/ui/Button";
-import { getActivityBySlug, getAssetUrl } from "@/lib/directus";
+import { Icon }                   from "@/lib/icons";
+import {
+  getActivityBySlug,
+  getAssetUrl,
+  getIconSettings,
+  resolveIconKey,
+  ICON_KEYS,
+} from "@/lib/directus";
 import { formatDate }             from "@/lib/utils";
 
 interface Props {
@@ -13,29 +20,26 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  try {
-    const activity = await getActivityBySlug(params.slug);
-    if (!activity) return { title: "Activiteit niet gevonden" };
-    return {
-      title:       activity.title,
-      description: activity.description?.replace(/<[^>]+>/g, "").slice(0, 160),
-    };
-  } catch {
-    return { title: "Activiteit" };
-  }
+  const activity = await getActivityBySlug(params.slug);
+  if (!activity) return { title: "Activiteit niet gevonden" };
+  return {
+    title:       activity.title,
+    description: activity.description?.replace(/<[^>]+>/g, "").slice(0, 160),
+  };
 }
 
 export const revalidate = 300;
 
 export default async function ActivityDetailPage({ params }: Props) {
-  let activity;
-  try {
-    activity = await getActivityBySlug(params.slug);
-  } catch {
-    activity = null;
-  }
+  const [activity, iconMap] = await Promise.all([
+    getActivityBySlug(params.slug),
+    getIconSettings(),
+  ]);
 
   if (!activity) notFound();
+
+  const dateIcon     = resolveIconKey(iconMap, ICON_KEYS.activityDate);
+  const locationIcon = resolveIconKey(iconMap, ICON_KEYS.activityLocation);
 
   const imageId =
     typeof activity.image === "string"
@@ -44,17 +48,11 @@ export default async function ActivityDetailPage({ params }: Props) {
 
   return (
     <>
-      {/* Hero */}
       <section className="relative bg-slate-mosque text-white py-16 overflow-hidden">
         <div className="absolute inset-0 pattern-overlay" />
         {imageId && (
           <div className="absolute inset-0 opacity-20">
-            <Image
-              src={getAssetUrl(imageId)}
-              alt={activity.title}
-              fill
-              className="object-cover"
-            />
+            <Image src={getAssetUrl(imageId)} alt={activity.title} fill className="object-cover" />
           </div>
         )}
         <Container className="relative z-10">
@@ -73,7 +71,8 @@ export default async function ActivityDetailPage({ params }: Props) {
             </h1>
             <div className="flex flex-wrap gap-4 text-sand/80 text-sm font-body">
               <span className="flex items-center gap-2">
-                📅 {formatDate(activity.start_date, "EEEE d MMMM yyyy")}
+                <Icon name={dateIcon} className="w-4 h-4" />
+                {formatDate(activity.start_date, "EEEE d MMMM yyyy")}
               </span>
               {activity.end_date && (
                 <span className="flex items-center gap-2">
@@ -82,7 +81,8 @@ export default async function ActivityDetailPage({ params }: Props) {
               )}
               {activity.location && (
                 <span className="flex items-center gap-2">
-                  📍 {activity.location}
+                  <Icon name={locationIcon} className="w-4 h-4" />
+                  {activity.location}
                 </span>
               )}
             </div>
@@ -95,17 +95,11 @@ export default async function ActivityDetailPage({ params }: Props) {
         </div>
       </section>
 
-      {/* Content */}
       <section className="bg-sand-50 py-12 lg:py-16">
         <Container narrow>
           {imageId && (
             <div className="relative h-64 sm:h-80 rounded-2xl overflow-hidden mb-8 shadow-md">
-              <Image
-                src={getAssetUrl(imageId)}
-                alt={activity.title}
-                fill
-                className="object-cover"
-              />
+              <Image src={getAssetUrl(imageId)} alt={activity.title} fill className="object-cover" />
             </div>
           )}
 
@@ -114,12 +108,9 @@ export default async function ActivityDetailPage({ params }: Props) {
             dangerouslySetInnerHTML={{ __html: activity.description || "" }}
           />
 
-          {/* TODO: Inschrijfformulier (toekomstige functionaliteit) */}
           {activity.registration_enabled && (
             <div className="mt-10 p-6 bg-slate-mosque/10 border border-slate-mosque/20 rounded-2xl">
-              <h3 className="font-display text-xl text-ink mb-2">
-                Inschrijven
-              </h3>
+              <h3 className="font-display text-xl text-ink mb-2">Inschrijven</h3>
               <p className="font-body text-taupe-dark text-sm">
                 Inschrijven voor deze activiteit is binnenkort mogelijk.
               </p>

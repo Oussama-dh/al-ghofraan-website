@@ -1,5 +1,4 @@
 // app/page.tsx
-// Homepagina — content uit page_content (slug: "home"), activiteiten uit activities.
 
 import type { Metadata }     from "next";
 import HeroSection           from "@/components/sections/HeroSection";
@@ -8,31 +7,37 @@ import SectionTitle          from "@/components/ui/SectionTitle";
 import ActivityCard          from "@/components/ui/ActivityCard";
 import Container             from "@/components/ui/Container";
 import Button                from "@/components/ui/Button";
-import { getUpcomingActivities, getPageContent } from "@/lib/directus";
+import { Icon }              from "@/lib/icons";
+import {
+  getUpcomingActivities,
+  getPageContent,
+  getIconSettings,
+  resolveIconKey,
+  ICON_KEYS,
+} from "@/lib/directus";
 import type { Activity }     from "@/types/directus";
 
 export const revalidate = 600;
 
-// Fallback-activiteiten als activities-tabel leeg is
 const FALLBACK_ACTIVITIES: Activity[] = [
   {
     id: "1", status: "published", featured: true,  registration_enabled: false,
     title: "Vrijdagslezing", slug: "vrijdagslezing",
-    description: "Wekelijkse lezing na de vrijdagssalaat. Iedereen is welkom.",
+    description: "Wekelijkse lezing na de vrijdagssalaat.",
     start_date: new Date(Date.now() + 7 * 86400000).toISOString(),
     location: "Moskee Al-Ghofraan",
   },
   {
     id: "2", status: "published", featured: false, registration_enabled: false,
     title: "Islamitische cursus voor beginners", slug: "islamitische-cursus-beginners",
-    description: "Een toegankelijke introductiecursus over de grondbeginselen van de islam.",
+    description: "Een toegankelijke introductiecursus over de islam.",
     start_date: new Date(Date.now() + 14 * 86400000).toISOString(),
     location: "Moskee Al-Ghofraan",
   },
   {
     id: "3", status: "published", featured: false, registration_enabled: false,
     title: "Open dag voor niet-moslims", slug: "open-dag-niet-moslims",
-    description: "Kom meer te weten over de islam, bezoek de moskee en stel al uw vragen.",
+    description: "Kom meer te weten over de islam, bezoek de moskee.",
     start_date: new Date(Date.now() + 21 * 86400000).toISOString(),
     location: "Moskee Al-Ghofraan",
   },
@@ -42,16 +47,20 @@ export async function generateMetadata(): Promise<Metadata> {
   const page = await getPageContent("home");
   return {
     title:       page?.seo_title       || "Home",
-    description: page?.seo_description || "De DawahCommissie van moskee Al-Ghofraan — lezingen, activiteiten en programma's voor de moslimgemeenschap.",
+    description: page?.seo_description || "De DawahCommissie van moskee Al-Ghofraan.",
   };
 }
 
 export default async function HomePage() {
-  // Parallel ophalen
-  const [page, activities] = await Promise.all([
+  const [page, activities, iconMap] = await Promise.all([
     getPageContent("home"),
     getUpcomingActivities(6),
+    getIconSettings(),
   ]);
+
+  const dateIcon         = resolveIconKey(iconMap, ICON_KEYS.activityDate);
+  const locationIcon     = resolveIconKey(iconMap, ICON_KEYS.activityLocation);
+  const prayerTimesIcon  = resolveIconKey(iconMap, ICON_KEYS.prayerTimes);
 
   const list      = activities.length > 0 ? activities : FALLBACK_ACTIVITIES;
   const featured  = list.filter((a) => a.featured).slice(0, 1);
@@ -66,10 +75,16 @@ export default async function HomePage() {
         intro={page?.intro    || undefined}
       />
 
-      {/* Optioneel paginalichaam uit CMS */}
       {page?.body && (
         <section className="bg-sand-50 py-16 lg:py-20">
           <Container narrow>
+            {page.icon && (
+              <div className="flex justify-center mb-6">
+                <div className="w-14 h-14 rounded-2xl bg-slate-mosque/10 flex items-center justify-center text-slate-mosque">
+                  <Icon name={page.icon} className="w-7 h-7" strokeWidth={1.75} />
+                </div>
+              </div>
+            )}
             <div
               className="prose prose-lg max-w-none font-body text-ink leading-relaxed prose-headings:font-display prose-headings:text-ink prose-a:text-slate-mosque"
               dangerouslySetInnerHTML={{ __html: page.body }}
@@ -78,7 +93,7 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Missie-sectie — blijft statisch, dit is design-content geen redactie-content */}
+      {/* Missie-sectie — emoji's blijven, want zijn art-direction, niet UI */}
       <section className="bg-sand-50 py-16 lg:py-24">
         <Container>
           <div className="grid md:grid-cols-2 gap-12 items-center">
@@ -109,12 +124,8 @@ export default async function HomePage() {
             <div className="relative hidden md:block">
               <div className="aspect-square rounded-3xl bg-slate-mosque/10 border border-taupe/20 flex items-center justify-center p-8">
                 <div className="text-center">
-                  <div className="font-arabic text-6xl text-slate-mosque mb-4" lang="ar">
-                    الدعوة
-                  </div>
-                  <div className="font-body text-taupe-dark text-sm">
-                    Ad-Da&apos;wa — De Uitnodiging
-                  </div>
+                  <div className="font-arabic text-6xl text-slate-mosque mb-4" lang="ar">الدعوة</div>
+                  <div className="font-body text-taupe-dark text-sm">Ad-Da&apos;wa — De Uitnodiging</div>
                   <div className="mt-6 grid grid-cols-3 gap-3">
                     {["الإيمان", "العلم", "العمل"].map((word) => (
                       <div key={word} className="bg-white rounded-xl p-2 text-center border border-sand-200">
@@ -152,6 +163,8 @@ export default async function HomePage() {
                   key={activity.id}
                   activity={activity}
                   featured={activity.featured}
+                  dateIcon={dateIcon}
+                  locationIcon={locationIcon}
                 />
               ))}
             </div>
@@ -164,8 +177,8 @@ export default async function HomePage() {
         <Container>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-white rounded-3xl p-6 sm:p-8 border border-sand-200 shadow-sm">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-slate-mosque/10 rounded-2xl flex items-center justify-center text-3xl shrink-0">
-                🕌
+              <div className="w-14 h-14 bg-slate-mosque/10 rounded-2xl flex items-center justify-center text-slate-mosque shrink-0">
+                <Icon name={prayerTimesIcon} className="w-7 h-7" strokeWidth={1.75} />
               </div>
               <div>
                 <h3 className="font-display text-xl text-ink">Gebedstijden</h3>

@@ -1,18 +1,17 @@
 // app/doneren/page.tsx
 // Placeholder-pagina voor donaties — Stripe nog NIET geïmplementeerd.
-// Content (titel, subtitle, intro, body) komt nu uit page_content (slug: "doneren").
 
 import type { Metadata } from "next";
 import Container         from "@/components/ui/Container";
 import SectionTitle      from "@/components/ui/SectionTitle";
-import { getPageContent } from "@/lib/directus";
-
-// ─────────────────────────────────────────────────────────────
-// TODO: Stripe-integratie
-// Wanneer API-sleutels beschikbaar zijn, vervang het placeholder-blok
-// hieronder met een <DonationForm /> client component die Stripe Elements
-// gebruikt. Zie eerdere TODO-comments in dit bestand.
-// ─────────────────────────────────────────────────────────────
+import { CreditCard }    from "lucide-react";
+import { Icon }          from "@/lib/icons";
+import {
+  getPageContent,
+  getIconSettings,
+  resolveIconKey,
+  ICON_KEYS,
+} from "@/lib/directus";
 
 const DONATIE_DOELEN = [
   { emoji: "📚", titel: "Educatieve programma's", beschrijving: "Lezingen, cursussen en studiemateriaal" },
@@ -29,15 +28,19 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function DonerenPage() {
-  const page = await getPageContent("doneren");
+  const [page, iconMap] = await Promise.all([
+    getPageContent("doneren"),
+    getIconSettings(),
+  ]);
 
   const title    = page?.title    || "Steun de DawahCommissie";
   const subtitle = page?.subtitle || "Uw bijdrage maakt een verschil voor de gehele gemeenschap";
   const intro    = page?.intro    || "Binnenkort kunt u hier veilig online doneren.";
 
+  const donationIcon = page?.icon || resolveIconKey(iconMap, ICON_KEYS.donation);
+
   return (
     <>
-      {/* Header */}
       <section className="bg-slate-mosque py-16 relative overflow-hidden">
         <div className="absolute inset-0 pattern-overlay" />
         <Container className="relative z-10">
@@ -57,10 +60,9 @@ export default async function DonerenPage() {
 
       <section className="bg-sand-50 py-12 lg:py-20">
         <Container narrow>
-          {/* Placeholder donatie-blok */}
           <div className="bg-white rounded-3xl border border-sand-200 shadow-sm p-8 sm:p-12 text-center mb-10">
-            <div className="w-20 h-20 bg-slate-mosque/10 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">
-              💛
+            <div className="w-20 h-20 bg-slate-mosque/10 rounded-full flex items-center justify-center text-slate-mosque mx-auto mb-6">
+              <Icon name={donationIcon} className="w-10 h-10" strokeWidth={1.5} />
             </div>
 
             <div className="font-arabic text-2xl text-taupe mb-3" lang="ar">
@@ -78,10 +80,7 @@ export default async function DonerenPage() {
             </p>
 
             <div className="inline-flex items-center gap-2 bg-taupe/20 text-taupe-dark px-8 py-4 rounded-full font-body font-medium cursor-default text-base">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                <line x1="1" y1="10" x2="23" y2="10"/>
-              </svg>
+              <CreditCard className="w-5 h-5" strokeWidth={2} />
               Online doneren — binnenkort beschikbaar
             </div>
 
@@ -93,7 +92,6 @@ export default async function DonerenPage() {
             </p>
           </div>
 
-          {/* Body uit CMS, indien aanwezig */}
           {page?.body && (
             <div
               className="prose prose-lg max-w-none font-body text-ink leading-relaxed prose-headings:font-display prose-headings:text-ink prose-a:text-slate-mosque mb-12"
@@ -101,7 +99,6 @@ export default async function DonerenPage() {
             />
           )}
 
-          {/* Statisch grid van doelen */}
           <div>
             <h3 className="font-display text-2xl text-ink mb-6 text-center">
               Waarvoor wordt uw bijdrage gebruikt?
@@ -117,7 +114,6 @@ export default async function DonerenPage() {
             </div>
           </div>
 
-          {/* Jazakallah */}
           <div className="mt-10 text-center">
             <p className="font-arabic text-3xl text-slate-mosque" lang="ar">
               جزاكم الله خيرًا

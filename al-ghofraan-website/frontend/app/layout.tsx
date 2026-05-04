@@ -5,7 +5,13 @@ import { Amiri, Outfit } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { getSiteSettings, getNavigationItems } from "@/lib/directus";
+import {
+  getSiteSettings,
+  getNavigationItems,
+  getIconSettings,
+  resolveIconKey,
+  ICON_KEYS,
+} from "@/lib/directus";
 
 const amiri = Amiri({
   subsets:  ["arabic", "latin"],
@@ -43,18 +49,28 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Beide parallel ophalen — sneller en faalt elk apart-veilig
-  const [settings, navItems] = await Promise.all([
+  const [settings, navItems, iconMap] = await Promise.all([
     getSiteSettings(),
     getNavigationItems(),
+    getIconSettings(),
   ]);
+
+  const emailIcon   = resolveIconKey(iconMap, ICON_KEYS.contactEmail);
+  const phoneIcon   = resolveIconKey(iconMap, ICON_KEYS.contactPhone);
+  const addressIcon = resolveIconKey(iconMap, ICON_KEYS.contactAddress);
 
   return (
     <html lang="nl" className={`${amiri.variable} ${outfit.variable}`}>
       <body className="min-h-screen flex flex-col">
         <Header settings={settings} navItems={navItems} />
         <main className="flex-1">{children}</main>
-        <Footer settings={settings} navItems={navItems} />
+        <Footer
+          settings={settings}
+          navItems={navItems}
+          emailIcon={emailIcon}
+          phoneIcon={phoneIcon}
+          addressIcon={addressIcon}
+        />
       </body>
     </html>
   );
