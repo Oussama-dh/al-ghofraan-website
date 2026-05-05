@@ -3,9 +3,24 @@
 import type { Metadata }          from "next";
 import Container                  from "@/components/ui/Container";
 import SectionTitle               from "@/components/ui/SectionTitle";
+import Button                     from "@/components/ui/Button";
 import PrayerTimesTable, { TodayPrayerCard } from "@/components/ui/PrayerTimesTable";
-import { getActivePrayerTimeFile, getAssetUrl, getSiteSettings } from "@/lib/directus";
-import { parsePrayerTimesCSV, getTodaysPrayerTimes, getCurrentMonthRows } from "@/lib/prayerTimes";
+import { PageSectionsList }       from "@/components/sections/PageSectionRenderer";
+import { CalendarDays }           from "lucide-react";
+import {
+  getActivePrayerTimeFile,
+  getInternalAssetUrl,
+  getSiteSettings,
+  getPageSectionsWithItems,
+} from "@/lib/directus";
+import {
+  parsePrayerTimesCSV,
+  getTodaysPrayerTimes,
+  getCurrentMonthRows,
+  getNextPrayerKey,
+  formatPrayerFileTitle,
+  getAmsterdamDateParts,
+} from "@/lib/prayerTimes";
 import type { PrayerTimeRow }     from "@/types/directus";
 
 export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
@@ -20,16 +35,18 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const FALLBACK_ROW: PrayerTimeRow = {
-  datum:   "—",
-  fajr:    "05:30",
-  shuruq:  "07:15",
-  dhuhr:   "13:00",
-  asr:     "16:30",
-  maghrib: "19:45",
-  isha:    "21:15",
+  datum:    "—",
+  fajr:     "05:30",
+  shoeroeq: "07:15",
+  dhoehr:   "13:00",
+  asr:      "16:30",
+  maghrib:  "19:45",
+  ishaa:    "21:15",
 };
 
 export default async function GebedstijdenPage() {
+  const sectionsPromise = getPageSectionsWithItems("gebedstijden");
+
   let allRows: PrayerTimeRow[] = [];
   let monthRows: PrayerTimeRow[] = [];
   let todayRow: PrayerTimeRow | null = null;
@@ -46,7 +63,7 @@ export default async function GebedstijdenPage() {
           : (prayerFile.file as { id: string })?.id;
 
       if (fileId) {
-        const assetUrl = getAssetUrl(fileId);
+      const assetUrl = getInternalAssetUrl(fileId);
         if (assetUrl) {
           const token   = process.env.DIRECTUS_TOKEN;
           const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
@@ -78,11 +95,31 @@ export default async function GebedstijdenPage() {
     error = "Gebedstijden konden niet worden geladen.";
   }
 
-  const today = new Date();
-  const dd = String(today.getDate()).padStart(2, "0");
-  const mm = String(today.getMonth() + 1).padStart(2, "0");
-  const todayDatum = `${dd}-${mm}`;
+  const sections      = await sectionsPromise;
+  const ctaSections   = sections.filter((s) => s.type === "cta");
+  const otherSections = sections.filter((s) => s.type !== "cta");
 
+  // Bereken eerstvolgend gebed o.b.v. huidige tijd. Bij geen todayRow of
+  // wanneer alle gebeden voorbij zijn → null = geen highlight (eenvoudig).
+  // Bij rendering met de FALLBACK_ROW gebruiken we de fallback-row zelf
+  // zodat de "volgende"-tag ook in offline state plausibel oogt.
+  const rowForHighlight = todayRow || FALLBACK_ROW;
+  const nextPrayerKey   = getNextPrayerKey(rowForHighlight);
+
+  // Vandaag-header label (dd-mm)
+const todayParts = getAmsterdamDateParts();
+const dd = String(todayParts.day).padStart(2, "0");
+const mm = String(todayParts.month).padStart(2, "0");
+
+  // Highlight in tabel matcht op datum-string van vandaag-rij
+  const todayDatum = todayRow?.datum;
+
+  // Subtitel: voorkom dubbel jaartal
+  const subtitleText = fileInfo
+    ? formatPrayerFileTitle(fileInfo.title, fileInfo.year)
+    : "Actuele gebedstijden";
+
+  // Toon eerste 31 rijen als fallback wanneer huidige maand leeg is
   const displayRows = monthRows.length > 0 ? monthRows : allRows.slice(0, 31);
 
   return (
@@ -93,7 +130,7 @@ export default async function GebedstijdenPage() {
           <SectionTitle
             title="Gebedstijden"
             arabic="مواقيت الصلاة"
-            subtitle={fileInfo ? `${fileInfo.title} — ${fileInfo.year}` : "Actuele gebedstijden"}
+            subtitle={subtitleText}
             light
           />
         </Container>
@@ -120,35 +157,47 @@ export default async function GebedstijdenPage() {
               <span className="w-2 h-8 bg-slate-mosque rounded-full inline-block" />
               Vandaag — {dd}-{mm}
             </h2>
-            <TodayPrayerCard row={todayRow || FALLBACK_ROW} />
+            <TodayPrayerCard
+              row={todayRow || FALLBACK_ROW}
+              nextPrayerKey={nextPrayerKey}
+            />
             {!todayRow && allRows.length === 0 && (
               <p className="font-body text-xs text-taupe mt-3 text-center">
                 * Tijden zijn indicatief. Upload het juiste CSV-bestand via Directus.
+              </p>
+            )}
+            {todayRow && nextPrayerKey === null && (
+              <p className="font-body text-xs text-taupe mt-3 text-center">
+                Alle gebeden van vandaag zijn voorbij. Tot morgen, in shaa Allah.
               </p>
             )}
           </div>
 
           {displayRows.length > 0 && (
             <div>
-              <h2 className="font-display text-2xl text-ink mb-6 flex items-center gap-3">
-                <span className="w-2 h-8 bg-taupe/40 rounded-full inline-block" />
-                Overzicht {monthRows.length > 0 ? "deze maand" : ""}
-              </h2>
-              <PrayerTimesTable rows={displayRows} todayDatum={todayDatum} />
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+                <h2 className="font-display text-2xl text-ink flex items-center gap-3">
+                  <span className="w-2 h-8 bg-taupe/40 rounded-full inline-block" />
+                  Overzicht {monthRows.length > 0 ? "deze maand" : ""}
+                </h2>
+                <Button href="/gebedstijden/overzicht" variant="outline" size="sm" className="shrink-0">
+                  <CalendarDays className="w-4 h-4" />
+                  Bekijk maandoverzicht
+                </Button>
+              </div>
+              <PrayerTimesTable
+                rows={displayRows}
+                todayDatum={todayDatum}
+                shortDateOnly
+              />
             </div>
           )}
 
-          <div className="mt-10 p-6 bg-white rounded-2xl border border-sand-200">
-            <h3 className="font-body font-semibold text-ink mb-2 text-sm">
-              ℹ️ Over de gebedstijden
-            </h3>
-            <p className="font-body text-taupe-dark text-sm leading-relaxed">
-              De gebedstijden worden beheerd via ons CMS. Een vrijwilliger kan
-              jaarlijks een nieuw CSV-bestand uploaden.
-            </p>
-          </div>
         </Container>
       </section>
+
+      <PageSectionsList sections={otherSections} />
+      <PageSectionsList sections={ctaSections} />
     </>
   );
 }

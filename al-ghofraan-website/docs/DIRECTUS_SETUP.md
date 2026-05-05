@@ -131,7 +131,7 @@ Geef de volgende rechten aan de **Public** rol:
    - Slug: `vrijdagslezing-tawakkul` (auto-gegenereerd)
    - Description: gebruik de WYSIWYG editor
    - Start date: bv. `2026-05-09 13:30:00`
-   - Location: `Moskee Al-Ghofraan, Hoofdzaal`
+   - Location: `Moskee el Mouahidin`
    - Image: upload een afbeelding
    - Status: `published`
    - Featured: `true`

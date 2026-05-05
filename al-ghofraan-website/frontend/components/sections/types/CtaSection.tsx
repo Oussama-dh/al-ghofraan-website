@@ -1,7 +1,8 @@
 // components/sections/types/CtaSection.tsx
 //
-// CTA-banner met titel, intro en 1-2 knoppen. Gebruikt het
-// donkere mosque-blauw met patroon-overlay.
+// CTA-banner met titel, intro en 1-2 knoppen. Donkerblauwe achtergrond met
+// patroon-overlay, ongeacht background_variant (daar wijken we van af zodat
+// CTA visueel altijd opvalt).
 
 import Container from "@/components/ui/Container";
 import Button    from "@/components/ui/Button";
@@ -20,7 +21,18 @@ export default function CtaSection({ section }: { section: SectionWithItems }) {
     primary_cta_href,
     secondary_cta_label,
     secondary_cta_href,
+    button_text,
+    button_url,
+    secondary_button_text,
+    secondary_button_url,
   } = section;
+
+  // Vallen terug op button_text/url als de cta-specifieke velden niet zijn ingevuld.
+  // Zo werkt CTA óók als de redacteur alleen de algemene knop-velden gebruikt.
+  const primaryLabel = primary_cta_label   || button_text          || "";
+  const primaryHref  = primary_cta_href    || button_url           || "";
+  const secLabel     = secondary_cta_label || secondary_button_text || "";
+  const secHref      = secondary_cta_href  || secondary_button_url  || "";
 
   return (
     <section className="bg-slate-mosque py-16 lg:py-20 relative overflow-hidden">
@@ -53,22 +65,22 @@ export default function CtaSection({ section }: { section: SectionWithItems }) {
           </p>
         )}
 
-        {(primary_cta_label || secondary_cta_label) && (
+        {(primaryLabel || secLabel) && (
           <div className="flex flex-wrap gap-4 justify-center">
-            {primary_cta_label && primary_cta_href && (
-              <Button href={primary_cta_href} size="lg"
+            {primaryLabel && primaryHref && (
+              <Button href={primaryHref} size="lg"
                 className="bg-taupe hover:bg-taupe-dark text-white">
-                {primary_cta_label}
+                {primaryLabel}
               </Button>
             )}
-            {secondary_cta_label && secondary_cta_href && (
+            {secLabel && secHref && (
               <Button
-                href={secondary_cta_href}
+                href={secHref}
                 variant="outline"
                 size="lg"
                 className="border-white/30 text-white hover:bg-white hover:text-slate-mosque"
               >
-                {secondary_cta_label}
+                {secLabel}
               </Button>
             )}
           </div>

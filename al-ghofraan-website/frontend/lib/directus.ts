@@ -1,9 +1,5 @@
 // lib/directus.ts
 // Centrale Directus SDK client + getypeerde data-helpers.
-//
-// Cache strategie:
-//   - Development: elke fetch live; wijzigingen direct zichtbaar na refresh
-//   - Production: standaard Next.js cache met revalidate per pagina
 
 import {
   createDirectus,
@@ -48,12 +44,29 @@ export const directusServer = DIRECTUS_TOKEN
       .with(staticToken(DIRECTUS_TOKEN))
       .with(rest(restOptions))
   : createDirectus<DirectusSchema>(DIRECTUS_INTERNAL_URL).with(rest(restOptions));
-  
-export function getAssetUrl(fileId: string | { id?: string } | null | undefined): string | null {
-  if (!fileId) return null;
-  const id = typeof fileId === "string" ? fileId : fileId.id;
-  if (!id) return null;
-  return `${DIRECTUS_PUBLIC_URL}/assets/${id}`;
+
+function getFileId(file?: string | { id?: string } | null): string {
+  if (!file) return "";
+
+  if (typeof file === "string") {
+    return file;
+  }
+
+  return file.id || "";
+}
+
+export function getAssetUrl(file?: string | { id?: string } | null): string {
+  const fileId = getFileId(file);
+  if (!fileId) return "";
+
+  return `${DIRECTUS_PUBLIC_URL}/assets/${fileId}`;
+}
+
+export function getInternalAssetUrl(file?: string | { id?: string } | null): string {
+  const fileId = getFileId(file);
+  if (!fileId) return "";
+
+  return `${DIRECTUS_INTERNAL_URL}/assets/${fileId}`;
 }
 
 async function safe<T>(fn: () => Promise<T>, label: string, fallback: T): Promise<T> {
@@ -159,6 +172,27 @@ export async function getPageContent(slug: string): Promise<PageContent | null> 
   );
 }
 
+/**
+ * Geef alle gepubliceerde page_content slugs terug.
+ * Wordt door /[slug]/page.tsx gebruikt voor generateStaticParams.
+ */
+export async function getAllPageContentSlugs(): Promise<string[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("page_content", {
+          filter: { status: { _eq: "published" } } as never,
+          limit:  -1,
+          fields: ["slug"],
+        })
+      );
+      return (result as Array<{ slug: string }>).map((r) => r.slug).filter(Boolean);
+    },
+    "getAllPageContentSlugs",
+    []
+  );
+}
+
 // ─── Navigation ──────────────────────────────────────────────
 export async function getNavigationItems(
   scope: "header" | "footer" | "all" = "all"
@@ -261,6 +295,28 @@ export async function getIconSettings(): Promise<Map<string, string>> {
 }
 
 // ─── Page sections ───────────────────────────────────────────
+const SECTION_FIELDS = [
+  "id", "page_slug", "key", "type", "label",
+  "eyebrow_ar", "title", "intro",
+  "card_title_ar", "card_subtitle", "card_tags",
+  "icon", "image",
+  "button_text",          "button_url",
+  "secondary_button_text","secondary_button_url",
+  "max_items",
+  "background_variant",
+  "primary_cta_label",    "primary_cta_href",
+  "secondary_cta_label",  "secondary_cta_href",
+  "active", "sort",
+];
+
+const SECTION_ITEM_FIELDS = [
+  "id", "page_slug", "section_key",
+  "title", "description", "icon", "href",
+  "button_text", "button_url",
+  "image",
+  "sort", "active",
+];
+
 export async function getPageSections(pageSlug: string): Promise<PageSection[]> {
   return safe(
     async () => {
@@ -272,18 +328,10 @@ export async function getPageSections(pageSlug: string): Promise<PageSection[]> 
           } as never,
           sort:   ["sort"],
           limit:  -1,
-          fields: [
-            "id", "page_slug", "key", "type", "label",
-            "eyebrow_ar", "title", "intro",
-            "card_title_ar", "card_subtitle", "card_tags",
-            "icon",
-            "primary_cta_label",   "primary_cta_href",
-            "secondary_cta_label", "secondary_cta_href",
-            "active", "sort",
-          ],
+          fields: SECTION_FIELDS,
         })
       );
-      return result as PageSection[];
+      return result as unknown as PageSection[];
     },
     `getPageSections(${pageSlug})`,
     []
@@ -307,19 +355,17 @@ export async function getPageSectionItems(
           filter: filter as never,
           sort:   ["sort"],
           limit:  -1,
-          fields: ["id", "page_slug", "section_key", "title", "description", "icon", "href", "sort", "active"],
+          fields: SECTION_ITEM_FIELDS,
         })
       );
-      return result as PageSectionItem[];
+      return result as unknown as PageSectionItem[];
     },
     `getPageSectionItems(${pageSlug}, ${sectionKey || "*"})`,
     []
   );
 }
 
-/**
- * Eén call, alle sections op een pagina + hun items.
- */
+/** Eén call: alle sections op een pagina + hun items, items begrensd door max_items. */
 export async function getPageSectionsWithItems(
   pageSlug: string
 ): Promise<Array<PageSection & { items: PageSectionItem[] }>> {
@@ -328,12 +374,18 @@ export async function getPageSectionsWithItems(
     getPageSectionItems(pageSlug),
   ]);
 
-  return sections.map((section) => ({
-    ...section,
-    items: allItems
+  return sections.map((section) => {
+    let items = allItems
       .filter((item) => item.section_key === section.key)
-      .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0)),
-  }));
+      .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+
+    // Begrens op max_items als ingesteld
+    if (section.max_items && section.max_items > 0) {
+      items = items.slice(0, section.max_items);
+    }
+
+    return { ...section, items };
+  });
 }
 
 // ─── Icon-keys ───────────────────────────────────────────────

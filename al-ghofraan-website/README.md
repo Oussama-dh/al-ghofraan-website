@@ -167,7 +167,7 @@ docker compose up -d
 
 ## 📜 Licentie
 
-Eigendom van moskee Al-Ghofraan. Niet voor extern hergebruik zonder toestemming.
+Eigendom van Al-Ghofraan. Niet voor extern hergebruik zonder toestemming.
 
 ---
 
