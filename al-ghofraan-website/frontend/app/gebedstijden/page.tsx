@@ -4,18 +4,21 @@ import type { Metadata }          from "next";
 import Container                  from "@/components/ui/Container";
 import SectionTitle               from "@/components/ui/SectionTitle";
 import PrayerTimesTable, { TodayPrayerCard } from "@/components/ui/PrayerTimesTable";
-import { getActivePrayerTimeFile, getAssetUrl } from "@/lib/directus";
+import { getActivePrayerTimeFile, getAssetUrl, getSiteSettings } from "@/lib/directus";
 import { parsePrayerTimesCSV, getTodaysPrayerTimes, getCurrentMonthRows } from "@/lib/prayerTimes";
 import type { PrayerTimeRow }     from "@/types/directus";
 
-export const metadata: Metadata = {
-  title: "Gebedstijden",
-  description: "Bekijk de actuele gebedstijden voor dit jaar.",
-};
-
+export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
 export const revalidate = 3600;
 
-// Fallback gebedstijden als er geen CSV beschikbaar is
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings();
+  return {
+    title:       "Gebedstijden",
+    description: settings?.default_seo_description || "Bekijk de actuele gebedstijden voor dit jaar.",
+  };
+}
+
 const FALLBACK_ROW: PrayerTimeRow = {
   datum:   "—",
   fajr:    "05:30",
@@ -44,22 +47,27 @@ export default async function GebedstijdenPage() {
 
       if (fileId) {
         const assetUrl = getAssetUrl(fileId);
-        const token    = process.env.DIRECTUS_TOKEN;
-        const headers: HeadersInit = token
-          ? { Authorization: `Bearer ${token}` }
-          : {};
+        if (assetUrl) {
+          const token   = process.env.DIRECTUS_TOKEN;
+          const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
 
-        const resp = await fetch(assetUrl, { headers, next: { revalidate: 3600 } });
-        if (resp.ok) {
-          const csv = await resp.text();
-          allRows   = parsePrayerTimesCSV(csv);
-          monthRows = getCurrentMonthRows(allRows);
-          todayRow  = getTodaysPrayerTimes(allRows);
-          fileInfo  = {
-            title:       prayerFile.title,
-            year:        prayerFile.year,
-            uploaded_at: prayerFile.uploaded_at,
-          };
+          const isDev = process.env.NODE_ENV !== "production";
+          const resp = await fetch(assetUrl, {
+            headers,
+            cache: isDev ? "no-store" : "default",
+            next:  isDev ? undefined  : { revalidate: 3600 },
+          });
+          if (resp.ok) {
+            const csv = await resp.text();
+            allRows   = parsePrayerTimesCSV(csv);
+            monthRows = getCurrentMonthRows(allRows);
+            todayRow  = getTodaysPrayerTimes(allRows);
+            fileInfo  = {
+              title:       prayerFile.title,
+              year:        prayerFile.year,
+              uploaded_at: prayerFile.uploaded_at,
+            };
+          }
         }
       }
     } else {
@@ -79,18 +87,13 @@ export default async function GebedstijdenPage() {
 
   return (
     <>
-      {/* Page header */}
       <section className="bg-slate-mosque py-16 relative overflow-hidden">
         <div className="absolute inset-0 pattern-overlay" />
         <Container className="relative z-10">
           <SectionTitle
             title="Gebedstijden"
             arabic="مواقيت الصلاة"
-            subtitle={
-              fileInfo
-                ? `${fileInfo.title} — ${fileInfo.year}`
-                : "Actuele gebedstijden"
-            }
+            subtitle={fileInfo ? `${fileInfo.title} — ${fileInfo.year}` : "Actuele gebedstijden"}
             light
           />
         </Container>
@@ -107,12 +110,11 @@ export default async function GebedstijdenPage() {
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-8 text-center">
               <p className="font-body text-amber-800 text-sm">{error}</p>
               <p className="font-body text-amber-700 text-xs mt-2">
-                Beheerder: upload een CSV-bestand via Directus → Gebedstijden bestanden → Bestand toevoegen.
+                Beheerder: upload een CSV-bestand via Directus → Prayer Time Files.
               </p>
             </div>
           )}
 
-          {/* Vandaag */}
           <div className="mb-12">
             <h2 className="font-display text-2xl text-ink mb-6 flex items-center gap-3">
               <span className="w-2 h-8 bg-slate-mosque rounded-full inline-block" />
@@ -126,29 +128,23 @@ export default async function GebedstijdenPage() {
             )}
           </div>
 
-          {/* Maandoverzicht */}
           {displayRows.length > 0 && (
             <div>
               <h2 className="font-display text-2xl text-ink mb-6 flex items-center gap-3">
                 <span className="w-2 h-8 bg-taupe/40 rounded-full inline-block" />
                 Overzicht {monthRows.length > 0 ? "deze maand" : ""}
               </h2>
-              <PrayerTimesTable
-                rows={displayRows}
-                todayDatum={todayDatum}
-              />
+              <PrayerTimesTable rows={displayRows} todayDatum={todayDatum} />
             </div>
           )}
 
-          {/* Info CSV */}
           <div className="mt-10 p-6 bg-white rounded-2xl border border-sand-200">
             <h3 className="font-body font-semibold text-ink mb-2 text-sm">
               ℹ️ Over de gebedstijden
             </h3>
             <p className="font-body text-taupe-dark text-sm leading-relaxed">
               De gebedstijden worden beheerd via ons CMS. Een vrijwilliger kan
-              jaarlijks een nieuw CSV-bestand uploaden. Zie de documentatie voor
-              de exacte werkwijze.
+              jaarlijks een nieuw CSV-bestand uploaden.
             </p>
           </div>
         </Container>

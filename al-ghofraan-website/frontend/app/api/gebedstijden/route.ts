@@ -31,14 +31,29 @@ export async function GET() {
       );
     }
 
-    // Download het CSV-bestand van Directus
-    const assetUrl  = getAssetUrl(fileId);
-    const token     = process.env.DIRECTUS_TOKEN;
-    const headers: HeadersInit = token
-      ? { Authorization: `Bearer ${token}` }
-      : {};
+    /// Download het CSV-bestand van Directus
+const assetUrl = getAssetUrl(fileId);
 
-    const response = await fetch(assetUrl, { headers, next: { revalidate: 3600 } });
+if (!assetUrl) {
+  return NextResponse.json(
+    { error: "Asset-URL ontbreekt" },
+    { status: 404 }
+  );
+}
+
+const token = process.env.DIRECTUS_TOKEN;
+const headers: HeadersInit = token
+  ? { Authorization: `Bearer ${token}` }
+  : {};
+
+const response = await fetch(assetUrl, {
+  headers,
+  cache: process.env.NODE_ENV === "development" ? "no-store" : "force-cache",
+  next:
+    process.env.NODE_ENV === "development"
+      ? undefined
+      : { revalidate: 3600 },
+});
 
     if (!response.ok) {
       throw new Error(`Kon bestand niet downloaden: ${response.status}`);
