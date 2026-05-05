@@ -36,7 +36,7 @@ export interface PrayerTimeFile {
   uploaded_at: string;
 }
 
-// ─── site_settings (singleton) ───────────────────────────────
+// ─── site_settings ───────────────────────────────────────────
 export interface SiteSettings {
   id: string | number;
   site_name: string;
@@ -68,7 +68,6 @@ export interface NavigationItem {
   highlight: boolean;
   external: boolean;
   active: boolean;
-  /** "header" | "footer" | "both" — default "header" voor backwards compat */
   location?: "header" | "footer" | "both" | null;
 }
 
@@ -106,6 +105,54 @@ export interface IconSetting {
   description?: string | null;
 }
 
+// ─── page_sections ───────────────────────────────────────────
+export type PageSectionType = "split_feature" | "card_grid" | "simple_text" | "cta";
+
+export interface PageSection {
+  id: string;
+  page_slug: string;
+  /** Unieke key binnen een pagina, bv. "mission" of "what_we_do" */
+  key: string;
+  type: PageSectionType;
+  /** Korte interne label voor in Directus, niet zichtbaar op de site */
+  label?: string | null;
+  /** Arabische heading boven de titel (optioneel) */
+  eyebrow_ar?: string | null;
+  /** Hoofdtitel van de sectie */
+  title?: string | null;
+  /** Subtitel / intro-tekst */
+  intro?: string | null;
+  /** Voor split_feature: Arabisch woord op de illustratie-kaart */
+  card_title_ar?: string | null;
+  /** Voor split_feature: kleine ondertitel onder card_title_ar */
+  card_subtitle?: string | null;
+  /** Voor split_feature: array van Arabische tag-woordjes */
+  card_tags?: string[] | null;
+  /** Optioneel hoofdicoon voor de sectie */
+  icon?: string | null;
+  /** Voor cta type: knoppen */
+  primary_cta_label?: string | null;
+  primary_cta_href?:  string | null;
+  secondary_cta_label?: string | null;
+  secondary_cta_href?:  string | null;
+  active: boolean;
+  sort?: number | null;
+}
+
+// ─── page_section_items ──────────────────────────────────────
+export interface PageSectionItem {
+  id: string;
+  page_slug: string;
+  section_key: string;
+  title?: string | null;
+  description?: string | null;
+  icon?: string | null;
+  /** Optionele href als de tile klikbaar moet zijn */
+  href?: string | null;
+  sort?: number | null;
+  active: boolean;
+}
+
 // ─── CSV-rij ─────────────────────────────────────────────────
 export interface PrayerTimeRow {
   datum: string;
@@ -127,4 +174,6 @@ export interface DirectusSchema {
   page_content: PageContent[];
   faq_items: FaqItem[];
   icon_settings: IconSetting[];
+  page_sections: PageSection[];
+  page_section_items: PageSectionItem[];
 }

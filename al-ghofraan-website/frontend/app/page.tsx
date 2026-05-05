@@ -8,17 +8,19 @@ import ActivityCard          from "@/components/ui/ActivityCard";
 import Container             from "@/components/ui/Container";
 import Button                from "@/components/ui/Button";
 import { Icon }              from "@/lib/icons";
+import { PageSectionsList }  from "@/components/sections/PageSectionRenderer";
+import SplitFeatureSection   from "@/components/sections/types/SplitFeatureSection";
 import {
   getUpcomingActivities,
   getPageContent,
   getIconSettings,
   getSiteSettings,
+  getPageSectionsWithItems,
   resolveIconKey,
   ICON_KEYS,
 } from "@/lib/directus";
-import type { Activity }     from "@/types/directus";
+import type { Activity, PageSection, PageSectionItem } from "@/types/directus";
 
-// Dev: altijd vers. Productie: cache 10 min.
 export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
 export const revalidate = 600;
 
@@ -46,6 +48,37 @@ const FALLBACK_ACTIVITIES: Activity[] = [
   },
 ];
 
+// ─── Fallback voor het missie-sectie blok ────────────────────
+//
+// Wordt alleen gebruikt als er in Directus geen 'mission' sectie
+// staat voor page_slug='home'. Zo blijft de site er goed uitzien
+// vóór de seed loopt of als Directus offline is.
+const FALLBACK_MISSION_SECTION: PageSection & { items: PageSectionItem[] } = {
+  id: "fallback-mission",
+  page_slug: "home",
+  key:        "mission",
+  type:       "split_feature",
+  active:     true,
+  sort:       10,
+  eyebrow_ar:    "رسالتنا",
+  title:         "Onze missie",
+  intro:         "Wij geloven dat kennis, gemeenschap en dienstbaarheid de pijlers zijn van een bloeiende moslimgemeenschap.",
+  card_title_ar: "الدعوة",
+  card_subtitle: "Ad-Da'wa — De Uitnodiging",
+  card_tags:     ["الإيمان", "العلم", "العمل"],
+  items: [
+    { id: "fb1", page_slug: "home", section_key: "mission", active: true, sort: 1,
+      title: "Kennis verspreiden", icon: "book-open",
+      description: "Door lezingen en cursussen de kennis over de islam toegankelijk maken voor iedereen." },
+    { id: "fb2", page_slug: "home", section_key: "mission", active: true, sort: 2,
+      title: "Gemeenschap bouwen", icon: "users",
+      description: "Bruggen slaan binnen en buiten de moslimgemeenschap door ontmoeting en dialoog." },
+    { id: "fb3", page_slug: "home", section_key: "mission", active: true, sort: 3,
+      title: "Dienend zijn", icon: "hand-heart",
+      description: "De samenleving dienen met oprechtheid en toewijding, zoals de Profeet ﷺ ons leerde." },
+  ],
+};
+
 export async function generateMetadata(): Promise<Metadata> {
   const [page, settings] = await Promise.all([
     getPageContent("home"),
@@ -58,10 +91,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [page, activities, iconMap] = await Promise.all([
+  const [page, activities, iconMap, sections] = await Promise.all([
     getPageContent("home"),
     getUpcomingActivities(6),
     getIconSettings(),
+    getPageSectionsWithItems("home"),
   ]);
 
   const dateIcon        = resolveIconKey(iconMap, ICON_KEYS.activityDate);
@@ -73,6 +107,17 @@ export default async function HomePage() {
   const remaining = list.filter((a) => !a.featured).slice(0, 5);
   const shown     = [...featured, ...remaining].slice(0, 6);
 
+  // Splits sections in: missie (boven activiteiten), overige (onder),
+  // en cta (helemaal onderaan vlak voor de footer).
+  const missionSection = sections.find((s) => s.key === "mission" && s.type === "split_feature");
+  const otherSections  = sections.filter(
+    (s) => s.key !== "mission" && s.type !== "cta"
+  );
+  const ctaSections    = sections.filter((s) => s.type === "cta");
+
+  // Als er geen missie-sectie in Directus staat, val terug op hardcoded versie
+  const missionToShow = missionSection ?? FALLBACK_MISSION_SECTION;
+
   return (
     <>
       <HeroSection
@@ -81,6 +126,7 @@ export default async function HomePage() {
         intro={page?.intro    || undefined}
       />
 
+      {/* Body uit page_content (rich text) */}
       {page?.body && (
         <section className="bg-sand-50 py-16 lg:py-20">
           <Container narrow>
@@ -99,54 +145,13 @@ export default async function HomePage() {
         </section>
       )}
 
-      <section className="bg-sand-50 py-16 lg:py-24">
-        <Container>
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <SectionTitle
-                title="Onze missie"
-                arabic="رسالتنا"
-                align="left"
-                subtitle="Wij geloven dat kennis, gemeenschap en dienstbaarheid de pijlers zijn van een bloeiende moslimgemeenschap."
-              />
-              <div className="mt-8 space-y-4">
-                {[
-                  { icon: "📖", title: "Kennis verspreiden", text: "Door lezingen en cursussen de kennis over de islam toegankelijk maken voor iedereen." },
-                  { icon: "🤝", title: "Gemeenschap bouwen", text: "Bruggen slaan binnen en buiten de moslimgemeenschap door ontmoeting en dialoog." },
-                  { icon: "💛", title: "Dienend zijn",       text: "De samenleving dienen met oprechtheid en toewijding, zoals de Profeet ﷺ ons leerde." },
-                ].map((item) => (
-                  <div key={item.title} className="flex gap-4">
-                    <span className="text-2xl mt-1 shrink-0">{item.icon}</span>
-                    <div>
-                      <h3 className="font-body font-semibold text-ink mb-1">{item.title}</h3>
-                      <p className="font-body text-taupe-dark text-sm leading-relaxed">{item.text}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+      {/* Missie-sectie (split_feature) — uit Directus of fallback */}
+      <SplitFeatureSection section={missionToShow} />
 
-            <div className="relative hidden md:block">
-              <div className="aspect-square rounded-3xl bg-slate-mosque/10 border border-taupe/20 flex items-center justify-center p-8">
-                <div className="text-center">
-                  <div className="font-arabic text-6xl text-slate-mosque mb-4" lang="ar">الدعوة</div>
-                  <div className="font-body text-taupe-dark text-sm">Ad-Da&apos;wa — De Uitnodiging</div>
-                  <div className="mt-6 grid grid-cols-3 gap-3">
-                    {["الإيمان", "العلم", "العمل"].map((word) => (
-                      <div key={word} className="bg-white rounded-xl p-2 text-center border border-sand-200">
-                        <div className="font-arabic text-lg text-slate-mosque" lang="ar">{word}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="absolute -top-4 -right-4 w-24 h-24 rounded-full bg-taupe/20 -z-10" />
-              <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full bg-slate-mosque/20 -z-10" />
-            </div>
-          </div>
-        </Container>
-      </section>
+      {/* Andere secties die in Directus zijn aangemaakt (geen cta) */}
+      <PageSectionsList sections={otherSections} />
 
+      {/* Activiteiten — code-driven, niet via sections */}
       {shown.length > 0 && (
         <section className="bg-white py-16 lg:py-24">
           <Container>
@@ -176,6 +181,7 @@ export default async function HomePage() {
         </section>
       )}
 
+      {/* Gebedstijden-banner */}
       <section className="bg-sand py-12">
         <Container>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-white rounded-3xl p-6 sm:p-8 border border-sand-200 shadow-sm">
@@ -197,12 +203,17 @@ export default async function HomePage() {
         </Container>
       </section>
 
-      <CTASection
-        title="Steun het werk van de DawahCommissie"
-        subtitle="Uw bijdrage helpt ons om de gemeenschap te blijven dienen."
-        primaryCta={{ label: "Doneer hier",     href: "/doneren" }}
-        secondaryCta={{ label: "Meer over ons", href: "/dawahcommissie" }}
-      />
+      {/* CTA-secties uit Directus, anders fallback CTA */}
+      {ctaSections.length > 0 ? (
+        <PageSectionsList sections={ctaSections} />
+      ) : (
+        <CTASection
+          title="Steun het werk van de DawahCommissie"
+          subtitle="Uw bijdrage helpt ons om de gemeenschap te blijven dienen."
+          primaryCta={{ label: "Doneer hier",     href: "/doneren" }}
+          secondaryCta={{ label: "Meer over ons", href: "/dawahcommissie" }}
+        />
+      )}
     </>
   );
 }

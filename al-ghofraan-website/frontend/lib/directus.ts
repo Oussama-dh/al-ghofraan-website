@@ -2,11 +2,8 @@
 // Centrale Directus SDK client + getypeerde data-helpers.
 //
 // Cache strategie:
-//   - In development (NODE_ENV !== "production") wordt elke fetch met
-//     { cache: "no-store" } uitgevoerd — wijzigingen in Directus zijn
-//     direct zichtbaar na pagina-refresh, zonder container-restart.
-//   - In production werkt de standaard Next.js fetch-cache, met
-//     revalidate-instellingen per pagina.
+//   - Development: elke fetch live; wijzigingen direct zichtbaar na refresh
+//   - Production: standaard Next.js cache met revalidate per pagina
 
 import {
   createDirectus,
@@ -24,6 +21,8 @@ import type {
   SiteSettings,
   PrayerTimeFile,
   IconSetting,
+  PageSection,
+  PageSectionItem,
 } from "@/types/directus";
 
 const DIRECTUS_INTERNAL_URL =
@@ -38,33 +37,25 @@ const DIRECTUS_PUBLIC_URL =
 const DIRECTUS_TOKEN = process.env.DIRECTUS_TOKEN || "";
 const IS_DEV = process.env.NODE_ENV !== "production";
 
-// ─── REST options voor cache-controle ────────────────────────
-//
-// In development: forceer no-store zodat elke request live data ophaalt.
-// In productie: laat Next.js zijn cache doen.
-const restOptions = IS_DEV
-  ? {
-      // De Directus SDK ondersteunt fetch options doorgeven
-      credentials: "same-origin" as const,
-    }
-  : {};
+const restOptions = IS_DEV ? { credentials: "same-origin" as const } : {};
 
-// ─── Clients ─────────────────────────────────────────────────
-export const directus = createDirectus<DirectusSchema>(DIRECTUS_INTERNAL_URL).with(rest());
+export const directus = createDirectus<DirectusSchema>(DIRECTUS_INTERNAL_URL).with(
+  rest(restOptions)
+);
 
 export const directusServer = DIRECTUS_TOKEN
   ? createDirectus<DirectusSchema>(DIRECTUS_INTERNAL_URL)
       .with(staticToken(DIRECTUS_TOKEN))
-      .with(rest())
-  : createDirectus<DirectusSchema>(DIRECTUS_INTERNAL_URL).with(rest());
-
-// ─── Asset URL helper ────────────────────────────────────────
-export function getAssetUrl(fileId?: string | null): string {
-  if (!fileId) return "";
-  return `${DIRECTUS_PUBLIC_URL}/assets/${fileId}`;
+      .with(rest(restOptions))
+  : createDirectus<DirectusSchema>(DIRECTUS_INTERNAL_URL).with(rest(restOptions));
+  
+export function getAssetUrl(fileId: string | { id?: string } | null | undefined): string | null {
+  if (!fileId) return null;
+  const id = typeof fileId === "string" ? fileId : fileId.id;
+  if (!id) return null;
+  return `${DIRECTUS_PUBLIC_URL}/assets/${id}`;
 }
 
-// ─── Safe wrapper ────────────────────────────────────────────
 async function safe<T>(fn: () => Promise<T>, label: string, fallback: T): Promise<T> {
   try {
     return await fn();
@@ -169,13 +160,6 @@ export async function getPageContent(slug: string): Promise<PageContent | null> 
 }
 
 // ─── Navigation ──────────────────────────────────────────────
-//
-// Filter op location:
-//   - "header" → toont items met location header/both/null/leeg
-//   - "footer" → toont items met location footer/both
-//
-// "null/leeg" wordt als header gezien voor backwards compat met items
-// die zijn aangemaakt vóór het location-veld bestond.
 export async function getNavigationItems(
   scope: "header" | "footer" | "all" = "all"
 ): Promise<NavigationItem[]> {
@@ -276,9 +260,83 @@ export async function getIconSettings(): Promise<Map<string, string>> {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Icon-keys
-// ─────────────────────────────────────────────────────────────
+// ─── Page sections ───────────────────────────────────────────
+export async function getPageSections(pageSlug: string): Promise<PageSection[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("page_sections", {
+          filter: {
+            page_slug: { _eq: pageSlug },
+            active:    { _eq: true },
+          } as never,
+          sort:   ["sort"],
+          limit:  -1,
+          fields: [
+            "id", "page_slug", "key", "type", "label",
+            "eyebrow_ar", "title", "intro",
+            "card_title_ar", "card_subtitle", "card_tags",
+            "icon",
+            "primary_cta_label",   "primary_cta_href",
+            "secondary_cta_label", "secondary_cta_href",
+            "active", "sort",
+          ],
+        })
+      );
+      return result as PageSection[];
+    },
+    `getPageSections(${pageSlug})`,
+    []
+  );
+}
+
+export async function getPageSectionItems(
+  pageSlug: string,
+  sectionKey?: string
+): Promise<PageSectionItem[]> {
+  return safe(
+    async () => {
+      const filter: Record<string, unknown> = {
+        page_slug: { _eq: pageSlug },
+        active:    { _eq: true },
+      };
+      if (sectionKey) filter.section_key = { _eq: sectionKey };
+
+      const result = await directusServer.request(
+        readItems("page_section_items", {
+          filter: filter as never,
+          sort:   ["sort"],
+          limit:  -1,
+          fields: ["id", "page_slug", "section_key", "title", "description", "icon", "href", "sort", "active"],
+        })
+      );
+      return result as PageSectionItem[];
+    },
+    `getPageSectionItems(${pageSlug}, ${sectionKey || "*"})`,
+    []
+  );
+}
+
+/**
+ * Eén call, alle sections op een pagina + hun items.
+ */
+export async function getPageSectionsWithItems(
+  pageSlug: string
+): Promise<Array<PageSection & { items: PageSectionItem[] }>> {
+  const [sections, allItems] = await Promise.all([
+    getPageSections(pageSlug),
+    getPageSectionItems(pageSlug),
+  ]);
+
+  return sections.map((section) => ({
+    ...section,
+    items: allItems
+      .filter((item) => item.section_key === section.key)
+      .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0)),
+  }));
+}
+
+// ─── Icon-keys ───────────────────────────────────────────────
 export const ICON_KEYS = {
   activityDate:        "activity_date_icon",
   activityLocation:    "activity_location_icon",

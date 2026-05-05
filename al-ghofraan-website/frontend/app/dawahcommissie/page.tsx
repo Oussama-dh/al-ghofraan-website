@@ -6,11 +6,13 @@ import SectionTitle       from "@/components/ui/SectionTitle";
 import CTASection         from "@/components/sections/CTASection";
 import FaqSection         from "@/components/sections/FaqSection";
 import { Icon }           from "@/lib/icons";
+import { PageSectionsList } from "@/components/sections/PageSectionRenderer";
 import {
   getPageContent,
   getFaqItems,
   getIconSettings,
   getSiteSettings,
+  getPageSectionsWithItems,
   resolveIconKey,
   ICON_KEYS,
 } from "@/lib/directus";
@@ -37,10 +39,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function DawahcommissiePage() {
-  const [page, faqs, iconMap] = await Promise.all([
+  const [page, faqs, iconMap, sections] = await Promise.all([
     getPageContent("dawahcommissie"),
     getFaqItems(),
     getIconSettings(),
+    getPageSectionsWithItems("dawahcommissie"),
   ]);
 
   const title    = page?.title    || "Over de DawahCommissie";
@@ -49,6 +52,10 @@ export default async function DawahcommissiePage() {
 
   const pageIcon       = page?.icon || resolveIconKey(iconMap, ICON_KEYS.pageSectionDefault);
   const faqDefaultIcon = resolveIconKey(iconMap, ICON_KEYS.faq);
+
+  // Splits CTA-sections van overige sections
+  const ctaSections   = sections.filter((s) => s.type === "cta");
+  const otherSections = sections.filter((s) => s.type !== "cta");
 
   return (
     <>
@@ -69,6 +76,7 @@ export default async function DawahcommissiePage() {
         </div>
       </section>
 
+      {/* Page-content body */}
       <section className="bg-sand-50 py-12 lg:py-16">
         <Container narrow>
           {pageIcon && (
@@ -92,6 +100,10 @@ export default async function DawahcommissiePage() {
         </Container>
       </section>
 
+      {/* Beheerbare sections uit Directus (geen cta) */}
+      <PageSectionsList sections={otherSections} />
+
+      {/* FAQ */}
       <FaqSection
         items={faqs}
         title="Veelgestelde vragen"
@@ -99,12 +111,17 @@ export default async function DawahcommissiePage() {
         defaultIcon={faqDefaultIcon}
       />
 
-      <CTASection
-        title="Doe mee met de DawahCommissie"
-        subtitle="Bekijk onze agenda voor aankomende lezingen en activiteiten."
-        primaryCta={{ label: "Bekijk de agenda", href: "/agenda" }}
-        secondaryCta={{ label: "Doneer aan ons werk", href: "/doneren" }}
-      />
+      {/* CTA: uit Directus indien aanwezig, anders fallback */}
+      {ctaSections.length > 0 ? (
+        <PageSectionsList sections={ctaSections} />
+      ) : (
+        <CTASection
+          title="Doe mee met de DawahCommissie"
+          subtitle="Bekijk onze agenda voor aankomende lezingen en activiteiten."
+          primaryCta={{ label: "Bekijk de agenda",      href: "/agenda" }}
+          secondaryCta={{ label: "Doneer aan ons werk", href: "/doneren" }}
+        />
+      )}
     </>
   );
 }

@@ -2,14 +2,16 @@
 // Directus 11 — gebruikt het policies-model.
 
 const COLLECTIONS = [
-  { collection: "activities",        filter: { status:    { _eq: "published" } } },
-  { collection: "prayer_time_files", filter: { active:    { _eq: true       } } },
-  { collection: "site_settings",     filter: null },
-  { collection: "navigation_items",  filter: { active:    { _eq: true       } } },
-  { collection: "page_content",      filter: { status:    { _eq: "published" } } },
-  { collection: "faq_items",         filter: { published: { _eq: true       } } },
-  { collection: "icon_settings",     filter: null },
-  { collection: "directus_files",    filter: null },
+  { collection: "activities",         filter: { status:    { _eq: "published" } } },
+  { collection: "prayer_time_files",  filter: { active:    { _eq: true       } } },
+  { collection: "site_settings",      filter: null },
+  { collection: "navigation_items",   filter: { active:    { _eq: true       } } },
+  { collection: "page_content",       filter: { status:    { _eq: "published" } } },
+  { collection: "faq_items",          filter: { published: { _eq: true       } } },
+  { collection: "icon_settings",      filter: null },
+  { collection: "page_sections",      filter: { active:    { _eq: true       } } },
+  { collection: "page_section_items", filter: { active:    { _eq: true       } } },
+  { collection: "directus_files",     filter: null },
 ];
 
 export async function setupPermissions(client) {

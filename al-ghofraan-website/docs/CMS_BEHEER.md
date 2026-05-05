@@ -7,183 +7,213 @@ Deze handleiding legt uit hoe je inhoud van de website aanpast via Directus.
 
 ---
 
-## Algemeen
+## Algemeen — Wanneer is een refresh genoeg?
 
-Wanneer is een refresh genoeg, en wanneer is een restart nodig?
+| Wat je wijzigt          | Hoe zichtbaar maken             |
+|-------------------------|----------------------------------|
+| Tekst, menu, FAQ        | Pagina **refreshen** in browser  |
+| Iconen, contentblokken  | Pagina **refreshen** in browser  |
+| Logo / favicon          | Harde refresh (Ctrl+Shift+R)     |
+| Gebedstijden CSV        | Pagina refreshen (max 1u in productie) |
 
-| Wat je wijzigt          | Hoe zichtbaar maken          |
-|-------------------------|-------------------------------|
-| Tekst, menu, FAQ, etc.  | Pagina **refreshen** in browser |
-| Icoon-instellingen      | Pagina **refreshen** in browser |
-| Logo / favicon          | Pagina **refreshen** (favicon kan harde refresh nodig hebben: Ctrl+Shift+R) |
-| Gebedstijden CSV        | Pagina **refreshen** (kan tot 1 uur duren in productie) |
-
-> In ontwikkelmodus zien we wijzigingen **direct** na een refresh. Container-restarts zijn alleen nodig bij codewijzigingen, niet bij contentwijzigingen.
+In ontwikkelmodus zien we wijzigingen **direct** na een refresh. Container-restarts zijn alleen nodig bij codewijzigingen.
 
 ---
 
 ## 1. Header aanpassen
 
-**Logo & moskeenaam:**
-1. Directus → linkermenu → **Site Settings**
-2. `site_name` = naam die in de header staat
-3. `logo` = klik op het uploadveld, kies een PNG of SVG (transparante achtergrond, vierkant). Aanbevolen: 128×128 of groter.
-4. Klik **Save** rechtsboven
+**Logo & moskeenaam**: Directus → **Site Settings**
+- `site_name` → naam in de header
+- `logo` → upload PNG/SVG (transparant, vierkant, bv. 128×128)
 
-**Menu-items:**
-1. Directus → **Navigation Items**
-2. Velden:
-   - `label` — wat in het menu staat (bv. "Agenda")
-   - `href` — waar de link naartoe gaat (bv. `/agenda` of `https://...`)
-   - `sort` — volgorde (lager = eerder)
-   - `highlight` — `true` maakt het een opvallende CTA-knop (zoals "Doneren")
-   - `external` — `true` voor externe links (opent in nieuw tabblad)
-   - `active` — `false` om tijdelijk te verbergen
-   - `location` — `header`, `footer`, of `both`
+**Menu-items**: Directus → **Navigation Items**
+- `label` — wat in menu staat
+- `href` — waar de link heen gaat (bv. `/agenda`)
+- `sort` — volgorde (lager = eerder)
+- `highlight` — `true` voor CTA-knop ("Doneren")
+- `external` — `true` voor externe links
+- `active` — `false` om tijdelijk te verbergen
+- `location` — `header`, `footer`, of `both`
 
 ---
 
 ## 2. Footer aanpassen
 
 Directus → **Site Settings**:
-
-- `footer_text` — korte beschrijving onder het logo
-- `copyright_text` — leeg laten = automatisch met huidig jaar en sitenaam
-- `footer_enabled` — uitschakelen verbergt de hele footer
-- `address` — adres met regelafbrekingen
-- `contact_email` — e-mailadres
-- `phone` — telefoonnummer (bv. +31 20 123 4567)
+- `footer_text` — korte beschrijving onder logo
+- `copyright_text` — leeg laten = automatisch met huidig jaar
+- `footer_enabled` — uit = footer verbergen
+- `address`, `contact_email`, `phone`
 - `social_links` — JSON, bv:
   ```json
-  {
-    "facebook":  "https://facebook.com/al-ghofraan",
-    "instagram": "https://instagram.com/al-ghofraan",
-    "youtube":   "",
-    "whatsapp":  "https://wa.me/31612345678"
-  }
+  { "facebook": "https://...", "instagram": "https://...", "youtube": "", "whatsapp": "" }
   ```
 
 Footer-menu komt uit **Navigation Items** met `location` = `footer` of `both`.
 
 ---
 
-## 3. Favicon & logo
+## 3. Favicon, logo en og-image
 
-**Favicon (tabblad-icoontje):**
-1. Directus → **Site Settings**
-2. `favicon` → upload bestand
-   - Aanbevolen formaat: `.ico`, `.png` of `.svg`
-   - Aanbevolen afmetingen: **32×32** of **64×64** pixels
-3. Save → ververs de pagina (soms is Ctrl+Shift+R nodig om browser-cache te omzeilen)
-
-**Logo (header & footer):**
-1. Directus → **Site Settings**
-2. `logo` → upload PNG of SVG
-   - Aanbevolen: **transparante achtergrond, vierkant**
-   - Wordt schaalbaar weergegeven (32px in header, 40px in footer)
-
-**OG-image (sociale media preview):**
-- `og_image` — afbeelding die getoond wordt als de site gedeeld wordt op WhatsApp/Facebook/Twitter
-- Aanbevolen: **1200×630 pixels**
+Directus → **Site Settings**:
+- `favicon` — 32×32 of 64×64 PNG/ICO/SVG
+- `logo` — vierkante transparante PNG/SVG
+- `og_image` — 1200×630 PNG (preview op WhatsApp/Facebook)
 
 ---
 
 ## 4. SEO instellen
 
-**Voor de hele site (Site Settings):**
-- `default_seo_title` — fallback-titel (bv. "DawahCommissie Al-Ghofraan")
-- `default_seo_description` — fallback-beschrijving voor zoekmachines
+**Voor de hele site** (Site Settings):
+- `default_seo_title`, `default_seo_description`
 
-**Per pagina (Page Content):**
-- `seo_title` — titel zoals Google die toont (overschrijft default)
-- `seo_description` — beschrijving in zoekresultaten
-
-> Geen `seo_title` ingevuld? Dan gebruikt de site automatisch de default.
+**Per pagina** (Page Content):
+- `seo_title`, `seo_description` — overschrijven defaults
 
 ---
 
 ## 5. Pagina-teksten aanpassen
 
-Directus → **Page Content** → kies een pagina:
-- `home` — homepagina
-- `dawahcommissie` — Over ons
-- `doneren` — donatiepagina
-
-Velden:
-- `title` — grote titel
-- `subtitle` — kleine ondertitel
-- `intro` — korte introductietekst
-- `body` — hoofdtekst (rich text editor met opmaak, links, koppen)
+Directus → **Page Content** → kies pagina (`home`, `dawahcommissie`, `doneren`):
+- `title`, `subtitle`, `intro` — tekstvelden
+- `body` — rich text (opmaak, links, koppen)
 - `icon` — icoon-naam (zie [ICONS.md](./ICONS.md))
-- `status` — `published` om zichtbaar te maken, `draft` om te verbergen
+- `status` — `published` zichtbaar, `draft` verborgen
 
 ---
 
-## 6. Iconen aanpassen
+## 6. ⭐ Contentblokken (page_sections) — herbruikbare vakjes
 
-Zie [ICONS.md](./ICONS.md) voor de volledige lijst.
+Dit is het systeem waarmee je zelf nieuwe contentblokken kunt toevoegen aan pagina's, zonder code te wijzigen.
 
-Korte versie:
-- Centrale UI-iconen (datum, locatie, contact, etc.) → Directus → **Icon Settings**
+### Wat is een sectie?
+
+Een **sectie** is een blok op een pagina, bijvoorbeeld het missie-blok op de homepage met de drie punten erin. Een sectie heeft een **type** dat de layout bepaalt, en bevat **items** (de vakjes/punten erbinnen).
+
+### Beschikbare sectie-types
+
+| Type            | Waar voor                                                       |
+|-----------------|------------------------------------------------------------------|
+| `split_feature` | Twee kolommen: items met iconen links + decoratief Arabisch blok rechts. **Het missie-blok gebruikt dit.** |
+| `card_grid`     | Grid van 1/2/3 kaartjes naast elkaar — handig voor "wat we doen", "diensten", etc. |
+| `simple_text`   | Eenvoudig blok met alleen titel + intro-tekst                   |
+| `cta`           | Oproep met titel, tekst en 1-2 knoppen (in donkerblauw)         |
+
+### Een nieuwe sectie maken
+
+**Stap 1 — De sectie zelf**
+
+1. Directus → **Page Sections** → klik **+** rechtsboven
+2. Vul in:
+   - `page_slug` → op welke pagina (bv. `home`, `dawahcommissie`, `doneren`)
+   - `key` → unieke korte naam, alleen letters/streepjes (bv. `services`, `what_we_do`)
+   - `type` → kies een van de vier types
+   - `label` → interne naam voor jezelf (verschijnt niet op de site)
+   - `title`, `intro` → wat je wilt tonen
+   - `eyebrow_ar` → optioneel klein Arabisch woord boven de titel
+   - `sort` → volgorde t.o.v. andere secties op dezelfde pagina (lager = eerder)
+   - `active` → vink aan om zichtbaar te maken
+3. **Voor `split_feature`** vul ook in:
+   - `card_title_ar` → bv. `الدعوة`
+   - `card_subtitle` → bv. "Ad-Da'wa — De Uitnodiging"
+   - `card_tags` → klik om Arabische woorden toe te voegen (bv. الإيمان, العلم, العمل)
+4. **Voor `cta`** vul in:
+   - `primary_cta_label` + `primary_cta_href`
+   - eventueel `secondary_cta_label` + `secondary_cta_href`
+5. **Save**
+
+**Stap 2 — Items toevoegen** (alleen voor `split_feature` en `card_grid`)
+
+1. Directus → **Page Section Items** → **+**
+2. Vul in:
+   - `page_slug` → **moet exact gelijk zijn** aan de page_slug van de sectie
+   - `section_key` → **moet exact gelijk zijn** aan de `key` van de sectie
+   - `title` → kop van het vakje
+   - `description` → tekst onder de kop
+   - `icon` → icoon-naam (zie [ICONS.md](./ICONS.md))
+   - `href` → optionele link (vakje wordt klikbaar)
+   - `sort` → volgorde binnen de sectie
+   - `active` → aan/uit
+3. Save
+4. Herhaal voor elk vakje
+
+> ⚠️ **Cruciaal**: `page_slug` + `section_key` moeten exact matchen tussen sectie en items, anders zien we de items niet.
+
+### Voorbeeld — een "Wat wij bieden" sectie maken
+
+**Sectie:**
+- `page_slug` = `dawahcommissie`
+- `key` = `services`
+- `type` = `card_grid`
+- `title` = "Wat wij bieden"
+- `intro` = "Onze activiteiten in een notendop"
+
+**Items (3 stuks):**
+
+| page_slug         | section_key | title                | icon              | description |
+|-------------------|-------------|----------------------|-------------------|--------------|
+| `dawahcommissie`  | `services`  | Wekelijkse lezingen  | `book-open`       | … |
+| `dawahcommissie`  | `services`  | Cursussen            | `graduation-cap`  | … |
+| `dawahcommissie`  | `services`  | Open dagen           | `users`           | … |
+
+Refresh de pagina → de sectie verschijnt automatisch.
+
+### Sectie verbergen of verwijderen
+
+- **Tijdelijk verbergen** → zet `active` op `false`
+- **Volgorde wijzigen** → wijzig `sort`-waardes
+- **Verwijderen** → klik op de prullenbak in Directus (items en sectie apart)
+
+### Waar verschijnen de secties op de pagina?
+
+| Pagina             | Locatie van sections                                                        |
+|--------------------|------------------------------------------------------------------------------|
+| `home`             | Tussen page-content body en activiteiten-grid (uitgezonderd `cta` → onderaan) |
+| `dawahcommissie`   | Tussen page-content body en FAQ (uitgezonderd `cta` → onderaan)              |
+
+Eigen pagina's toevoegen vereist een codewijziging — vraag dit dan in een nieuwe wijzigingsverzoek.
+
+---
+
+## 7. Iconen aanpassen
+
+Zie [ICONS.md](./ICONS.md). Korte versie:
+- Centrale UI-iconen → **Icon Settings**
 - Pagina-icoon → `page_content.icon`
 - FAQ-icoon → `faq_items.icon`
-
-Onbekende icoon-naam = standaardicoon (info).
+- **Sectie-item icoon** → `page_section_items.icon`
 
 ---
 
-## 7. FAQ aanpassen
+## 8. FAQ aanpassen
 
 Directus → **FAQ Items**:
-- `question` — de vraag
-- `answer` — antwoord (rich text)
-- `category` — optioneel, voor groepering
-- `sort` — volgorde
-- `published` — `false` om tijdelijk te verbergen
-- `icon` — icoon-naam (zie ICONS.md)
+- `question`, `answer`, `category`, `sort`, `published`, `icon`
 
 ---
 
-## 8. Activiteiten aanpassen
+## 9. Activiteiten aanpassen
 
-Directus → **Activities** → klik op **+** rechtsboven:
-- `title` — titel
-- `slug` — URL-segment (auto-gegenereerd uit titel)
-- `description` — beschrijving (rich text)
-- `start_date` / `end_date` — datum + tijd
-- `location` — bv. "Moskee Al-Ghofraan, Hoofdzaal"
-- `image` — uitgelichte afbeelding (1200×800 aanbevolen)
-- `featured` — `true` toont op homepagina als hoofdactiviteit
-- `status` — `published` om zichtbaar te maken
-- `registration_enabled` — toekomstige feature, nu nog niet actief
+Directus → **Activities** → klik **+**:
+- `title`, `slug`, `description`, `start_date`, `end_date`, `location`, `image`
+- `featured` = `true` toont op homepage als hoofdactiviteit
+- `status` = `published` om zichtbaar te maken
 
 ---
 
-## 9. Gebedstijden uploaden
+## 10. Gebedstijden uploaden
 
-1. Maak een CSV-bestand met kolommen: `datum`, `dag`, `fajr`, `shuruq`, `dhuhr`, `asr`, `maghrib`, `isha`
-   - Datum-formaat: `01-01-2026` (dd-mm-jjjj)
-   - Tijd-formaat: `06:32` (24-uurs)
-2. Directus → **Prayer Time Files** → klik **+**
-3. Velden:
-   - `title` — bv. "Gebedstijden 2026"
-   - `file` — upload CSV
-   - `year` — `2026`
-   - `active` — **`true`** (zet de oude eerst op `false` als die er al is)
+1. CSV met kolommen: `datum`, `dag`, `fajr`, `shuruq`, `dhuhr`, `asr`, `maghrib`, `isha`
+2. Directus → **Prayer Time Files** → **+**
+3. `title`, `file` (upload CSV), `year`, `active = true`
 4. Save
 
-> ⚠️ Slechts één CSV mag tegelijk `active: true` zijn. Vergeet niet de vorige op `false` te zetten.
+⚠️ Slechts één CSV mag tegelijk `active = true` zijn.
 
 ---
 
-## 10. Wat als ik iets per ongeluk verprutst?
+## Wat als ik iets per ongeluk verprutst?
 
-- **Status op draft zetten** → de pagina/activiteit verdwijnt direct van de site
-- **`active: false`** voor menu-items of FAQ → idem
-- **Ongedaan maken** → Directus heeft een revisiegeschiedenis: open een item → klik op het ⏱-icoon rechtsboven
-
----
-
-## Hulp nodig?
-
-Stuur een e-mail naar **el-masoudi@hotmail.com** met een beschrijving van het probleem en eventueel een schermafbeelding.
+- **Status op draft / active uit** → verdwijnt direct
+- **Revisiegeschiedenis** → klok-icoontje rechtsboven in een item
+- **Hulp nodig** → mail **el-masoudi@hotmail.com**
