@@ -45,11 +45,28 @@ export const directusServer = DIRECTUS_TOKEN
       .with(rest(restOptions))
   : createDirectus<DirectusSchema>(DIRECTUS_INTERNAL_URL).with(rest(restOptions));
 
-export function getAssetUrl(fileId: string | { id?: string } | null | undefined): string | null {
-  if (!fileId) return null;
-  const id = typeof fileId === "string" ? fileId : fileId.id;
-  if (!id) return null;
-return `${DIRECTUS_PUBLIC_URL}/assets/${id}`;
+function getFileId(file?: string | { id?: string } | null): string {
+  if (!file) return "";
+
+  if (typeof file === "string") {
+    return file;
+  }
+
+  return file.id || "";
+}
+
+export function getAssetUrl(file?: string | { id?: string } | null): string {
+  const fileId = getFileId(file);
+  if (!fileId) return "";
+
+  return `${DIRECTUS_PUBLIC_URL}/assets/${fileId}`;
+}
+
+export function getInternalAssetUrl(file?: string | { id?: string } | null): string {
+  const fileId = getFileId(file);
+  if (!fileId) return "";
+
+  return `${DIRECTUS_INTERNAL_URL}/assets/${fileId}`;
 }
 
 async function safe<T>(fn: () => Promise<T>, label: string, fallback: T): Promise<T> {

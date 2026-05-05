@@ -2,7 +2,7 @@
 // API route die het actieve CSV-bestand ophaalt uit Directus en parseert
 
 import { NextResponse }              from "next/server";
-import { getActivePrayerTimeFile, getAssetUrl } from "@/lib/directus";
+import { getActivePrayerTimeFile, getInternalAssetUrl } from "@/lib/directus";
 import { parsePrayerTimesCSV }       from "@/lib/prayerTimes";
 
 export const revalidate = 3600; // cache 1 uur
@@ -32,7 +32,7 @@ export async function GET() {
     }
 
     /// Download het CSV-bestand van Directus
-const assetUrl = getAssetUrl(fileId);
+const assetUrl = getInternalAssetUrl(fileId);
 
 if (!assetUrl) {
   return NextResponse.json(

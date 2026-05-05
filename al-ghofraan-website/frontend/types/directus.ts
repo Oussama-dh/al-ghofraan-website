@@ -176,15 +176,21 @@ export interface PageSectionItem {
 }
 
 // ─── CSV-rij ─────────────────────────────────────────────────
+//
+// Veldnamen volgen de gebruikte spelling op de site:
+//   Fajr · Shoeroeq · Dhoehr · Asr · Maghrib · Ishaa
+//
+// Het CSV-bestand uit Directus heeft kolomheaders met hoofdletter,
+// maar in TypeScript hanteren we kleine letters voor consistentie.
 export interface PrayerTimeRow {
   datum: string;
   dag?: string;
   fajr: string;
-  shuruq: string;
-  dhuhr: string;
+  shoeroeq: string;
+  dhoehr: string;
   asr: string;
   maghrib: string;
-  isha: string;
+  ishaa: string;
 }
 
 // ─── SDK Schema ──────────────────────────────────────────────
