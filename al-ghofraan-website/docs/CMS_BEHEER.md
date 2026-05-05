@@ -11,33 +11,79 @@ Deze handleiding legt uit hoe je inhoud van de website aanpast via Directus.
 
 | Wat je wijzigt          | Hoe zichtbaar maken             |
 |-------------------------|----------------------------------|
-| Tekst, menu, FAQ        | Pagina **refreshen** in browser  |
+| Tekst, menu, FAQ, secties | Pagina **refreshen** in browser  |
 | Iconen, contentblokken  | Pagina **refreshen** in browser  |
 | Logo / favicon          | Harde refresh (Ctrl+Shift+R)     |
-| Gebedstijden CSV        | Pagina refreshen (max 1u in productie) |
+| Gebedstijden CSV        | Refreshen (max 1u in productie)  |
+| Nieuwe pagina aangemaakt | Refreshen — werkt direct         |
 
-In ontwikkelmodus zien we wijzigingen **direct** na een refresh. Container-restarts zijn alleen nodig bij codewijzigingen.
+In ontwikkelmodus zie je wijzigingen **direct** na een refresh.
 
 ---
 
-## 1. Header aanpassen
+## 1. ⭐ Een nieuwe pagina maken
+
+Je kunt zelf nieuwe pagina's toevoegen, zoals `/jongeren` of `/cursussen`, zonder code te wijzigen.
+
+### Stap 1 — Pagina-content aanmaken
+
+1. Directus → **Page Content** → klik **+** rechtsboven
+2. Vul in:
+   - `slug` — de URL na het domein (bv. `jongeren` → wordt http://localhost:3000/jongeren)
+   - `title` — de hoofdtitel
+   - `subtitle` — optionele ondertitel
+   - `intro` — korte introductietekst (verschijnt boven de body)
+   - `body` — rich text (opmaak, links, koppen)
+   - `icon` — optioneel icoon (zie [ICONS.md](./ICONS.md))
+   - `seo_title`, `seo_description` — optioneel voor zoekmachines
+   - `status` — zet op **`published`** om de pagina live te zetten
+3. Save
+
+### Stap 2 — Sections toevoegen aan de pagina (optioneel)
+
+Volg de instructies in **sectie 6** hieronder, met `page_slug` = je nieuwe slug.
+
+### Stap 3 — Pagina aan menu toevoegen
+
+1. Directus → **Navigation Items** → klik **+**
+2. Vul in:
+   - `label` — bv. "Jongeren"
+   - `href` — `/jongeren` (zelfde slug als hierboven)
+   - `sort` — bepaalt volgorde (lager = eerder)
+   - `active` = aan
+   - `location` = `header`, `footer`, of `both`
+3. Save
+
+### ⚠️ Slugs die je NIET mag gebruiken
+
+Deze slugs zijn al in gebruik door vaste app-routes. Gebruik ze niet:
+
+- `agenda`
+- `gebedstijden`
+- `doneren`
+- `dawahcommissie`
+- `api`
+- `_next`
+
+De website blokkeert deze automatisch — je krijgt geen "pagina niet gevonden" maar de juiste vaste pagina.
+
+---
+
+## 2. Header aanpassen
 
 **Logo & moskeenaam**: Directus → **Site Settings**
-- `site_name` → naam in de header
-- `logo` → upload PNG/SVG (transparant, vierkant, bv. 128×128)
+- `site_name` — naam in de header
+- `logo` — upload PNG/SVG (transparant, vierkant, bv. 128×128)
 
 **Menu-items**: Directus → **Navigation Items**
-- `label` — wat in menu staat
-- `href` — waar de link heen gaat (bv. `/agenda`)
-- `sort` — volgorde (lager = eerder)
+- `label`, `href`, `sort`, `active`
 - `highlight` — `true` voor CTA-knop ("Doneren")
-- `external` — `true` voor externe links
-- `active` — `false` om tijdelijk te verbergen
+- `external` — `true` voor externe links (opent nieuw tabblad)
 - `location` — `header`, `footer`, of `both`
 
 ---
 
-## 2. Footer aanpassen
+## 3. Footer aanpassen
 
 Directus → **Site Settings**:
 - `footer_text` — korte beschrijving onder logo
@@ -53,7 +99,7 @@ Footer-menu komt uit **Navigation Items** met `location` = `footer` of `both`.
 
 ---
 
-## 3. Favicon, logo en og-image
+## 4. Favicon, logo en og-image
 
 Directus → **Site Settings**:
 - `favicon` — 32×32 of 64×64 PNG/ICO/SVG
@@ -62,7 +108,7 @@ Directus → **Site Settings**:
 
 ---
 
-## 4. SEO instellen
+## 5. SEO instellen
 
 **Voor de hele site** (Site Settings):
 - `default_seo_title`, `default_seo_description`
@@ -72,106 +118,107 @@ Directus → **Site Settings**:
 
 ---
 
-## 5. Pagina-teksten aanpassen
+## 6. ⭐ Contentblokken (page_sections)
 
-Directus → **Page Content** → kies pagina (`home`, `dawahcommissie`, `doneren`):
-- `title`, `subtitle`, `intro` — tekstvelden
-- `body` — rich text (opmaak, links, koppen)
-- `icon` — icoon-naam (zie [ICONS.md](./ICONS.md))
-- `status` — `published` zichtbaar, `draft` verborgen
-
----
-
-## 6. ⭐ Contentblokken (page_sections) — herbruikbare vakjes
-
-Dit is het systeem waarmee je zelf nieuwe contentblokken kunt toevoegen aan pagina's, zonder code te wijzigen.
-
-### Wat is een sectie?
-
-Een **sectie** is een blok op een pagina, bijvoorbeeld het missie-blok op de homepage met de drie punten erin. Een sectie heeft een **type** dat de layout bepaalt, en bevat **items** (de vakjes/punten erbinnen).
+Sections zijn herbruikbare blokken die je op elke pagina kunt zetten.
 
 ### Beschikbare sectie-types
 
-| Type            | Waar voor                                                       |
-|-----------------|------------------------------------------------------------------|
-| `split_feature` | Twee kolommen: items met iconen links + decoratief Arabisch blok rechts. **Het missie-blok gebruikt dit.** |
-| `card_grid`     | Grid van 1/2/3 kaartjes naast elkaar — handig voor "wat we doen", "diensten", etc. |
-| `simple_text`   | Eenvoudig blok met alleen titel + intro-tekst                   |
-| `cta`           | Oproep met titel, tekst en 1-2 knoppen (in donkerblauw)         |
+| Type            | Waar voor                                                           |
+|-----------------|----------------------------------------------------------------------|
+| `split_feature` | Twee kolommen: items met iconen links + afbeelding óf Arabisch blok rechts |
+| `card_grid`     | Grid van 1/2/3 kaartjes naast elkaar                                |
+| `simple_text`   | Eenvoudig blok met titel + tekst (+ optionele afbeelding)           |
+| `cta`           | Oproep met titel, tekst en 1-2 knoppen (donkerblauw)                |
 
-### Een nieuwe sectie maken
+### Op welke pagina's kunnen sections?
+
+- `home` (homepagina)
+- `dawahcommissie`
+- `doneren`
+- `gebedstijden`
+- **Elke dynamische pagina** die je via Page Content aanmaakt
+
+### ⭐ Hoe `page_slug` werkt
+
+`page_slug` is een **vrij tekstveld** — typ exact de slug van de pagina waar de sectie moet verschijnen. De waarde moet exact overeenkomen met de URL.
+
+| URL                                  | `page_slug` waarde   |
+|--------------------------------------|----------------------|
+| http://localhost:3000/               | `home`               |
+| http://localhost:3000/dawahcommissie | `dawahcommissie`     |
+| http://localhost:3000/doneren        | `doneren`            |
+| http://localhost:3000/gebedstijden   | `gebedstijden`       |
+| http://localhost:3000/jongeren       | `jongeren`           |
+| http://localhost:3000/cursussen      | `cursussen`          |
+
+**Regels:**
+- Alleen kleine letters, cijfers, streepjes
+- Geen spaties, geen hoofdletters, geen schuine streep `/`
+- Voor de homepage gebruik je letterlijk `home` (niet `/`)
+- Voor `/dawahcommissie` gebruik je `dawahcommissie` (zonder schuine streep)
+- Voor toekomstige pagina's verzin je een eigen slug en die zet je ook in **Page Content** als nieuwe pagina (zie sectie 1)
+
+### Een sectie maken
 
 **Stap 1 — De sectie zelf**
 
-1. Directus → **Page Sections** → klik **+** rechtsboven
+1. Directus → **Page Sections** → **+**
 2. Vul in:
-   - `page_slug` → op welke pagina (bv. `home`, `dawahcommissie`, `doneren`)
-   - `key` → unieke korte naam, alleen letters/streepjes (bv. `services`, `what_we_do`)
-   - `type` → kies een van de vier types
-   - `label` → interne naam voor jezelf (verschijnt niet op de site)
-   - `title`, `intro` → wat je wilt tonen
-   - `eyebrow_ar` → optioneel klein Arabisch woord boven de titel
-   - `sort` → volgorde t.o.v. andere secties op dezelfde pagina (lager = eerder)
-   - `active` → vink aan om zichtbaar te maken
-3. **Voor `split_feature`** vul ook in:
-   - `card_title_ar` → bv. `الدعوة`
-   - `card_subtitle` → bv. "Ad-Da'wa — De Uitnodiging"
-   - `card_tags` → klik om Arabische woorden toe te voegen (bv. الإيمان, العلم, العمل)
-4. **Voor `cta`** vul in:
+   - `page_slug` — typ de slug van de pagina (bv. `home`, `dawahcommissie`, `jongeren`)
+   - `key` — unieke korte naam (bv. `services`, `what_we_do`) — letters/streepjes, geen spaties
+   - `type` — kies een van de vier types
+   - `label` — interne naam voor in deze admin
+   - `title`, `intro` — wat je wilt tonen
+   - `eyebrow_ar` — optioneel klein Arabisch woord
+   - `icon` — optioneel hoofdicoon (zie ICONS.md)
+   - `image` — optionele afbeelding
+   - `button_text`, `button_url` — optionele hoofdknop
+   - `secondary_button_text`, `secondary_button_url` — optionele tweede knop
+   - `max_items` — toon max N items (leeg of 0 = alle)
+   - `background_variant` — kies achtergrond:
+     - `default` — warm beige (standaard)
+     - `white` — wit
+     - `sand` — donkerder beige
+     - `slate-mosque` — donkerblauw met witte tekst
+   - `sort` — volgorde (lager = eerder)
+   - `active` — aan/uit
+3. **Voor `split_feature`** kun je ook invullen:
+   - `card_title_ar` — Arabisch hoofdwoord op de illustratie-kaart
+   - `card_subtitle` — kleine ondertitel
+   - `card_tags` — Arabische tag-woorden
+   - of upload een `image` — afbeelding krijgt voorrang boven het Arabische blok
+4. **Voor `cta`** vul in (in plaats van button_text/url):
    - `primary_cta_label` + `primary_cta_href`
-   - eventueel `secondary_cta_label` + `secondary_cta_href`
-5. **Save**
+   - `secondary_cta_label` + `secondary_cta_href`
+5. Save
 
-**Stap 2 — Items toevoegen** (alleen voor `split_feature` en `card_grid`)
+**Stap 2 — Items aan de sectie toevoegen** (alleen voor `split_feature` en `card_grid`)
 
 1. Directus → **Page Section Items** → **+**
 2. Vul in:
-   - `page_slug` → **moet exact gelijk zijn** aan de page_slug van de sectie
-   - `section_key` → **moet exact gelijk zijn** aan de `key` van de sectie
-   - `title` → kop van het vakje
-   - `description` → tekst onder de kop
-   - `icon` → icoon-naam (zie [ICONS.md](./ICONS.md))
-   - `href` → optionele link (vakje wordt klikbaar)
-   - `sort` → volgorde binnen de sectie
-   - `active` → aan/uit
+   - `page_slug` — **moet exact gelijk zijn** aan de page_slug van de sectie
+   - `section_key` — **moet exact gelijk zijn** aan de `key` van de sectie
+   - `title` — kop van het vakje
+   - `description` — tekst
+   - `icon` — icoon-naam (zie ICONS.md)
+   - `image` — optionele afbeelding (vervangt het icoon in card_grid)
+   - `button_text`, `button_url` — optionele knop
+   - `href` — alternatief voor button_url; maakt het hele vakje klikbaar
+   - `sort`, `active`
 3. Save
-4. Herhaal voor elk vakje
 
-> ⚠️ **Cruciaal**: `page_slug` + `section_key` moeten exact matchen tussen sectie en items, anders zien we de items niet.
+> ⚠️ **Cruciaal**: `page_slug` + `section_key` moeten exact matchen tussen sectie en items.
 
-### Voorbeeld — een "Wat wij bieden" sectie maken
+### Volgorde, zichtbaarheid, verwijderen
 
-**Sectie:**
-- `page_slug` = `dawahcommissie`
-- `key` = `services`
-- `type` = `card_grid`
-- `title` = "Wat wij bieden"
-- `intro` = "Onze activiteiten in een notendop"
+- **Volgorde**: wijzig `sort`-waarde (lager = eerder)
+- **Tijdelijk verbergen**: zet `active` op `false`
+- **Verwijderen**: prullenbak in Directus
 
-**Items (3 stuks):**
+### Onbekend type opgegeven?
 
-| page_slug         | section_key | title                | icon              | description |
-|-------------------|-------------|----------------------|-------------------|--------------|
-| `dawahcommissie`  | `services`  | Wekelijkse lezingen  | `book-open`       | … |
-| `dawahcommissie`  | `services`  | Cursussen            | `graduation-cap`  | … |
-| `dawahcommissie`  | `services`  | Open dagen           | `users`           | … |
-
-Refresh de pagina → de sectie verschijnt automatisch.
-
-### Sectie verbergen of verwijderen
-
-- **Tijdelijk verbergen** → zet `active` op `false`
-- **Volgorde wijzigen** → wijzig `sort`-waardes
-- **Verwijderen** → klik op de prullenbak in Directus (items en sectie apart)
-
-### Waar verschijnen de secties op de pagina?
-
-| Pagina             | Locatie van sections                                                        |
-|--------------------|------------------------------------------------------------------------------|
-| `home`             | Tussen page-content body en activiteiten-grid (uitgezonderd `cta` → onderaan) |
-| `dawahcommissie`   | Tussen page-content body en FAQ (uitgezonderd `cta` → onderaan)              |
-
-Eigen pagina's toevoegen vereist een codewijziging — vraag dit dan in een nieuwe wijzigingsverzoek.
+Als iemand in Directus een type invult dat niet bestaat (bv. een typfout), wordt die sectie automatisch overgeslagen. De rest van de pagina blijft werken.
 
 ---
 
@@ -180,8 +227,9 @@ Eigen pagina's toevoegen vereist een codewijziging — vraag dit dan in een nieu
 Zie [ICONS.md](./ICONS.md). Korte versie:
 - Centrale UI-iconen → **Icon Settings**
 - Pagina-icoon → `page_content.icon`
+- Sectie-icoon → `page_sections.icon`
 - FAQ-icoon → `faq_items.icon`
-- **Sectie-item icoon** → `page_section_items.icon`
+- Sectie-item icoon → `page_section_items.icon`
 
 ---
 
@@ -196,8 +244,8 @@ Directus → **FAQ Items**:
 
 Directus → **Activities** → klik **+**:
 - `title`, `slug`, `description`, `start_date`, `end_date`, `location`, `image`
-- `featured` = `true` toont op homepage als hoofdactiviteit
-- `status` = `published` om zichtbaar te maken
+- `featured` = `true` toont op homepage
+- `status` = `published`
 
 ---
 
@@ -212,8 +260,17 @@ Directus → **Activities** → klik **+**:
 
 ---
 
-## Wat als ik iets per ongeluk verprutst?
+## Hoe controleer ik dat een wijziging werkt?
 
-- **Status op draft / active uit** → verdwijnt direct
-- **Revisiegeschiedenis** → klok-icoontje rechtsboven in een item
-- **Hulp nodig** → mail **el-masoudi@hotmail.com**
+1. Wijzig in Directus → klik **Save**
+2. Vernieuw de pagina in de browser
+3. De nieuwe content moet meteen zichtbaar zijn
+
+In ontwikkelmodus is de cache uitgeschakeld — geen container-restart nodig.
+
+Als iets niet werkt:
+- Staat `status` op `published` (voor pagina's) of `active` op `true` (voor secties/items/menu's)?
+- Matchen `page_slug` en `section_key` exact?
+- Staat de slug niet in de gereserveerde lijst (sectie 1)?
+
+Hulp nodig: stuur een mail naar **el-masoudi@hotmail.com**.

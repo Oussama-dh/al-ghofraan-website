@@ -5,10 +5,12 @@ import Container         from "@/components/ui/Container";
 import SectionTitle      from "@/components/ui/SectionTitle";
 import { CreditCard }    from "lucide-react";
 import { Icon }          from "@/lib/icons";
+import { PageSectionsList } from "@/components/sections/PageSectionRenderer";
 import {
   getPageContent,
   getIconSettings,
   getSiteSettings,
+  getPageSectionsWithItems,
   resolveIconKey,
   ICON_KEYS,
 } from "@/lib/directus";
@@ -34,10 +36,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function DonerenPage() {
-  const [page, iconMap, settings] = await Promise.all([
+  const [page, iconMap, settings, sections] = await Promise.all([
     getPageContent("doneren"),
     getIconSettings(),
     getSiteSettings(),
+    getPageSectionsWithItems("doneren"),
   ]);
 
   const title    = page?.title    || "Steun de DawahCommissie";
@@ -46,6 +49,9 @@ export default async function DonerenPage() {
 
   const donationIcon = page?.icon || resolveIconKey(iconMap, ICON_KEYS.donation);
   const contactEmail = settings?.contact_email || "el-masoudi@hotmail.com";
+
+  const ctaSections   = sections.filter((s) => s.type === "cta");
+  const otherSections = sections.filter((s) => s.type !== "cta");
 
   return (
     <>
@@ -132,6 +138,12 @@ export default async function DonerenPage() {
           </div>
         </Container>
       </section>
+
+      {/* Beheerbare sections uit Directus (geen cta) */}
+      <PageSectionsList sections={otherSections} />
+
+      {/* CTA-sections altijd onderaan */}
+      <PageSectionsList sections={ctaSections} />
     </>
   );
 }

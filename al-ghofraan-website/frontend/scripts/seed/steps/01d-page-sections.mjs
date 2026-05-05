@@ -27,17 +27,9 @@ export async function setupPageSections(client) {
     type:  "string",
     meta: {
       width:     "half",
-      interface: "select-dropdown",
+      interface: "input",
       required:  true,
-      options: {
-        choices: [
-          { text: "Home",            value: "home" },
-          { text: "Over ons",         value: "dawahcommissie" },
-          { text: "Doneren",          value: "doneren" },
-        ],
-        allowOther: true,
-      },
-      note: "Op welke pagina deze sectie verschijnt.",
+      note:      "Slug van de pagina waarop deze sectie verschijnt. Bv. 'home', 'dawahcommissie', 'doneren', 'gebedstijden', 'jongeren'. Moet exact overeenkomen met de URL.",
     },
     schema: { is_nullable: false },
   });
@@ -216,17 +208,9 @@ export async function setupPageSections(client) {
     type:  "string",
     meta: {
       width:     "half",
-      interface: "select-dropdown",
+      interface: "input",
       required:  true,
-      options: {
-        choices: [
-          { text: "Home",            value: "home" },
-          { text: "Over ons",         value: "dawahcommissie" },
-          { text: "Doneren",          value: "doneren" },
-        ],
-        allowOther: true,
-      },
-      note: "Moet gelijk zijn aan de page_slug van de sectie.",
+      note:      "Slug van de pagina. Moet exact gelijk zijn aan de page_slug van de sectie waarbij dit item hoort.",
     },
     schema: { is_nullable: false },
   });

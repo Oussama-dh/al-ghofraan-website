@@ -108,6 +108,12 @@ export interface IconSetting {
 // ─── page_sections ───────────────────────────────────────────
 export type PageSectionType = "split_feature" | "card_grid" | "simple_text" | "cta";
 
+export type SectionBackgroundVariant =
+  | "default"        // sand-50 (warm beige)
+  | "white"          // pure wit
+  | "sand"           // donkerder beige
+  | "slate-mosque";  // donkerblauw — zelfde als CTA
+
 export interface PageSection {
   id: string;
   page_slug: string;
@@ -130,7 +136,18 @@ export interface PageSection {
   card_tags?: string[] | null;
   /** Optioneel hoofdicoon voor de sectie */
   icon?: string | null;
-  /** Voor cta type: knoppen */
+  /** Optionele afbeelding voor de sectie (split_feature, card_grid, simple_text) */
+  image?: string | DirectusFile | null;
+  /** Algemene knop (alle types behalve cta — daar zijn aparte primary_/secondary_ velden) */
+  button_text?: string | null;
+  button_url?:  string | null;
+  secondary_button_text?: string | null;
+  secondary_button_url?:  string | null;
+  /** Maximaal aantal items dat getoond wordt (0 of leeg = alle) */
+  max_items?: number | null;
+  /** Achtergrondvariant — beïnvloedt kleur van de sectie */
+  background_variant?: SectionBackgroundVariant | null;
+  /** Voor cta type: knoppen (apart i.v.m. eigen styling) */
   primary_cta_label?: string | null;
   primary_cta_href?:  string | null;
   secondary_cta_label?: string | null;
@@ -149,6 +166,11 @@ export interface PageSectionItem {
   icon?: string | null;
   /** Optionele href als de tile klikbaar moet zijn */
   href?: string | null;
+  /** Algemene knop op item-niveau (optioneel) */
+  button_text?: string | null;
+  button_url?:  string | null;
+  /** Optionele afbeelding op item-niveau */
+  image?: string | DirectusFile | null;
   sort?: number | null;
   active: boolean;
 }

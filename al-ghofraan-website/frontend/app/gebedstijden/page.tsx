@@ -4,7 +4,8 @@ import type { Metadata }          from "next";
 import Container                  from "@/components/ui/Container";
 import SectionTitle               from "@/components/ui/SectionTitle";
 import PrayerTimesTable, { TodayPrayerCard } from "@/components/ui/PrayerTimesTable";
-import { getActivePrayerTimeFile, getAssetUrl, getSiteSettings } from "@/lib/directus";
+import { PageSectionsList }       from "@/components/sections/PageSectionRenderer";
+import { getActivePrayerTimeFile, getAssetUrl, getSiteSettings, getPageSectionsWithItems } from "@/lib/directus";
 import { parsePrayerTimesCSV, getTodaysPrayerTimes, getCurrentMonthRows } from "@/lib/prayerTimes";
 import type { PrayerTimeRow }     from "@/types/directus";
 
@@ -30,6 +31,9 @@ const FALLBACK_ROW: PrayerTimeRow = {
 };
 
 export default async function GebedstijdenPage() {
+  // Sections parallel ophalen — onafhankelijk van CSV-fetch
+  const sectionsPromise = getPageSectionsWithItems("gebedstijden");
+
   let allRows: PrayerTimeRow[] = [];
   let monthRows: PrayerTimeRow[] = [];
   let todayRow: PrayerTimeRow | null = null;
@@ -77,6 +81,10 @@ export default async function GebedstijdenPage() {
     console.warn("Gebedstijden laden mislukt:", e);
     error = "Gebedstijden konden niet worden geladen.";
   }
+
+  const sections      = await sectionsPromise;
+  const ctaSections   = sections.filter((s) => s.type === "cta");
+  const otherSections = sections.filter((s) => s.type !== "cta");
 
   const today = new Date();
   const dd = String(today.getDate()).padStart(2, "0");
@@ -149,6 +157,12 @@ export default async function GebedstijdenPage() {
           </div>
         </Container>
       </section>
+
+      {/* Beheerbare sections uit Directus (geen cta) */}
+      <PageSectionsList sections={otherSections} />
+
+      {/* CTA-sections altijd onderaan */}
+      <PageSectionsList sections={ctaSections} />
     </>
   );
 }
