@@ -36,14 +36,21 @@ export interface PrayerTimeFile {
   uploaded_at: string;
 }
 
-// ─── site_settings ───────────────────────────────────────────
+// ─── site_settings (singleton) ───────────────────────────────
 export interface SiteSettings {
   id: string | number;
   site_name: string;
   logo?: string | DirectusFile | null;
+  favicon?: string | DirectusFile | null;
+  og_image?: string | DirectusFile | null;
   contact_email?: string | null;
   phone?: string | null;
   address?: string | null;
+  footer_text?: string | null;
+  copyright_text?: string | null;
+  footer_enabled?: boolean | null;
+  default_seo_title?: string | null;
+  default_seo_description?: string | null;
   social_links?: {
     facebook?: string;
     instagram?: string;
@@ -61,6 +68,8 @@ export interface NavigationItem {
   highlight: boolean;
   external: boolean;
   active: boolean;
+  /** "header" | "footer" | "both" — default "header" voor backwards compat */
+  location?: "header" | "footer" | "both" | null;
 }
 
 // ─── page_content ────────────────────────────────────────────
@@ -74,7 +83,6 @@ export interface PageContent {
   seo_title?: string | null;
   seo_description?: string | null;
   status: "published" | "draft";
-  /** Optioneel icoon-naam (zie lib/icons.tsx voor toegestane waarden) */
   icon?: string | null;
 }
 
@@ -86,26 +94,20 @@ export interface FaqItem {
   category?: string | null;
   sort?: number | null;
   published: boolean;
-  /** Optioneel icoon-naam */
   icon?: string | null;
 }
 
-// ─── icon_settings (nieuw — collectie met meerdere rijen) ────
+// ─── icon_settings ───────────────────────────────────────────
 export interface IconSetting {
   id: string;
-  /** Unieke key, bv. "activity_date_icon" */
   key: string;
-  /** Icon-naam uit ICON_MAP (lib/icons.tsx) */
   icon: string;
-  /** Vriendelijke naam voor in Directus UI */
   label?: string | null;
-  /** Korte uitleg waar deze setting wordt gebruikt */
   description?: string | null;
 }
 
 // ─── CSV-rij ─────────────────────────────────────────────────
 export interface PrayerTimeRow {
-  date?: string;
   datum: string;
   dag?: string;
   fajr: string;

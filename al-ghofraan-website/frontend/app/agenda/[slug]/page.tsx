@@ -1,11 +1,11 @@
 // app/agenda/[slug]/page.tsx
 
-import type { Metadata }          from "next";
-import { notFound }               from "next/navigation";
-import Image                      from "next/image";
-import Container                  from "@/components/ui/Container";
-import Button                     from "@/components/ui/Button";
-import { Icon }                   from "@/lib/icons";
+import type { Metadata }  from "next";
+import { notFound }       from "next/navigation";
+import Image              from "next/image";
+import Container          from "@/components/ui/Container";
+import Button             from "@/components/ui/Button";
+import { Icon }           from "@/lib/icons";
 import {
   getActivityBySlug,
   getAssetUrl,
@@ -13,11 +13,14 @@ import {
   resolveIconKey,
   ICON_KEYS,
 } from "@/lib/directus";
-import { formatDate }             from "@/lib/utils";
+import { formatDate }     from "@/lib/utils";
 
 interface Props {
   params: { slug: string };
 }
+
+export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const activity = await getActivityBySlug(params.slug);
@@ -27,8 +30,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: activity.description?.replace(/<[^>]+>/g, "").slice(0, 160),
   };
 }
-
-export const revalidate = 300;
 
 export default async function ActivityDetailPage({ params }: Props) {
   const [activity, iconMap] = await Promise.all([
@@ -41,18 +42,15 @@ export default async function ActivityDetailPage({ params }: Props) {
   const dateIcon     = resolveIconKey(iconMap, ICON_KEYS.activityDate);
   const locationIcon = resolveIconKey(iconMap, ICON_KEYS.activityLocation);
 
-  const imageId =
-    typeof activity.image === "string"
-      ? activity.image
-      : (activity.image as { id: string } | null)?.id;
+  const imageUrl = getAssetUrl(activity.image as never);
 
   return (
     <>
       <section className="relative bg-slate-mosque text-white py-16 overflow-hidden">
         <div className="absolute inset-0 pattern-overlay" />
-        {imageId && (
+        {imageUrl && (
           <div className="absolute inset-0 opacity-20">
-            <Image src={getAssetUrl(imageId)} alt={activity.title} fill className="object-cover" />
+            <Image src={imageUrl} alt={activity.title} fill className="object-cover" />
           </div>
         )}
         <Container className="relative z-10">
@@ -97,9 +95,9 @@ export default async function ActivityDetailPage({ params }: Props) {
 
       <section className="bg-sand-50 py-12 lg:py-16">
         <Container narrow>
-          {imageId && (
+          {imageUrl && (
             <div className="relative h-64 sm:h-80 rounded-2xl overflow-hidden mb-8 shadow-md">
-              <Image src={getAssetUrl(imageId)} alt={activity.title} fill className="object-cover" />
+              <Image src={imageUrl} alt={activity.title} fill className="object-cover" />
             </div>
           )}
 

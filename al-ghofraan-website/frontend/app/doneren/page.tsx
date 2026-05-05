@@ -1,5 +1,4 @@
 // app/doneren/page.tsx
-// Placeholder-pagina voor donaties — Stripe nog NIET geïmplementeerd.
 
 import type { Metadata } from "next";
 import Container         from "@/components/ui/Container";
@@ -9,9 +8,13 @@ import { Icon }          from "@/lib/icons";
 import {
   getPageContent,
   getIconSettings,
+  getSiteSettings,
   resolveIconKey,
   ICON_KEYS,
 } from "@/lib/directus";
+
+export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
+export const revalidate = 600;
 
 const DONATIE_DOELEN = [
   { emoji: "📚", titel: "Educatieve programma's", beschrijving: "Lezingen, cursussen en studiemateriaal" },
@@ -20,17 +23,21 @@ const DONATIE_DOELEN = [
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
-  const page = await getPageContent("doneren");
+  const [page, settings] = await Promise.all([
+    getPageContent("doneren"),
+    getSiteSettings(),
+  ]);
   return {
-    title:       page?.seo_title       || "Doneren",
-    description: page?.seo_description || "Steun de DawahCommissie van moskee Al-Ghofraan met een donatie.",
+    title:       page?.seo_title       || settings?.default_seo_title       || "Doneren",
+    description: page?.seo_description || settings?.default_seo_description || "Steun de DawahCommissie van moskee Al-Ghofraan.",
   };
 }
 
 export default async function DonerenPage() {
-  const [page, iconMap] = await Promise.all([
+  const [page, iconMap, settings] = await Promise.all([
     getPageContent("doneren"),
     getIconSettings(),
+    getSiteSettings(),
   ]);
 
   const title    = page?.title    || "Steun de DawahCommissie";
@@ -38,6 +45,7 @@ export default async function DonerenPage() {
   const intro    = page?.intro    || "Binnenkort kunt u hier veilig online doneren.";
 
   const donationIcon = page?.icon || resolveIconKey(iconMap, ICON_KEYS.donation);
+  const contactEmail = settings?.contact_email || "el-masoudi@hotmail.com";
 
   return (
     <>
@@ -86,8 +94,8 @@ export default async function DonerenPage() {
 
             <p className="font-body text-xs text-taupe mt-4">
               Wilt u nu al bijdragen? Neem contact met ons op via{" "}
-              <a href="mailto:el-masoudi@hotmail.com" className="text-slate-mosque underline hover:no-underline">
-                el-masoudi@hotmail.com
+              <a href={`mailto:${contactEmail}`} className="text-slate-mosque underline hover:no-underline">
+                {contactEmail}
               </a>
             </p>
           </div>

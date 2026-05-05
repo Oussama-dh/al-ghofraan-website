@@ -10,10 +10,12 @@ import {
   getPageContent,
   getFaqItems,
   getIconSettings,
+  getSiteSettings,
   resolveIconKey,
   ICON_KEYS,
 } from "@/lib/directus";
 
+export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
 export const revalidate = 600;
 
 const FALLBACK_BODY = `
@@ -24,10 +26,13 @@ const FALLBACK_BODY = `
 `;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const page = await getPageContent("dawahcommissie");
+  const [page, settings] = await Promise.all([
+    getPageContent("dawahcommissie"),
+    getSiteSettings(),
+  ]);
   return {
-    title:       page?.seo_title       || "Over de DawahCommissie",
-    description: page?.seo_description || "Leer meer over de DawahCommissie van moskee Al-Ghofraan.",
+    title:       page?.seo_title       || settings?.default_seo_title       || "Over de DawahCommissie",
+    description: page?.seo_description || settings?.default_seo_description || "Leer meer over de DawahCommissie van moskee Al-Ghofraan.",
   };
 }
 

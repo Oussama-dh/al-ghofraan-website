@@ -2,25 +2,27 @@
 "use client";
 
 import Link             from "next/link";
+import Image            from "next/image";
 import { useState }     from "react";
+import { Menu, X }      from "lucide-react";
 import { cn }           from "@/lib/utils";
 import type { NavigationItem, SiteSettings } from "@/types/directus";
 
 interface HeaderProps {
-  settings:   SiteSettings | null;
-  navItems?:  NavigationItem[];
+  settings:  SiteSettings | null;
+  navItems?: NavigationItem[];
+  logoUrl?:  string | null;
 }
 
-// Fallback-menu wanneer Directus leeg/offline is
 const FALLBACK_NAV: NavigationItem[] = [
   { id: "f1", label: "Home",         href: "/",               sort: 10, highlight: false, external: false, active: true },
   { id: "f2", label: "Over ons",     href: "/dawahcommissie", sort: 20, highlight: false, external: false, active: true },
   { id: "f3", label: "Agenda",       href: "/agenda",         sort: 30, highlight: false, external: false, active: true },
   { id: "f4", label: "Gebedstijden", href: "/gebedstijden",   sort: 40, highlight: false, external: false, active: true },
-  { id: "f5", label: "Doneren",     href: "/doneren",        sort: 50, highlight: true,  external: false, active: true },
+  { id: "f5", label: "Doneren",      href: "/doneren",        sort: 50, highlight: true,  external: false, active: true },
 ];
 
-export default function Header({ settings, navItems }: HeaderProps) {
+export default function Header({ settings, navItems, logoUrl }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const siteName = settings?.site_name || "Al-Ghofraan";
@@ -38,13 +40,26 @@ export default function Header({ settings, navItems }: HeaderProps) {
             className="flex items-center gap-3 group"
             onClick={() => setMenuOpen(false)}
           >
-            <div className="w-9 h-9 bg-slate-mosque rounded-xl flex items-center justify-center shrink-0 group-hover:bg-slate-dark transition-colors">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-white">
-                <path d="M12 2l2 4h2l1 2H7l1-2h2l2-4z" fill="currentColor" opacity="0.9" />
-                <rect x="9" y="8" width="6" height="12" rx="1" fill="currentColor" />
-                <rect x="6" y="18" width="12" height="2" rx="0.5" fill="currentColor" />
-              </svg>
-            </div>
+            {logoUrl ? (
+              <div className="w-9 h-9 relative shrink-0">
+                <Image
+                  src={logoUrl}
+                  alt={`${siteName} logo`}
+                  fill
+                  sizes="36px"
+                  className="object-contain"
+                  priority
+                />
+              </div>
+            ) : (
+              <div className="w-9 h-9 bg-slate-mosque rounded-xl flex items-center justify-center shrink-0 group-hover:bg-slate-dark transition-colors">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-white">
+                  <path d="M12 2l2 4h2l1 2H7l1-2h2l2-4z" fill="currentColor" opacity="0.9" />
+                  <rect x="9"  y="8"  width="6"  height="12" rx="1"   fill="currentColor" />
+                  <rect x="6"  y="18" width="12" height="2"  rx="0.5" fill="currentColor" />
+                </svg>
+              </div>
+            )}
             <div>
               <div className="font-display text-lg leading-tight text-ink">
                 {siteName}
@@ -68,19 +83,7 @@ export default function Header({ settings, navItems }: HeaderProps) {
             aria-label="Menu openen"
             aria-expanded={menuOpen}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              {menuOpen ? (
-                <>
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6"  y1="6" x2="18" y2="18" />
-                </>
-              ) : (
-                <>
-                  <line x1="3" y1="8"  x2="21" y2="8"  />
-                  <line x1="3" y1="16" x2="21" y2="16" />
-                </>
-              )}
-            </svg>
+            {menuOpen ? <X size={22} strokeWidth={2} /> : <Menu size={22} strokeWidth={2} />}
           </button>
         </div>
       </div>
@@ -100,17 +103,13 @@ export default function Header({ settings, navItems }: HeaderProps) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Render helper — werkt voor zowel desktop als mobiel menu
-// ─────────────────────────────────────────────────────────────
 function renderNavLink(
   item: NavigationItem,
   mobile: boolean,
   onClick: () => void
 ) {
-  const desktopBase = "px-4 py-2 text-sm font-body rounded-lg transition-colors";
-  const mobileBase  = "px-4 py-3 rounded-xl font-body text-base transition-colors";
-
+  const desktopBase      = "px-4 py-2 text-sm font-body rounded-lg transition-colors";
+  const mobileBase       = "px-4 py-3 rounded-xl font-body text-base transition-colors";
   const desktopHighlight = "ml-2 px-5 py-2 bg-slate-mosque text-white text-sm font-medium font-body rounded-full hover:bg-slate-dark transition-colors";
   const mobileHighlight  = "bg-slate-mosque text-white text-center font-medium mt-2";
 

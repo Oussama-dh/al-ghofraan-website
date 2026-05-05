@@ -75,7 +75,7 @@ export function getTodaysPrayerTimes(
 
   return (
     rows.find((row) => {
-      const d = row.datum ?? row.date ?? "";
+const d = row.datum ?? "";
 
       return (
         d.startsWith(`${dd}-${mm}`) ||
@@ -91,8 +91,7 @@ export function getCurrentMonthRows(rows: PrayerTimeRow[]): PrayerTimeRow[] {
   const mm = String(new Date().getMonth() + 1).padStart(2, "0");
 
   return rows.filter((row) => {
-    const d = row.datum ?? row.date ?? "";
-
+const d = row.datum ?? "";
     return (
       d.includes(`-${mm}-`) ||
       d.includes(`/${mm}/`) ||

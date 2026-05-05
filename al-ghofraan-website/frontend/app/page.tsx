@@ -12,11 +12,14 @@ import {
   getUpcomingActivities,
   getPageContent,
   getIconSettings,
+  getSiteSettings,
   resolveIconKey,
   ICON_KEYS,
 } from "@/lib/directus";
 import type { Activity }     from "@/types/directus";
 
+// Dev: altijd vers. Productie: cache 10 min.
+export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
 export const revalidate = 600;
 
 const FALLBACK_ACTIVITIES: Activity[] = [
@@ -44,10 +47,13 @@ const FALLBACK_ACTIVITIES: Activity[] = [
 ];
 
 export async function generateMetadata(): Promise<Metadata> {
-  const page = await getPageContent("home");
+  const [page, settings] = await Promise.all([
+    getPageContent("home"),
+    getSiteSettings(),
+  ]);
   return {
-    title:       page?.seo_title       || "Home",
-    description: page?.seo_description || "De DawahCommissie van moskee Al-Ghofraan.",
+    title:       page?.seo_title       || settings?.default_seo_title       || "Home",
+    description: page?.seo_description || settings?.default_seo_description || "De DawahCommissie van moskee Al-Ghofraan.",
   };
 }
 
@@ -58,9 +64,9 @@ export default async function HomePage() {
     getIconSettings(),
   ]);
 
-  const dateIcon         = resolveIconKey(iconMap, ICON_KEYS.activityDate);
-  const locationIcon     = resolveIconKey(iconMap, ICON_KEYS.activityLocation);
-  const prayerTimesIcon  = resolveIconKey(iconMap, ICON_KEYS.prayerTimes);
+  const dateIcon        = resolveIconKey(iconMap, ICON_KEYS.activityDate);
+  const locationIcon    = resolveIconKey(iconMap, ICON_KEYS.activityLocation);
+  const prayerTimesIcon = resolveIconKey(iconMap, ICON_KEYS.prayerTimes);
 
   const list      = activities.length > 0 ? activities : FALLBACK_ACTIVITIES;
   const featured  = list.filter((a) => a.featured).slice(0, 1);
@@ -93,7 +99,6 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Missie-sectie — emoji's blijven, want zijn art-direction, niet UI */}
       <section className="bg-sand-50 py-16 lg:py-24">
         <Container>
           <div className="grid md:grid-cols-2 gap-12 items-center">
@@ -142,7 +147,6 @@ export default async function HomePage() {
         </Container>
       </section>
 
-      {/* Activiteiten */}
       {shown.length > 0 && (
         <section className="bg-white py-16 lg:py-24">
           <Container>
@@ -172,7 +176,6 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Gebedstijden-banner */}
       <section className="bg-sand py-12">
         <Container>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-white rounded-3xl p-6 sm:p-8 border border-sand-200 shadow-sm">
@@ -196,7 +199,7 @@ export default async function HomePage() {
 
       <CTASection
         title="Steun het werk van de DawahCommissie"
-        subtitle="Uw bijdrage helpt ons om de gemeenschap te blijven dienen met lezingen, activiteiten en educatieve programma's."
+        subtitle="Uw bijdrage helpt ons om de gemeenschap te blijven dienen."
         primaryCta={{ label: "Doneer hier",     href: "/doneren" }}
         secondaryCta={{ label: "Meer over ons", href: "/dawahcommissie" }}
       />

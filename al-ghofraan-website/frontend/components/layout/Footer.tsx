@@ -1,39 +1,48 @@
 // components/layout/Footer.tsx
 
-import Link from "next/link";
+import Link  from "next/link";
+import Image from "next/image";
 import { Icon } from "@/lib/icons";
 import type { NavigationItem, SiteSettings } from "@/types/directus";
 
 interface FooterProps {
-  settings:        SiteSettings | null;
-  navItems?:       NavigationItem[];
-  /** Iconen uit icon_settings */
-  emailIcon?:      string;
-  phoneIcon?:      string;
-  addressIcon?:    string;
+  settings:     SiteSettings | null;
+  navItems?:    NavigationItem[];
+  logoUrl?:     string | null;
+  emailIcon?:   string;
+  phoneIcon?:   string;
+  addressIcon?: string;
 }
 
 const FALLBACK_NAV: NavigationItem[] = [
-  { id: "f1", label: "Home",                       href: "/",               sort: 10, highlight: false, external: false, active: true },
-  { id: "f2", label: "Over de DawahCommissie",     href: "/dawahcommissie", sort: 20, highlight: false, external: false, active: true },
-  { id: "f3", label: "Agenda & Activiteiten",      href: "/agenda",         sort: 30, highlight: false, external: false, active: true },
-  { id: "f4", label: "Gebedstijden",               href: "/gebedstijden",   sort: 40, highlight: false, external: false, active: true },
-  { id: "f5", label: "Doneren",                    href: "/doneren",        sort: 50, highlight: true,  external: false, active: true },
+  { id: "f1", label: "Home",                  href: "/",               sort: 10, highlight: false, external: false, active: true },
+  { id: "f2", label: "Over de DawahCommissie", href: "/dawahcommissie", sort: 20, highlight: false, external: false, active: true },
+  { id: "f3", label: "Agenda",                href: "/agenda",         sort: 30, highlight: false, external: false, active: true },
+  { id: "f4", label: "Gebedstijden",          href: "/gebedstijden",   sort: 40, highlight: false, external: false, active: true },
+  { id: "f5", label: "Doneren",               href: "/doneren",        sort: 50, highlight: true,  external: false, active: true },
 ];
+
+const FALLBACK_FOOTER_TEXT =
+  "De DawahCommissie van moskee Al-Ghofraan organiseert lezingen, " +
+  "activiteiten en programma's voor de moslimgemeenschap.";
 
 export default function Footer({
   settings,
   navItems,
+  logoUrl,
   emailIcon   = "mail",
   phoneIcon   = "phone",
   addressIcon = "map-pin",
 }: FooterProps) {
-  const year     = new Date().getFullYear();
-  const siteName = settings?.site_name    || "Al-Ghofraan";
-  const email    = settings?.contact_email || "el-masoudi@hotmail.com";
-  const phone    = settings?.phone        || null;
-  const address  = settings?.address      || null;
-  const social   = settings?.social_links || {};
+  const year       = new Date().getFullYear();
+  const siteName   = settings?.site_name      || "Al-Ghofraan";
+  const email      = settings?.contact_email   || "el-masoudi@hotmail.com";
+  const phone      = settings?.phone           || null;
+  const address    = settings?.address         || null;
+  const social     = settings?.social_links    || {};
+  const footerText = settings?.footer_text     || FALLBACK_FOOTER_TEXT;
+  const copyright  = settings?.copyright_text  ||
+    `© ${year} ${siteName} — DawahCommissie. Alle rechten voorbehouden.`;
 
   const items = (navItems && navItems.length > 0 ? navItems : FALLBACK_NAV)
     .slice()
@@ -47,44 +56,65 @@ export default function Footer({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           {/* Branding */}
           <div className="flex flex-col gap-4">
-            <div>
-              <div className="font-display text-2xl text-white mb-1">{siteName}</div>
-              <div className="font-arabic text-lg text-sand/70" lang="ar">
-                المسجد الغفران
+            <div className="flex items-center gap-3">
+              {logoUrl && (
+                <div className="w-10 h-10 relative shrink-0 bg-white/10 rounded-lg p-1.5">
+                  <Image
+                    src={logoUrl}
+                    alt={`${siteName} logo`}
+                    fill
+                    sizes="40px"
+                    className="object-contain"
+                  />
+                </div>
+              )}
+              <div>
+                <div className="font-display text-2xl text-white">{siteName}</div>
+                <div className="font-arabic text-base text-sand/70" lang="ar">
+                  المسجد الغفران
+                </div>
               </div>
             </div>
             <p className="font-body text-sm text-sand/70 leading-relaxed max-w-xs">
-              De DawahCommissie van moskee Al-Ghofraan organiseert lezingen,
-              activiteiten en programma&apos;s voor de moslimgemeenschap.
+              {footerText}
             </p>
 
-            {social && Object.values(social).some((v) => !!v) && (
-              <div className="flex gap-3 mt-2">
-                {social.facebook && (
-                  <SocialLink href={social.facebook} label="Facebook">
-                  <Icon name="facebook" className="w-4 h-4" />
-                  </SocialLink>
-          )}
-                {social.instagram && (
-                  <SocialLink href={social.instagram} label="Instagram">
-                  <Icon name="instagram" className="w-4 h-4" />
-                  </SocialLink>
-          )}
-          {social.youtube && (
-  <SocialLink href={social.youtube} label="YouTube">
-    <Icon name="youtube" className="w-4 h-4" />
-  </SocialLink>
+{social && Object.values(social).some(Boolean) && (
+  <div className="flex flex-wrap gap-3 mt-2 text-sm">
+    {social.facebook && (
+      <Link
+        href={social.facebook}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hover:text-bluegray transition-colors"
+      >
+        Facebook
+      </Link>
+    )}
+
+    {social.instagram && (
+      <Link
+        href={social.instagram}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hover:text-bluegray transition-colors"
+      >
+        Instagram
+      </Link>
+    )}
+
+    {social.youtube && (
+      <Link
+        href={social.youtube}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hover:text-bluegray transition-colors"
+      >
+        YouTube
+      </Link>
+    )}
+  </div>
 )}
-                {social.whatsapp && (
-                  <SocialLink href={social.whatsapp} label="WhatsApp">
-                    {/* lucide heeft geen whatsapp; Icon-mapping ook niet — eigen SVG */}
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/>
-                    </svg>
-                  </SocialLink>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Navigatie */}
@@ -150,7 +180,7 @@ export default function Footer({
         </div>
 
         <div className="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-sand/50 font-body">
-          <span>© {year} {siteName} — DawahCommissie. Alle rechten voorbehouden.</span>
+          <span>{copyright}</span>
           <span className="font-arabic text-sm" lang="ar">بسم الله الرحمن الرحيم</span>
         </div>
       </div>

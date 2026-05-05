@@ -24,9 +24,10 @@ export default function ActivityCard({
   dateIcon     = "calendar",
   locationIcon = "map-pin",
 }: ActivityCardProps) {
-  const imageId =
-    typeof activity.image === "string" ? activity.image : activity.image?.id;
+const imageId =
+  typeof activity.image === "string" ? activity.image : activity.image?.id;
 
+const imageUrl = imageId ? getAssetUrl(imageId) : null;
   const startDate = formatDate(activity.start_date, "d MMMM yyyy");
   const dayNum    = formatDate(activity.start_date, "d");
   const monthAbbr = formatDate(activity.start_date, "MMM");
@@ -49,14 +50,14 @@ export default function ActivityCard({
           featured ? "md:w-2/5 h-52 md:h-auto" : "h-48"
         )}
       >
-        {imageId ? (
-          <Image
-            src={getAssetUrl(imageId)}
-            alt={activity.title}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-        ) : (
+{imageUrl ? (
+  <Image
+    src={imageUrl}
+    alt={activity.title}
+    fill
+    className="object-cover group-hover:scale-105 transition-transform duration-500"
+  />
+) : (
           <div className="absolute inset-0 pattern-overlay bg-sand flex items-center justify-center">
             <Star className="w-12 h-12 text-taupe/40" strokeWidth={1.5} />
           </div>

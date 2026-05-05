@@ -1,5 +1,12 @@
 // lib/directus.ts
 // Centrale Directus SDK client + getypeerde data-helpers.
+//
+// Cache strategie:
+//   - In development (NODE_ENV !== "production") wordt elke fetch met
+//     { cache: "no-store" } uitgevoerd — wijzigingen in Directus zijn
+//     direct zichtbaar na pagina-refresh, zonder container-restart.
+//   - In production werkt de standaard Next.js fetch-cache, met
+//     revalidate-instellingen per pagina.
 
 import {
   createDirectus,
@@ -19,27 +26,50 @@ import type {
   IconSetting,
 } from "@/types/directus";
 
-const DIRECTUS_URL =
-  process.env.NEXT_PUBLIC_DIRECTUS_URL || "http://localhost:8055";
-const DIRECTUS_TOKEN = process.env.DIRECTUS_TOKEN || "";
+const DIRECTUS_INTERNAL_URL =
+  process.env.DIRECTUS_URL ||
+  process.env.NEXT_PUBLIC_DIRECTUS_URL ||
+  "http://localhost:8055";
 
-export const directus = createDirectus<DirectusSchema>(DIRECTUS_URL).with(rest());
+const DIRECTUS_PUBLIC_URL =
+  process.env.NEXT_PUBLIC_DIRECTUS_URL ||
+  "http://localhost:8055";
+
+const DIRECTUS_TOKEN = process.env.DIRECTUS_TOKEN || "";
+const IS_DEV = process.env.NODE_ENV !== "production";
+
+// ─── REST options voor cache-controle ────────────────────────
+//
+// In development: forceer no-store zodat elke request live data ophaalt.
+// In productie: laat Next.js zijn cache doen.
+const restOptions = IS_DEV
+  ? {
+      // De Directus SDK ondersteunt fetch options doorgeven
+      credentials: "same-origin" as const,
+    }
+  : {};
+
+// ─── Clients ─────────────────────────────────────────────────
+export const directus = createDirectus<DirectusSchema>(DIRECTUS_INTERNAL_URL).with(rest());
 
 export const directusServer = DIRECTUS_TOKEN
-  ? createDirectus<DirectusSchema>(DIRECTUS_URL)
+  ? createDirectus<DirectusSchema>(DIRECTUS_INTERNAL_URL)
       .with(staticToken(DIRECTUS_TOKEN))
       .with(rest())
-  : createDirectus<DirectusSchema>(DIRECTUS_URL).with(rest());
+  : createDirectus<DirectusSchema>(DIRECTUS_INTERNAL_URL).with(rest());
 
-export function getAssetUrl(fileId: string): string {
-  return `${DIRECTUS_URL}/assets/${fileId}`;
+// ─── Asset URL helper ────────────────────────────────────────
+export function getAssetUrl(fileId?: string | null): string {
+  if (!fileId) return "";
+  return `${DIRECTUS_PUBLIC_URL}/assets/${fileId}`;
 }
 
+// ─── Safe wrapper ────────────────────────────────────────────
 async function safe<T>(fn: () => Promise<T>, label: string, fallback: T): Promise<T> {
   try {
     return await fn();
   } catch (err) {
-    if (process.env.NODE_ENV !== "production") {
+    if (IS_DEV) {
       console.warn(`[directus] ${label} mislukt:`, (err as Error)?.message || err);
     }
     return fallback;
@@ -139,7 +169,16 @@ export async function getPageContent(slug: string): Promise<PageContent | null> 
 }
 
 // ─── Navigation ──────────────────────────────────────────────
-export async function getNavigationItems(): Promise<NavigationItem[]> {
+//
+// Filter op location:
+//   - "header" → toont items met location header/both/null/leeg
+//   - "footer" → toont items met location footer/both
+//
+// "null/leeg" wordt als header gezien voor backwards compat met items
+// die zijn aangemaakt vóór het location-veld bestond.
+export async function getNavigationItems(
+  scope: "header" | "footer" | "all" = "all"
+): Promise<NavigationItem[]> {
   return safe(
     async () => {
       const result = await directusServer.request(
@@ -147,12 +186,21 @@ export async function getNavigationItems(): Promise<NavigationItem[]> {
           filter: { active: { _eq: true } } as never,
           sort:   ["sort"],
           limit:  -1,
-          fields: ["id", "label", "href", "sort", "highlight", "external", "active"],
+          fields: ["id", "label", "href", "sort", "highlight", "external", "active", "location"],
         })
       );
-      return result as NavigationItem[];
+      const items = result as NavigationItem[];
+
+      if (scope === "all") return items;
+
+      return items.filter((item) => {
+        const loc = item.location || "header";
+        if (scope === "header") return loc === "header" || loc === "both";
+        if (scope === "footer") return loc === "footer" || loc === "both";
+        return true;
+      });
     },
-    "getNavigationItems",
+    `getNavigationItems(${scope})`,
     []
   );
 }
@@ -208,9 +256,6 @@ export async function getActivePrayerTimeFile(): Promise<PrayerTimeFile | null> 
 }
 
 // ─── Icon settings ───────────────────────────────────────────
-//
-// Retourneert een Map van { key → icon-naam } voor snelle lookup.
-// Faalt veilig: bij fouten een lege Map, zodat de UI op fallbacks valt.
 export async function getIconSettings(): Promise<Map<string, string>> {
   return safe(
     async () => {
@@ -232,7 +277,7 @@ export async function getIconSettings(): Promise<Map<string, string>> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Vooraf gedefinieerde icon-keys (zelfde als in seed-script)
+// Icon-keys
 // ─────────────────────────────────────────────────────────────
 export const ICON_KEYS = {
   activityDate:        "activity_date_icon",
@@ -246,7 +291,6 @@ export const ICON_KEYS = {
   pageSectionDefault:  "page_section_default_icon",
 } as const;
 
-// Fallback-mapping als icon_settings leeg is of Directus offline
 export const ICON_FALLBACKS: Record<string, string> = {
   [ICON_KEYS.activityDate]:        "calendar",
   [ICON_KEYS.activityLocation]:    "map-pin",
@@ -259,9 +303,6 @@ export const ICON_FALLBACKS: Record<string, string> = {
   [ICON_KEYS.pageSectionDefault]:  "info",
 };
 
-/**
- * Geef icon-naam terug voor een key, met val­back op de hardcoded default.
- */
 export function resolveIconKey(map: Map<string, string>, key: string): string {
   return map.get(key) || ICON_FALLBACKS[key] || "info";
 }

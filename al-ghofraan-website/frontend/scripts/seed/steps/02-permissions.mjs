@@ -18,10 +18,7 @@ export async function setupPermissions(client) {
   const publicPolicy = await findPublicPolicy(client);
 
   if (!publicPolicy) {
-    console.warn("");
-    console.warn("⚠️  Public-policy niet automatisch gevonden.");
-    console.warn("    Zie frontend/scripts/seed/PUBLIC_PERMISSIONS_FALLBACK.md");
-    console.warn("");
+    console.warn("⚠️  Public-policy niet gevonden — zie PUBLIC_PERMISSIONS_FALLBACK.md");
     return;
   }
 
@@ -29,9 +26,7 @@ export async function setupPermissions(client) {
 
   let existingPerms;
   try {
-    const resp = await client.get(
-      `/permissions?filter[policy][_eq]=${publicPolicy.id}&limit=-1`
-    );
+    const resp = await client.get(`/permissions?filter[policy][_eq]=${publicPolicy.id}&limit=-1`);
     existingPerms = resp?.data || [];
   } catch (err) {
     console.warn("⚠️  Kon bestaande permissies niet ophalen:", err.message);
@@ -43,12 +38,10 @@ export async function setupPermissions(client) {
     existingMap.set(`${perm.collection}:${perm.action}`, perm);
   }
 
-  let success = 0;
-  let failed  = 0;
+  let success = 0, failed = 0;
 
   for (const { collection, filter } of COLLECTIONS) {
     const key = `${collection}:read`;
-
     const payload = {
       policy:      publicPolicy.id,
       collection,
@@ -76,7 +69,7 @@ export async function setupPermissions(client) {
   }
 
   if (failed > 0) {
-    console.warn(`⚠️  ${failed}/${COLLECTIONS.length} permissies faalden — zie PUBLIC_PERMISSIONS_FALLBACK.md`);
+    console.warn(`⚠️  ${failed}/${COLLECTIONS.length} permissies faalden`);
   } else {
     console.log(`✓ Stap 2 voltooid (${success} permissies)`);
   }
