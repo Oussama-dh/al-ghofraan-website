@@ -13,7 +13,7 @@ export async function setupDonations(client) {
     meta: {
       icon:             "favorite",
       note:             "Donaties via Stripe Checkout. Stripe blijft bron van waarheid; deze tabel is voor overzicht.",
-      display_template: "{{donor_email}} — €{{amount}} ({{type}})",
+      display_template: "{{donor_name}} — {{amount_display}} ({{type}})",
       sort_field:       "-created_at",
       archive_field:    "status",
       archive_value:    "ended",
@@ -86,10 +86,22 @@ export async function setupDonations(client) {
       width:     "half",
       interface: "input",
       required:  true,
-      note:      "Bedrag in eurocenten (bv. 500 = €5,00)",
+      note:      "Bedrag in eurocenten — bv. 2500 = €25,00. Komt exact overeen met Stripe.",
       readonly:  true,
     },
     schema:{ is_nullable: false },
+  });
+
+  await ensureField(client, "donations", {
+    field: "amount_display",
+    type:  "string",
+    meta: {
+      width:     "half",
+      interface: "input",
+      readonly:  true,
+      note:      "Leesbare weergave (bv. '€25,00'). Wordt automatisch ingevuld door de website.",
+    },
+    schema:{},
   });
 
   await ensureField(client, "donations", {

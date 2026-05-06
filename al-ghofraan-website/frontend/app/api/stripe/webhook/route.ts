@@ -19,8 +19,8 @@ import type Stripe from "stripe";
 import { getStripe, isStripeConfigured } from "@/lib/stripe";
 import { directusServer } from "@/lib/directus";
 import { readItems, updateItem, createItem } from "@directus/sdk";
+import { formatEurFromCents } from "@/lib/utils";
 import type { Donation, DonationStatus } from "@/types/directus";
-
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -84,6 +84,7 @@ async function createDonationFromSession(
         type,
         status:            "pending",
         amount,
+        amount_display:    formatEurFromCents(amount),
         currency:          (session.currency || "eur").toLowerCase(),
         donor_name:        (session.metadata?.donor_name as string) || null,
         donor_email:
@@ -128,6 +129,26 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, rawEven
     ? session.customer
     : session.customer?.id) ?? null;
 
+  // Definitief bedrag (kan in subscription mode anders binnenkomen).
+  const finalAmount = typeof session.amount_total === "number"
+    ? session.amount_total
+    : donation.amount;
+
+  // donor_name: behoud wat in pending stond; alleen aanvullen als 't ontbreekt
+  const finalDonorName =
+    donation.donor_name ||
+    (session.metadata?.donor_name as string) ||
+    (session.customer_details?.name as string) ||
+    null;
+
+  // donor_email: aanvullen vanuit Stripe als 't ontbreekt
+  const finalDonorEmail =
+    donation.donor_email ||
+    session.customer_email ||
+    (session.customer_details?.email as string) ||
+    (session.metadata?.donor_email as string) ||
+    "";
+
   await patchDonation(donation.id, {
     status,
     paid_at:                  new Date().toISOString(),
@@ -135,10 +156,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, rawEven
     stripe_subscription_id:   subId,
     stripe_customer_id:       customerId,
     raw_event:                rawEvent as Record<string, unknown>,
-    // amount kan in subscription mode anders binnenkomen; vul aan als 't ontbreekt
-    amount: typeof session.amount_total === "number"
-      ? session.amount_total
-      : donation.amount,
+    amount:                   finalAmount,
+    amount_display:           formatEurFromCents(finalAmount),
+    donor_name:               finalDonorName,
+    donor_email:              finalDonorEmail,
   });
 }
 
@@ -198,7 +219,6 @@ async function handleSubscriptionDeleted(sub: Stripe.Subscription, rawEvent: unk
 // ─── POST handler ───────────────────────────────────────────
 
 export async function POST(request: Request) {
-  const stripe = getStripe();
   if (!isStripeConfigured() || !WEBHOOK_SECRET) {
     return NextResponse.json(
       { error: "Webhook niet geconfigureerd." },
@@ -215,6 +235,14 @@ export async function POST(request: Request) {
   const rawBody = await request.text();
 
   let event: Stripe.Event;
+  if (!isStripeConfigured()) {
+  return NextResponse.json(
+    { error: "Stripe is niet geconfigureerd." },
+    { status: 503 }
+  );
+}
+
+const stripe = getStripe();
   try {
     event = stripe.webhooks.constructEvent(rawBody, sig, WEBHOOK_SECRET);
   } catch (err) {

@@ -280,8 +280,10 @@ export interface Donation {
   id: string;
   type: DonationType;
   status: DonationStatus;
-  /** Bedrag in eurocenten — altijd integer */
+  /** Bedrag in eurocenten — altijd integer. Bewaard voor exact overeenkomen met Stripe. */
   amount: number;
+  /** Leesbare weergave, bv. "€25,00". Wordt automatisch ingevuld bij aanmaken/updaten. */
+  amount_display?: string | null;
   currency: string;
   donor_name?: string | null;
   donor_email: string;

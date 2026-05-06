@@ -51,6 +51,12 @@ export default function DonationForm({ className }: DonationFormProps) {
     setStatus("idle");
     setErrorMessage("");
 
+    if (!donorName.trim()) {
+      setStatus("error");
+      setErrorMessage("Vul uw naam in.");
+      return;
+    }
+
     if (!donorEmail.trim()) {
       setStatus("error");
       setErrorMessage("Vul uw e-mailadres in.");
@@ -73,7 +79,7 @@ export default function DonationForm({ className }: DonationFormProps) {
         body:    JSON.stringify({
           type,
           amount_cents: amountCents,
-          donor_name:   donorName.trim() || undefined,
+          donor_name:   donorName.trim(),
           donor_email:  donorEmail.trim(),
           message:      message.trim() || undefined,
         }),
@@ -192,11 +198,12 @@ export default function DonationForm({ className }: DonationFormProps) {
       <div className="grid sm:grid-cols-2 gap-4 mb-4">
         <div>
           <label htmlFor="don-name" className={labelClass}>
-            Naam <span className="text-taupe-dark/70 text-xs font-normal">(optioneel)</span>
+            Naam <span className="text-red-600" aria-hidden>*</span>
           </label>
           <input
             id="don-name"
             type="text"
+            required
             autoComplete="name"
             className={inputClass}
             value={donorName}

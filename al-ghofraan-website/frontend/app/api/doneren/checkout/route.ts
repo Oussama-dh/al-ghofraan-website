@@ -23,6 +23,7 @@ import { NextResponse } from "next/server";
 import { getStripe, isStripeConfigured } from "@/lib/stripe";
 import { directusServer } from "@/lib/directus";
 import { createItem } from "@directus/sdk";
+import { formatEurFromCents } from "@/lib/utils";
 import type { DonationType } from "@/types/directus";
 
 export const runtime = "nodejs";
@@ -43,7 +44,7 @@ interface IncomingBody {
 interface ParsedBody {
   type:         DonationType;
   amount_cents: number;
-  donor_name?:  string;
+  donor_name:   string;
   donor_email:  string;
   message?:     string;
 }
@@ -67,6 +68,18 @@ function parseBody(
     return { ok: false, error: `Maximumbedrag online is €${MAX_AMOUNT_CENTS / 100}. Neem contact op voor grotere bedragen.` };
   }
 
+  // Naam — VERPLICHT (lege string of alleen spaties wordt geweigerd)
+  const name = String(raw.donor_name || "").trim();
+  if (!name) {
+    return { ok: false, error: "Vul uw naam in." };
+  }
+  if (name.length < 2) {
+    return { ok: false, error: "Vul een geldige naam in." };
+  }
+  if (name.length > 200) {
+    return { ok: false, error: "Naam is te lang." };
+  }
+
   const email = String(raw.donor_email || "").trim();
   if (!EMAIL_RE.test(email) || email.length > 320) {
     return { ok: false, error: "Vul een geldig e-mailadres in." };
@@ -75,14 +88,9 @@ function parseBody(
   const out: ParsedBody = {
     type:         type as DonationType,
     amount_cents: amount,
+    donor_name:   name,
     donor_email:  email,
   };
-
-  if (raw.donor_name !== undefined && String(raw.donor_name).trim()) {
-    const name = String(raw.donor_name).trim();
-    if (name.length > 200) return { ok: false, error: "Naam is te lang." };
-    out.donor_name = name;
-  }
 
   if (raw.message !== undefined && String(raw.message).trim()) {
     const message = String(raw.message).trim();
@@ -113,7 +121,8 @@ export async function POST(request: Request) {
       { status: 503 }
     );
   }
-
+  
+  const stripe = getStripe();
   let raw: IncomingBody;
   try {
     raw = (await request.json()) as IncomingBody;
@@ -130,10 +139,22 @@ export async function POST(request: Request) {
   const origin = getOrigin(request);
 
   // ─── Stripe Checkout Session aanmaken ─────────────────────
+  const amountDisplay = formatEurFromCents(body.amount_cents);
+
+  // Gedeelde metadata voor zowel Checkout Session als PI/Subscription —
+  // zo verschijnt alles ook in het Stripe Dashboard bij elke layer.
+  const sharedMetadata: Record<string, string> = {
+    donation_type:  body.type,
+    donor_name:     body.donor_name,
+    donor_email:    body.donor_email,
+    amount_cents:   String(body.amount_cents),
+    amount_display: amountDisplay,
+    source:         "website",
+  };
+
   let session;
   try {
     if (body.type === "one_time") {
-      const stripe = getStripe();
       session = await stripe.checkout.sessions.create({
         mode: "payment",
         // iDEAL voor NL + card voor internationale donaties.
@@ -155,24 +176,18 @@ export async function POST(request: Request) {
         customer_email: body.donor_email,
         success_url:    `${origin}/doneren/succes?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url:     `${origin}/doneren?geannuleerd=1`,
-        metadata: {
-          donation_type: body.type,
-          donor_name:    body.donor_name || "",
-          donor_email:   body.donor_email,
-          amount_cents:  String(body.amount_cents),
-          source:        "website",
+        metadata:       sharedMetadata,
+        payment_intent_data: {
+          description: `Donatie ${amountDisplay} — ${body.donor_name}`,
+          metadata: {
+            ...sharedMetadata,
+            ...(body.message ? { message: body.message.slice(0, 500) } : {}),
+          },
         },
-        // Bericht meegeven via custom field zodat het in Stripe Dashboard zichtbaar is
         ...(body.message
           ? {
               custom_text: {
                 submit: { message: "Bedankt voor uw bijdrage." },
-              },
-              payment_intent_data: {
-                description: `Donatie — ${body.donor_email}`,
-                metadata: {
-                  message: body.message.slice(0, 500),
-                },
               },
             }
           : {}),
@@ -182,7 +197,6 @@ export async function POST(request: Request) {
       // betaalmethode (iDEAL is one-shot). Voor maandelijkse donaties is
       // card de standaard. Stripe regelt SEPA-mandate intern als de
       // gebruiker daarvoor kiest in checkout.
-      const stripe = getStripe();
       session = await stripe.checkout.sessions.create({
         mode: "subscription",
         payment_method_types: ["card"],
@@ -202,16 +216,11 @@ export async function POST(request: Request) {
         customer_email: body.donor_email,
         success_url:    `${origin}/doneren/succes?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url:     `${origin}/doneren?geannuleerd=1`,
-        metadata: {
-          donation_type: body.type,
-          donor_name:    body.donor_name || "",
-          donor_email:   body.donor_email,
-          amount_cents:  String(body.amount_cents),
-          source:        "website",
-        },
+        metadata:       sharedMetadata,
         subscription_data: {
+          description: `Maandelijkse donatie ${amountDisplay} — ${body.donor_name}`,
           metadata: {
-            donor_email: body.donor_email,
+            ...sharedMetadata,
             ...(body.message ? { message: body.message.slice(0, 500) } : {}),
           },
         },
@@ -239,8 +248,9 @@ export async function POST(request: Request) {
         type:              body.type,
         status:            "pending",
         amount:            body.amount_cents,
+        amount_display:    amountDisplay,
         currency:          "eur",
-        donor_name:        body.donor_name ?? null,
+        donor_name:        body.donor_name,
         donor_email:       body.donor_email,
         message:           body.message ?? null,
         stripe_session_id: session.id,
