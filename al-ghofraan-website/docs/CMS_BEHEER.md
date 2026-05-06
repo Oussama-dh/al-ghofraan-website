@@ -62,6 +62,7 @@ Deze slugs zijn al in gebruik door vaste app-routes. Gebruik ze niet:
 - `gebedstijden`
 - `doneren`
 - `dawahcommissie`
+- `onderwijs`
 - `api`
 - `_next`
 
@@ -101,10 +102,36 @@ Footer-menu komt uit **Navigation Items** met `location` = `footer` of `both`.
 
 ## 4. Favicon, logo en og-image
 
-Directus → **Site Settings**:
-- `favicon` — 32×32 of 64×64 PNG/ICO/SVG
-- `logo` — vierkante transparante PNG/SVG
-- `og_image` — 1200×630 PNG (preview op WhatsApp/Facebook)
+Directus → **Site Settings** → upload bestanden in de juiste velden.
+
+### Logo (header linksboven)
+
+- **Veld:** `logo`
+- **Aanbevolen formaat:** PNG of SVG met **transparante achtergrond**
+- **Aanbevolen verhouding:** rechthoekig of vierkant — wordt op de site
+  weergegeven met een vaste hoogte van 40px (mobiel) / 48px (desktop) en
+  schaalt evenredig in de breedte (max 160px)
+- **Plaatsing:** verschijnt linksboven in de header, naast de site-naam
+- **Klikgedrag:** logo blijft klikbaar naar de homepage (`/`)
+- **Geen logo geüpload?** Dan toont de site automatisch een fallback-icoon —
+  bezoekers zien dus altijd iets
+
+> 💡 SVG is meestal de beste keuze: scherp op alle schermen, ook op
+> retina-displays. Geen logo bij de hand? Tip: laat een ontwerper een
+> transparante SVG maken op een vierkant canvas (bv. 256×256px).
+
+### Favicon
+
+- **Veld:** `favicon`
+- **Formaat:** 32×32 of 64×64 PNG, ICO of SVG
+- Verschijnt op het tabblad in de browser
+
+### Og-image (social preview)
+
+- **Veld:** `og_image`
+- **Formaat:** 1200×630 PNG
+- Wordt getoond als preview-afbeelding wanneer iemand een link naar de site
+  deelt op WhatsApp, Facebook, LinkedIn, etc.
 
 ---
 
@@ -257,6 +284,148 @@ Directus → **Activities** → klik **+**:
 4. Save
 
 ⚠️ Slechts één CSV mag tegelijk `active = true` zijn.
+
+---
+
+## 11. Onderwijsaanbod (`/onderwijs`)
+
+De onderwijs-pagina toont alle gepubliceerde lessen, cursussen en studiekringen.
+Elk programma heeft een eigen detailpagina op `/onderwijs/<slug>`.
+
+### Een nieuw onderwijsprogramma toevoegen
+
+Directus → **Education Programs** → klik **+** rechtsboven:
+
+| Veld                   | Toelichting                                                              |
+|------------------------|--------------------------------------------------------------------------|
+| `title`                | Titel zoals zichtbaar op de site (bv. "Qur'aan-recitatie voor beginners")|
+| `slug`                 | URL-segment, automatisch uit titel — wordt `/onderwijs/<slug>`          |
+| `description`          | Rich text — verschijnt op de detailpagina                                |
+| `teacher`              | Naam van de docent (optioneel)                                           |
+| `target_group`         | Doelgroep, bv. "Vrouwen" of "Beginners 16+" (optioneel)                  |
+| `schedule`             | Vrije tekst, bv. "Elke zaterdag 14:00–15:30" (optioneel)                 |
+| `location`             | Locatie (optioneel)                                                      |
+| `start_date`           | Startdatum (optioneel)                                                   |
+| `end_date`             | Einddatum (optioneel)                                                    |
+| `image`                | Hero-afbeelding (optioneel)                                              |
+| `registration_enabled` | **Aan** = inschrijfformulier verschijnt op detailpagina                  |
+| `target_gender`        | Doelgroep op geslacht — zie [sectie 11.1](#111-doelgroep-op-geslacht-instellen) |
+| `max_participants`     | Informatief — niet automatisch afgedwongen (optioneel)                   |
+| `sort`                 | Lager getal = bovenaan op `/onderwijs`                                   |
+| `status`               | Zet op **`published`** om live te zetten                                 |
+
+> 💡 Tip: zet `sort` met stappen van 10 (10, 20, 30…) zodat je later makkelijk een
+> nieuw item ertussen kunt schuiven.
+
+### Inschrijving aan/uit zetten
+
+Op het programma:
+- **`registration_enabled = true`** → het formulier verschijnt op de detailpagina
+- **`registration_enabled = false`** → bezoekers zien "Inschrijven is momenteel gesloten"
+
+Hetzelfde principe geldt voor activiteiten in **Activities** (de agenda).
+
+### 11.1 Doelgroep op geslacht instellen
+
+Het veld `target_gender` is beschikbaar op zowel **Education Programs** als
+**Activities** en bepaalt wie het inschrijfformulier ziet en mag versturen.
+
+| Waarde   | Wat de bezoeker ziet                                  | Wat de server toelaat       |
+|----------|-------------------------------------------------------|------------------------------|
+| `mixed` (of leeg) | Keuze tussen "Man" en "Vrouw"                | Beide                       |
+| `male`            | Alleen "Man" + banner: "Deze inschrijving is alleen voor mannen." | Alleen male       |
+| `female`          | Alleen "Vrouw" + banner: "Deze inschrijving is alleen voor vrouwen." | Alleen female   |
+
+> ⚠️ Geslacht is **verplicht** voor elke inschrijving. Zonder geslacht kan de
+> bezoeker het formulier niet versturen, en weigert de server het verzoek.
+
+**Voorbeeld:** je biedt een Fiqh-cursus alleen voor vrouwen aan. Zet
+`target_gender = female` — dan kan een mannelijke bezoeker zich niet per
+ongeluk inschrijven, ook niet via direct knutselen aan de URL of formulier.
+
+---
+
+## 12. Inschrijvingen bekijken en beheren
+
+Alle inschrijvingen — voor zowel activiteiten als onderwijs — komen binnen in
+**dezelfde** collectie zodat je ze op één plek kunt beheren.
+
+### Inschrijvingen openen
+
+Directus → **Registrations**
+
+Sortering staat standaard op nieuwste eerst. Filter op `type` om alleen
+activiteit- of onderwijs-inschrijvingen te zien.
+
+### Velden per inschrijving
+
+| Veld              | Inhoud                                                            |
+|-------------------|-------------------------------------------------------------------|
+| `type`            | `activity` of `education` (automatisch ingevuld)                  |
+| `source_title`    | Titel van de activiteit/cursus zoals die was bij inschrijven      |
+| `source_slug`     | Slug — handig om snel naar de pagina te navigeren                 |
+| `name`, `email`   | Contactgegevens                                                   |
+| `phone`           | Telefoon (indien opgegeven)                                       |
+| `gender`          | `male` of `female` — **verplicht** voor nieuwe inschrijvingen     |
+| `age`             | Leeftijd (optioneel)                                              |
+| `notes`           | Vrij tekstveld dat de bezoeker invulde                            |
+| `status`          | Zie hieronder                                                     |
+| `created_at`      | Tijdstip van inschrijving (automatisch)                           |
+
+> ℹ️ **Bestaande inschrijvingen van vóór deze update** kunnen nog oude
+> waarden hebben in `gender` (zoals `m`, `f`, `other` of leeg). Die blijven
+> staan zoals ze zijn — alleen *nieuwe* inschrijvingen worden afgedwongen
+> op `male` / `female`.
+
+### Inschrijvingen filteren op geslacht
+
+In Directus → **Registrations**:
+
+1. Klik bovenaan op het filter-icoon
+2. Kies veld `gender` → operator `Is equal to` → waarde `male` of `female`
+3. Combineer eventueel met `type` (activity/education) of `source_slug`
+   om bijvoorbeeld alleen vrouwen voor één specifieke cursus te zien
+
+Sla de filter op als een preset (drie puntjes rechtsboven → Save preset)
+zodat je dezelfde view later snel terugvindt.
+
+### Status beheren
+
+De `status` is een dropdown met vijf opties:
+
+| Status         | Wanneer te gebruiken                                  |
+|----------------|-------------------------------------------------------|
+| `new`          | Net binnengekomen — nog geen actie ondernomen         |
+| `contacted`    | We hebben contact opgenomen, wachten op respons       |
+| `confirmed`    | Definitief ingeschreven                               |
+| `waiting_list` | Vol — op de wachtlijst geplaatst                      |
+| `cancelled`    | Inschrijving geannuleerd                              |
+
+Wijzig de status door op de inschrijving te klikken en de dropdown aan te passen.
+
+### Verschil tussen `education_programs` en `registrations`
+
+- **Education Programs** = het *aanbod* dat je publiceert (cursussen, lessen).
+  Eén item per cursus. Beheer je via de "Education Programs" collectie.
+- **Registrations** = de *inschrijvingen* die bezoekers indienen via het
+  formulier. Eén item per persoon die zich inschrijft. Komt automatisch binnen.
+
+Activiteiten (`activities`) werken hetzelfde: het zijn de aankondigingen op
+de agenda. Inschrijvingen daarop landen óók in **Registrations** met
+`type = activity`.
+
+### Veiligheid
+
+- Bezoekers kunnen `registrations` **niet** lezen of opvragen via de website —
+  alleen redacteuren in Directus.
+- Het formulier op de website schrijft via een server-side API-route
+  (`/api/inschrijven`) die het admin-token gebruikt. Daar is geen
+  Directus-account voor nodig voor de bezoeker.
+
+> ⚠️ **Belangrijk:** voor productie moet `DIRECTUS_TOKEN` in `.env` staan met
+> een geldig server-token (Directus → Settings → Access Tokens). Zonder dat
+> token werkt het inschrijfformulier niet en krijgt de bezoeker een vriendelijke
+> foutmelding.
 
 ---
 

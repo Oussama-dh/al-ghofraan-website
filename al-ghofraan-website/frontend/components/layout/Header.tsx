@@ -2,7 +2,6 @@
 "use client";
 
 import Link             from "next/link";
-import Image            from "next/image";
 import { useState }     from "react";
 import { Menu, X }      from "lucide-react";
 import { cn }           from "@/lib/utils";
@@ -33,7 +32,7 @@ export default function Header({ settings, navItems, logoUrl }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-sand-200">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo / naam */}
           <Link
             href="/"
@@ -41,19 +40,19 @@ export default function Header({ settings, navItems, logoUrl }: HeaderProps) {
             onClick={() => setMenuOpen(false)}
           >
             {logoUrl ? (
-              <div className="w-9 h-9 relative shrink-0">
-                <Image
-                  src={logoUrl}
-                  alt={`${siteName} logo`}
-                  fill
-                  sizes="36px"
-                  className="object-contain"
-                  priority
-                />
-              </div>
+              // Vaste hoogte 40px (md: 48px), breedte schaalt mee met aspect ratio.
+              // Gebruik next/image met width/height=auto via intrinsic sizing zou
+              // layout-shift geven; daarom een gewone <img> met explicit height en
+              // max-width voor mobile.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt={`${siteName} logo`}
+                className="h-10 md:h-12 w-auto max-w-[160px] object-contain shrink-0"
+              />
             ) : (
-              <div className="w-9 h-9 bg-slate-mosque rounded-xl flex items-center justify-center shrink-0 group-hover:bg-slate-dark transition-colors">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-white">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-mosque rounded-xl flex items-center justify-center shrink-0 group-hover:bg-slate-dark transition-colors">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="text-white">
                   <path d="M12 2l2 4h2l1 2H7l1-2h2l2-4z" fill="currentColor" opacity="0.9" />
                   <rect x="9"  y="8"  width="6"  height="12" rx="1"   fill="currentColor" />
                   <rect x="6"  y="18" width="12" height="2"  rx="0.5" fill="currentColor" />

@@ -19,6 +19,7 @@ import type {
   IconSetting,
   PageSection,
   PageSectionItem,
+  EducationProgram,
 } from "@/types/directus";
 
 const DIRECTUS_INTERNAL_URL =
@@ -98,7 +99,7 @@ export async function getActivities(options?: {
           fields:  [
             "id", "status", "title", "slug", "description",
             "start_date", "end_date", "location", "image",
-            "featured", "registration_enabled",
+            "featured", "registration_enabled", "target_gender",
           ],
         })
       );
@@ -124,7 +125,7 @@ export async function getUpcomingActivities(limit = 6): Promise<Activity[]> {
           fields: [
             "id", "status", "title", "slug", "description",
             "start_date", "end_date", "location", "image",
-            "featured", "registration_enabled",
+            "featured", "registration_enabled", "target_gender",
           ],
         })
       );
@@ -148,6 +149,68 @@ export async function getActivityBySlug(slug: string): Promise<Activity | null> 
     },
     `getActivityBySlug(${slug})`,
     null
+  );
+}
+
+// ─── Education programs ──────────────────────────────────────
+const EDUCATION_FIELDS = [
+  "id", "status", "title", "slug", "description",
+  "teacher", "target_group", "schedule", "location",
+  "start_date", "end_date", "image",
+  "registration_enabled", "max_participants", "sort", "target_gender",
+];
+
+export async function getEducationPrograms(): Promise<EducationProgram[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("education_programs", {
+          filter: { status: { _eq: "published" } } as never,
+          sort:   ["sort", "title"],
+          limit:  -1,
+          fields: EDUCATION_FIELDS,
+        })
+      );
+      return result as unknown as EducationProgram[];
+    },
+    "getEducationPrograms",
+    []
+  );
+}
+
+export async function getEducationProgramBySlug(
+  slug: string
+): Promise<EducationProgram | null> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("education_programs", {
+          filter: { slug: { _eq: slug }, status: { _eq: "published" } } as never,
+          limit:  1,
+          fields: EDUCATION_FIELDS,
+        })
+      );
+      return ((result as unknown as EducationProgram[])[0]) ?? null;
+    },
+    `getEducationProgramBySlug(${slug})`,
+    null
+  );
+}
+
+export async function getAllEducationProgramSlugs(): Promise<string[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("education_programs", {
+          filter: { status: { _eq: "published" } } as never,
+          limit:  -1,
+          fields: ["slug"],
+        })
+      );
+      return (result as Array<{ slug: string }>).map((r) => r.slug).filter(Boolean);
+    },
+    "getAllEducationProgramSlugs",
+    []
   );
 }
 
