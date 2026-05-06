@@ -62,6 +62,7 @@ Deze slugs zijn al in gebruik door vaste app-routes. Gebruik ze niet:
 - `gebedstijden`
 - `doneren`
 - `dawahcommissie`
+- `onderwijs`
 - `api`
 - `_next`
 
@@ -257,6 +258,111 @@ Directus → **Activities** → klik **+**:
 4. Save
 
 ⚠️ Slechts één CSV mag tegelijk `active = true` zijn.
+
+---
+
+## 11. Onderwijsaanbod (`/onderwijs`)
+
+De onderwijs-pagina toont alle gepubliceerde lessen, cursussen en studiekringen.
+Elk programma heeft een eigen detailpagina op `/onderwijs/<slug>`.
+
+### Een nieuw onderwijsprogramma toevoegen
+
+Directus → **Education Programs** → klik **+** rechtsboven:
+
+| Veld                   | Toelichting                                                              |
+|------------------------|--------------------------------------------------------------------------|
+| `title`                | Titel zoals zichtbaar op de site (bv. "Qur'aan-recitatie voor beginners")|
+| `slug`                 | URL-segment, automatisch uit titel — wordt `/onderwijs/<slug>`          |
+| `description`          | Rich text — verschijnt op de detailpagina                                |
+| `teacher`              | Naam van de docent (optioneel)                                           |
+| `target_group`         | Doelgroep, bv. "Vrouwen" of "Beginners 16+" (optioneel)                  |
+| `schedule`             | Vrije tekst, bv. "Elke zaterdag 14:00–15:30" (optioneel)                 |
+| `location`             | Locatie (optioneel)                                                      |
+| `start_date`           | Startdatum (optioneel)                                                   |
+| `end_date`             | Einddatum (optioneel)                                                    |
+| `image`                | Hero-afbeelding (optioneel)                                              |
+| `registration_enabled` | **Aan** = inschrijfformulier verschijnt op detailpagina                  |
+| `max_participants`     | Informatief — niet automatisch afgedwongen (optioneel)                   |
+| `sort`                 | Lager getal = bovenaan op `/onderwijs`                                   |
+| `status`               | Zet op **`published`** om live te zetten                                 |
+
+> 💡 Tip: zet `sort` met stappen van 10 (10, 20, 30…) zodat je later makkelijk een
+> nieuw item ertussen kunt schuiven.
+
+### Inschrijving aan/uit zetten
+
+Op het programma:
+- **`registration_enabled = true`** → het formulier verschijnt op de detailpagina
+- **`registration_enabled = false`** → bezoekers zien "Inschrijven is momenteel gesloten"
+
+Hetzelfde principe geldt voor activiteiten in **Activities** (de agenda).
+
+---
+
+## 12. Inschrijvingen bekijken en beheren
+
+Alle inschrijvingen — voor zowel activiteiten als onderwijs — komen binnen in
+**dezelfde** collectie zodat je ze op één plek kunt beheren.
+
+### Inschrijvingen openen
+
+Directus → **Registrations**
+
+Sortering staat standaard op nieuwste eerst. Filter op `type` om alleen
+activiteit- of onderwijs-inschrijvingen te zien.
+
+### Velden per inschrijving
+
+| Veld              | Inhoud                                                            |
+|-------------------|-------------------------------------------------------------------|
+| `type`            | `activity` of `education` (automatisch ingevuld)                  |
+| `source_title`    | Titel van de activiteit/cursus zoals die was bij inschrijven      |
+| `source_slug`     | Slug — handig om snel naar de pagina te navigeren                 |
+| `name`, `email`   | Contactgegevens                                                   |
+| `phone`           | Telefoon (indien opgegeven)                                       |
+| `age`, `gender`   | Optionele velden                                                  |
+| `notes`           | Vrij tekstveld dat de bezoeker invulde                            |
+| `status`          | Zie hieronder                                                     |
+| `created_at`      | Tijdstip van inschrijving (automatisch)                           |
+
+### Status beheren
+
+De `status` is een dropdown met vijf opties:
+
+| Status         | Wanneer te gebruiken                                  |
+|----------------|-------------------------------------------------------|
+| `new`          | Net binnengekomen — nog geen actie ondernomen         |
+| `contacted`    | We hebben contact opgenomen, wachten op respons       |
+| `confirmed`    | Definitief ingeschreven                               |
+| `waiting_list` | Vol — op de wachtlijst geplaatst                      |
+| `cancelled`    | Inschrijving geannuleerd                              |
+
+Wijzig de status door op de inschrijving te klikken en de dropdown aan te passen.
+
+### Verschil tussen `education_programs` en `registrations`
+
+- **Education Programs** = het *aanbod* dat je publiceert (cursussen, lessen).
+  Eén item per cursus. Beheer je via de "Education Programs" collectie.
+- **Registrations** = de *inschrijvingen* die bezoekers indienen via het
+  formulier. Eén item per persoon die zich inschrijft. Komt automatisch binnen.
+
+Activiteiten (`activities`) werken hetzelfde: het zijn de aankondigingen op
+de agenda. Inschrijvingen daarop landen óók in **Registrations** met
+`type = activity`.
+
+### Veiligheid
+
+- Bezoekers kunnen `registrations` **niet** lezen of opvragen via de website —
+  alleen redacteuren in Directus.
+- Het formulier op de website schrijft via een server-side API-route
+  (`/api/inschrijven`) die het admin-token gebruikt. Daar is geen
+  Directus-account voor nodig voor de bezoeker.
+
+> ⚠️ **Belangrijk:** voor productie moet `DIRECTUS_TOKEN` in `.env` staan met
+> een geldig server-token (Directus → Settings → Access Tokens). Zonder dat
+> token werkt het inschrijfformulier niet en krijgt de bezoeker een vriendelijke
+> foutmelding.
 
 ---
 

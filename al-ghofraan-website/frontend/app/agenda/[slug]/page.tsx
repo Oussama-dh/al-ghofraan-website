@@ -6,6 +6,7 @@ import Image              from "next/image";
 import Container          from "@/components/ui/Container";
 import Button             from "@/components/ui/Button";
 import { Icon }           from "@/lib/icons";
+import RegistrationForm   from "@/components/registration/RegistrationForm";
 import {
   getActivityBySlug,
   getAssetUrl,
@@ -107,11 +108,12 @@ export default async function ActivityDetailPage({ params }: Props) {
           />
 
           {activity.registration_enabled && (
-            <div className="mt-10 p-6 bg-slate-mosque/10 border border-slate-mosque/20 rounded-2xl">
-              <h3 className="font-display text-xl text-ink mb-2">Inschrijven</h3>
-              <p className="font-body text-taupe-dark text-sm">
-                Inschrijven voor deze activiteit is binnenkort mogelijk.
-              </p>
+            <div className="mt-10">
+              <RegistrationForm
+                type="activity"
+                sourceSlug={activity.slug}
+                sourceTitle={activity.title}
+              />
             </div>
           )}
 

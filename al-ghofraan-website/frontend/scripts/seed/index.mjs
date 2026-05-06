@@ -9,6 +9,8 @@ import { setupPageSections }        from "./steps/01d-page-sections.mjs";
 import { setupSectionExtras }       from "./steps/01e-section-extras.mjs";
 import { setupPageSlugInput }       from "./steps/01f-page-slug-input.mjs";
 import { fixPrayerTimeFileField }   from "./steps/01g-fix-prayer-time-file-field.mjs";
+import { setupEducationPrograms }   from "./steps/11-education-programs.mjs";
+import { setupRegistrations }       from "./steps/12-registrations.mjs";
 import { setupPermissions }         from "./steps/02-permissions.mjs";
 import { seedNavigation }           from "./steps/03-navigation.mjs";
 import { seedSiteSettings }         from "./steps/04-site-settings.mjs";
@@ -40,7 +42,9 @@ try {
   await setupSectionExtras(client);      // 1e. extra section + item velden
   await setupPageSlugInput(client);      // 1f. page_slug dropdown → input
   await fixPrayerTimeFileField(client);  // 1g. file-veld relatie repareren
-  await setupPermissions(client);        // 2.  permissies
+  await setupEducationPrograms(client);  // 11. education_programs (collectie + voorbeelden)
+  await setupRegistrations(client);      // 12. registrations (alleen collectie — geen public access)
+  await setupPermissions(client);        // 2.  permissies (NA alle collecties!)
   await seedNavigation(client);          // 3.  menu
   await seedSiteSettings(client);        // 4.  site-instellingen
   await seedPageContent(client);         // 5.  pagina's

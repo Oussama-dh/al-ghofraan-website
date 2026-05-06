@@ -11,6 +11,7 @@ export async function seedNavigation(client) {
     { label: "Home",          href: "/",               sort: 10, highlight: false, external: false, active: true, location: "both"   },
     { label: "Over ons",      href: "/dawahcommissie", sort: 20, highlight: false, external: false, active: true, location: "both"   },
     { label: "Agenda",        href: "/agenda",         sort: 30, highlight: false, external: false, active: true, location: "both"   },
+    { label: "Onderwijs",     href: "/onderwijs",      sort: 35, highlight: false, external: false, active: true, location: "header" },
     { label: "Gebedstijden",  href: "/gebedstijden",   sort: 40, highlight: false, external: false, active: true, location: "both"   },
     { label: "Doneren",       href: "/doneren",        sort: 50, highlight: true,  external: false, active: true, location: "both"   },
   ];

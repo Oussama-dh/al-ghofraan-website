@@ -156,6 +156,52 @@ export interface PageSection {
   sort?: number | null;
 }
 
+// ─── education_programs ──────────────────────────────────────
+export interface EducationProgram {
+  id: string;
+  status: "published" | "draft" | "archived";
+  title: string;
+  slug: string;
+  description?: string | null;
+  teacher?: string | null;
+  target_group?: string | null;
+  schedule?: string | null;
+  location?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  image?: string | DirectusFile | null;
+  registration_enabled: boolean;
+  max_participants?: number | null;
+  sort?: number | null;
+}
+
+// ─── registrations ───────────────────────────────────────────
+export type RegistrationType = "activity" | "education";
+
+export type RegistrationStatus =
+  | "new"
+  | "contacted"
+  | "confirmed"
+  | "waiting_list"
+  | "cancelled";
+
+export interface Registration {
+  id: string;
+  type: RegistrationType;
+  source_collection: string;   // "activities" | "education_programs"
+  source_id: string;           // id van het bron-item
+  source_slug: string;
+  source_title: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  age?: number | null;
+  gender?: "m" | "f" | "other" | "unspecified" | null;
+  notes?: string | null;
+  status: RegistrationStatus;
+  created_at?: string | null;
+}
+
 // ─── page_section_items ──────────────────────────────────────
 export interface PageSectionItem {
   id: string;
@@ -204,4 +250,6 @@ export interface DirectusSchema {
   icon_settings: IconSetting[];
   page_sections: PageSection[];
   page_section_items: PageSectionItem[];
+  education_programs: EducationProgram[];
+  registrations: Registration[];
 }
