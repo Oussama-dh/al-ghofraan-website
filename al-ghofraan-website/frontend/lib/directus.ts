@@ -99,7 +99,7 @@ export async function getActivities(options?: {
           fields:  [
             "id", "status", "title", "slug", "description",
             "start_date", "end_date", "location", "image",
-            "featured", "registration_enabled",
+            "featured", "registration_enabled", "target_gender",
           ],
         })
       );
@@ -125,7 +125,7 @@ export async function getUpcomingActivities(limit = 6): Promise<Activity[]> {
           fields: [
             "id", "status", "title", "slug", "description",
             "start_date", "end_date", "location", "image",
-            "featured", "registration_enabled",
+            "featured", "registration_enabled", "target_gender",
           ],
         })
       );
@@ -157,7 +157,7 @@ const EDUCATION_FIELDS = [
   "id", "status", "title", "slug", "description",
   "teacher", "target_group", "schedule", "location",
   "start_date", "end_date", "image",
-  "registration_enabled", "max_participants", "sort",
+  "registration_enabled", "max_participants", "sort", "target_gender",
 ];
 
 export async function getEducationPrograms(): Promise<EducationProgram[]> {

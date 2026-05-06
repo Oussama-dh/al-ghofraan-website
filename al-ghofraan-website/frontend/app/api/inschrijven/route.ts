@@ -4,13 +4,14 @@
 // Schrijft naar de `registrations` collectie via Directus admin-token.
 //
 // De client verstuurt:
-//   { type, source_slug, name, email, phone?, age?, gender?, notes?, consent }
+//   { type, source_slug, name, email, gender, phone?, age?, notes?, consent }
 //
 // Server-side wordt:
 //   1. payload gevalideerd
 //   2. de bron opgezocht in de juiste collectie (activities/education_programs)
 //   3. gecontroleerd of registration_enabled = true
-//   4. een nieuwe registratie aangemaakt met type/source_*/status="new"
+//   4. gecontroleerd of het opgegeven gender past bij target_gender van de bron
+//   5. een nieuwe registratie aangemaakt met type/source_*/status="new"
 
 import { NextResponse } from "next/server";
 import { directusServer } from "@/lib/directus";
@@ -18,7 +19,9 @@ import { readItems, createItem } from "@directus/sdk";
 import type {
   Activity,
   EducationProgram,
+  Gender,
   RegistrationType,
+  TargetGender,
 } from "@/types/directus";
 
 export const runtime = "nodejs";
@@ -26,7 +29,9 @@ export const dynamic = "force-dynamic";
 
 // ─── Validatie ──────────────────────────────────────────────
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const ALLOWED_GENDERS = new Set(["m", "f", "other", "unspecified"]);
+const ALLOWED_GENDERS: ReadonlySet<Gender> = new Set<Gender>(["male", "female"]);
+const ALLOWED_TARGET_GENDERS: ReadonlySet<TargetGender> =
+  new Set<TargetGender>(["male", "female", "mixed"]);
 
 interface IncomingBody {
   type?:        unknown;
@@ -45,13 +50,15 @@ interface ParsedBody {
   source_slug: string;
   name:        string;
   email:       string;
+  gender:      Gender;
   phone?:      string;
   age?:        number;
-  gender?:     "m" | "f" | "other" | "unspecified";
   notes?:      string;
 }
 
-function parseBody(raw: IncomingBody): { ok: true; data: ParsedBody } | { ok: false; error: string } {
+function parseBody(
+  raw: IncomingBody
+): { ok: true; data: ParsedBody } | { ok: false; error: string } {
   const type = String(raw.type || "").trim();
   if (type !== "activity" && type !== "education") {
     return { ok: false, error: "Ongeldig type. Verwacht 'activity' of 'education'." };
@@ -70,6 +77,15 @@ function parseBody(raw: IncomingBody): { ok: true; data: ParsedBody } | { ok: fa
     return { ok: false, error: "Vul een geldig e-mailadres in." };
   }
 
+  // Gender — VERPLICHT en alleen male/female
+  const gender = String(raw.gender || "").trim();
+  if (!gender) {
+    return { ok: false, error: "Geslacht is verplicht." };
+  }
+  if (!ALLOWED_GENDERS.has(gender as Gender)) {
+    return { ok: false, error: "Ongeldige waarde voor geslacht. Kies 'Man' of 'Vrouw'." };
+  }
+
   if (raw.consent !== true) {
     return { ok: false, error: "Akkoord met verwerking van uw gegevens is verplicht." };
   }
@@ -80,6 +96,7 @@ function parseBody(raw: IncomingBody): { ok: true; data: ParsedBody } | { ok: fa
     source_slug: sourceSlug,
     name,
     email,
+    gender:      gender as Gender,
   };
 
   if (raw.phone !== undefined && raw.phone !== null && String(raw.phone).trim()) {
@@ -96,14 +113,6 @@ function parseBody(raw: IncomingBody): { ok: true; data: ParsedBody } | { ok: fa
     out.age = Math.round(age);
   }
 
-  if (raw.gender !== undefined && raw.gender !== null && String(raw.gender).trim()) {
-    const gender = String(raw.gender).trim();
-    if (!ALLOWED_GENDERS.has(gender)) {
-      return { ok: false, error: "Ongeldige waarde voor geslacht." };
-    }
-    out.gender = gender as ParsedBody["gender"];
-  }
-
   if (raw.notes !== undefined && raw.notes !== null && String(raw.notes).trim()) {
     const notes = String(raw.notes).trim();
     if (notes.length > 2000) return { ok: false, error: "Opmerkingen zijn te lang (max 2000 tekens)." };
@@ -113,20 +122,37 @@ function parseBody(raw: IncomingBody): { ok: true; data: ParsedBody } | { ok: fa
   return { ok: true, data: out };
 }
 
+/**
+ * Normaliseer target_gender uit Directus — leeg/onbekend behandelen we als "mixed".
+ */
+function normalizeTargetGender(value: unknown): TargetGender {
+  if (typeof value !== "string") return "mixed";
+  const v = value.trim();
+  if (!v) return "mixed";
+  return ALLOWED_TARGET_GENDERS.has(v as TargetGender)
+    ? (v as TargetGender)
+    : "mixed";
+}
+
 // ─── Bron-lookup ────────────────────────────────────────────
+interface SourceData {
+  sourceCollection:    string;
+  sourceId:            string;
+  sourceTitle:         string;
+  registrationEnabled: boolean;
+  targetGender:        TargetGender;
+}
+
 async function findSource(
   type: RegistrationType,
   slug: string
-): Promise<
-  | { ok: true; sourceCollection: string; sourceId: string; sourceTitle: string; registrationEnabled: boolean }
-  | { ok: false; status: number; error: string }
-> {
+): Promise<{ ok: true; data: SourceData } | { ok: false; status: number; error: string }> {
   try {
     if (type === "activity") {
       const result = await directusServer.request(
         readItems("activities", {
           filter: { slug: { _eq: slug }, status: { _eq: "published" } } as never,
-          fields: ["id", "title", "registration_enabled"],
+          fields: ["id", "title", "registration_enabled", "target_gender"],
           limit:  1,
         })
       );
@@ -134,16 +160,19 @@ async function findSource(
       if (!row) return { ok: false, status: 404, error: "Activiteit niet gevonden." };
       return {
         ok: true,
-        sourceCollection: "activities",
-        sourceId:         String(row.id),
-        sourceTitle:      row.title,
-        registrationEnabled: !!row.registration_enabled,
+        data: {
+          sourceCollection:    "activities",
+          sourceId:            String(row.id),
+          sourceTitle:         row.title,
+          registrationEnabled: !!row.registration_enabled,
+          targetGender:        normalizeTargetGender(row.target_gender),
+        },
       };
     } else {
       const result = await directusServer.request(
         readItems("education_programs", {
           filter: { slug: { _eq: slug }, status: { _eq: "published" } } as never,
-          fields: ["id", "title", "registration_enabled"],
+          fields: ["id", "title", "registration_enabled", "target_gender"],
           limit:  1,
         })
       );
@@ -151,10 +180,13 @@ async function findSource(
       if (!row) return { ok: false, status: 404, error: "Onderwijsprogramma niet gevonden." };
       return {
         ok: true,
-        sourceCollection: "education_programs",
-        sourceId:         String(row.id),
-        sourceTitle:      row.title,
-        registrationEnabled: !!row.registration_enabled,
+        data: {
+          sourceCollection:    "education_programs",
+          sourceId:            String(row.id),
+          sourceTitle:         row.title,
+          registrationEnabled: !!row.registration_enabled,
+          targetGender:        normalizeTargetGender(row.target_gender),
+        },
       };
     }
   } catch (err) {
@@ -193,10 +225,25 @@ export async function POST(request: Request) {
   if (!source.ok) {
     return NextResponse.json({ error: source.error }, { status: source.status });
   }
+  const src = source.data;
 
-  if (!source.registrationEnabled) {
+  if (!src.registrationEnabled) {
     return NextResponse.json(
       { error: "Inschrijven voor dit item is momenteel gesloten." },
+      { status: 403 }
+    );
+  }
+
+  // Geslacht moet passen bij doelgroep
+  if (src.targetGender === "male" && body.gender !== "male") {
+    return NextResponse.json(
+      { error: "Deze inschrijving is alleen voor mannen." },
+      { status: 403 }
+    );
+  }
+  if (src.targetGender === "female" && body.gender !== "female") {
+    return NextResponse.json(
+      { error: "Deze inschrijving is alleen voor vrouwen." },
       { status: 403 }
     );
   }
@@ -206,15 +253,15 @@ export async function POST(request: Request) {
     await directusServer.request(
       createItem("registrations", {
         type:              body.type,
-        source_collection: source.sourceCollection,
-        source_id:         source.sourceId,
+        source_collection: src.sourceCollection,
+        source_id:         src.sourceId,
         source_slug:       body.source_slug,
-        source_title:      source.sourceTitle,
+        source_title:      src.sourceTitle,
         name:              body.name,
         email:             body.email,
         phone:             body.phone ?? null,
         age:               body.age ?? null,
-        gender:            body.gender ?? null,
+        gender:            body.gender,
         notes:             body.notes ?? null,
         status:            "new",
       } as never)

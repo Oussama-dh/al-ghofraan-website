@@ -145,6 +145,7 @@ export default async function EducationProgramDetailPage({ params }: Props) {
                 type="education"
                 sourceSlug={program.slug}
                 sourceTitle={program.title}
+                targetGender={program.target_gender ?? null}
               />
             ) : (
               <div className="p-6 bg-sand-100 border border-sand-200 rounded-2xl text-center">

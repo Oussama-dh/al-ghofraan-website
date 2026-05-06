@@ -102,10 +102,36 @@ Footer-menu komt uit **Navigation Items** met `location` = `footer` of `both`.
 
 ## 4. Favicon, logo en og-image
 
-Directus → **Site Settings**:
-- `favicon` — 32×32 of 64×64 PNG/ICO/SVG
-- `logo` — vierkante transparante PNG/SVG
-- `og_image` — 1200×630 PNG (preview op WhatsApp/Facebook)
+Directus → **Site Settings** → upload bestanden in de juiste velden.
+
+### Logo (header linksboven)
+
+- **Veld:** `logo`
+- **Aanbevolen formaat:** PNG of SVG met **transparante achtergrond**
+- **Aanbevolen verhouding:** rechthoekig of vierkant — wordt op de site
+  weergegeven met een vaste hoogte van 40px (mobiel) / 48px (desktop) en
+  schaalt evenredig in de breedte (max 160px)
+- **Plaatsing:** verschijnt linksboven in de header, naast de site-naam
+- **Klikgedrag:** logo blijft klikbaar naar de homepage (`/`)
+- **Geen logo geüpload?** Dan toont de site automatisch een fallback-icoon —
+  bezoekers zien dus altijd iets
+
+> 💡 SVG is meestal de beste keuze: scherp op alle schermen, ook op
+> retina-displays. Geen logo bij de hand? Tip: laat een ontwerper een
+> transparante SVG maken op een vierkant canvas (bv. 256×256px).
+
+### Favicon
+
+- **Veld:** `favicon`
+- **Formaat:** 32×32 of 64×64 PNG, ICO of SVG
+- Verschijnt op het tabblad in de browser
+
+### Og-image (social preview)
+
+- **Veld:** `og_image`
+- **Formaat:** 1200×630 PNG
+- Wordt getoond als preview-afbeelding wanneer iemand een link naar de site
+  deelt op WhatsApp, Facebook, LinkedIn, etc.
 
 ---
 
@@ -283,6 +309,7 @@ Directus → **Education Programs** → klik **+** rechtsboven:
 | `end_date`             | Einddatum (optioneel)                                                    |
 | `image`                | Hero-afbeelding (optioneel)                                              |
 | `registration_enabled` | **Aan** = inschrijfformulier verschijnt op detailpagina                  |
+| `target_gender`        | Doelgroep op geslacht — zie [sectie 11.1](#111-doelgroep-op-geslacht-instellen) |
 | `max_participants`     | Informatief — niet automatisch afgedwongen (optioneel)                   |
 | `sort`                 | Lager getal = bovenaan op `/onderwijs`                                   |
 | `status`               | Zet op **`published`** om live te zetten                                 |
@@ -297,6 +324,24 @@ Op het programma:
 - **`registration_enabled = false`** → bezoekers zien "Inschrijven is momenteel gesloten"
 
 Hetzelfde principe geldt voor activiteiten in **Activities** (de agenda).
+
+### 11.1 Doelgroep op geslacht instellen
+
+Het veld `target_gender` is beschikbaar op zowel **Education Programs** als
+**Activities** en bepaalt wie het inschrijfformulier ziet en mag versturen.
+
+| Waarde   | Wat de bezoeker ziet                                  | Wat de server toelaat       |
+|----------|-------------------------------------------------------|------------------------------|
+| `mixed` (of leeg) | Keuze tussen "Man" en "Vrouw"                | Beide                       |
+| `male`            | Alleen "Man" + banner: "Deze inschrijving is alleen voor mannen." | Alleen male       |
+| `female`          | Alleen "Vrouw" + banner: "Deze inschrijving is alleen voor vrouwen." | Alleen female   |
+
+> ⚠️ Geslacht is **verplicht** voor elke inschrijving. Zonder geslacht kan de
+> bezoeker het formulier niet versturen, en weigert de server het verzoek.
+
+**Voorbeeld:** je biedt een Fiqh-cursus alleen voor vrouwen aan. Zet
+`target_gender = female` — dan kan een mannelijke bezoeker zich niet per
+ongeluk inschrijven, ook niet via direct knutselen aan de URL of formulier.
 
 ---
 
@@ -321,10 +366,28 @@ activiteit- of onderwijs-inschrijvingen te zien.
 | `source_slug`     | Slug — handig om snel naar de pagina te navigeren                 |
 | `name`, `email`   | Contactgegevens                                                   |
 | `phone`           | Telefoon (indien opgegeven)                                       |
-| `age`, `gender`   | Optionele velden                                                  |
+| `gender`          | `male` of `female` — **verplicht** voor nieuwe inschrijvingen     |
+| `age`             | Leeftijd (optioneel)                                              |
 | `notes`           | Vrij tekstveld dat de bezoeker invulde                            |
 | `status`          | Zie hieronder                                                     |
 | `created_at`      | Tijdstip van inschrijving (automatisch)                           |
+
+> ℹ️ **Bestaande inschrijvingen van vóór deze update** kunnen nog oude
+> waarden hebben in `gender` (zoals `m`, `f`, `other` of leeg). Die blijven
+> staan zoals ze zijn — alleen *nieuwe* inschrijvingen worden afgedwongen
+> op `male` / `female`.
+
+### Inschrijvingen filteren op geslacht
+
+In Directus → **Registrations**:
+
+1. Klik bovenaan op het filter-icoon
+2. Kies veld `gender` → operator `Is equal to` → waarde `male` of `female`
+3. Combineer eventueel met `type` (activity/education) of `source_slug`
+   om bijvoorbeeld alleen vrouwen voor één specifieke cursus te zien
+
+Sla de filter op als een preset (drie puntjes rechtsboven → Save preset)
+zodat je dezelfde view later snel terugvindt.
 
 ### Status beheren
 

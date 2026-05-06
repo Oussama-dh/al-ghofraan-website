@@ -11,6 +11,7 @@ import { setupPageSlugInput }       from "./steps/01f-page-slug-input.mjs";
 import { fixPrayerTimeFileField }   from "./steps/01g-fix-prayer-time-file-field.mjs";
 import { setupEducationPrograms }   from "./steps/11-education-programs.mjs";
 import { setupRegistrations }       from "./steps/12-registrations.mjs";
+import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
 import { setupPermissions }         from "./steps/02-permissions.mjs";
 import { seedNavigation }           from "./steps/03-navigation.mjs";
 import { seedSiteSettings }         from "./steps/04-site-settings.mjs";
@@ -44,6 +45,7 @@ try {
   await fixPrayerTimeFileField(client);  // 1g. file-veld relatie repareren
   await setupEducationPrograms(client);  // 11. education_programs (collectie + voorbeelden)
   await setupRegistrations(client);      // 12. registrations (alleen collectie — geen public access)
+  await setupTargetGender(client);       // 1h. target_gender velden + gender keuzes bijwerken
   await setupPermissions(client);        // 2.  permissies (NA alle collecties!)
   await seedNavigation(client);          // 3.  menu
   await seedSiteSettings(client);        // 4.  site-instellingen

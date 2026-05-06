@@ -132,14 +132,23 @@ export async function setupRegistrations(client) {
     meta: {
       width:     "half",
       interface: "select-dropdown",
+      required:  true,
       options: {
         choices: [
-          { text: "Man",         value: "m"           },
-          { text: "Vrouw",       value: "f"           },
-          { text: "Niet opgegeven", value: "unspecified" },
+          { text: "Man",   value: "male"   },
+          { text: "Vrouw", value: "female" },
         ],
       },
+      display: "labels",
+      display_options: {
+        choices: [
+          { text: "Man",   value: "male",   foreground: "#FFFFFF", background: "#3A6F8F" },
+          { text: "Vrouw", value: "female", foreground: "#FFFFFF", background: "#7E5A3A" },
+        ],
+      },
+      note: "Verplicht via inschrijfformulier — alleen male/female. Oude waarden in bestaande rijen blijven intact.",
     },
+    // schema bewust nullable string — anders breken oude rijen of records die zonder gender aangemaakt zijn
     schema:{},
   });
 

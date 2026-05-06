@@ -1,98 +1,91 @@
-// app/[slug]/page.tsx
-//
-// Dynamische pagina-route: leest page_content uit Directus voor de gegeven slug
-// en rendert de bijbehorende page_sections.
-//
-// Vaste app-routes (agenda, gebedstijden, ...) worden uitgesloten via
-// isReservedSlug(). Niet-bestaande / draft pagina's krijgen notFound().
+// app/agenda/[slug]/page.tsx
 
-import type { Metadata }     from "next";
-import { notFound }          from "next/navigation";
-import Container             from "@/components/ui/Container";
-import SectionTitle          from "@/components/ui/SectionTitle";
-import { Icon }              from "@/lib/icons";
-import { PageSectionsList }  from "@/components/sections/PageSectionRenderer";
+import type { Metadata }  from "next";
+import { notFound }       from "next/navigation";
+import Image              from "next/image";
+import Container          from "@/components/ui/Container";
+import Button             from "@/components/ui/Button";
+import { Icon }           from "@/lib/icons";
+import RegistrationForm   from "@/components/registration/RegistrationForm";
 import {
-  getPageContent,
-  getAllPageContentSlugs,
-  getPageSectionsWithItems,
+  getActivityBySlug,
+  getAssetUrl,
   getIconSettings,
-  getSiteSettings,
   resolveIconKey,
   ICON_KEYS,
 } from "@/lib/directus";
-import { isReservedSlug } from "@/lib/reservedSlugs";
-
-export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
-export const revalidate = 600;
-export const dynamicParams = true;
+import { formatDate }     from "@/lib/utils";
 
 interface Props {
   params: { slug: string };
 }
 
-/**
- * Pre-genereer params voor publicly bekende, niet-gereserveerde slugs.
- * Bij dynamicParams=true zorgt Next.js ervoor dat NIEUWE slugs in Directus
- * ook gewoon werken zonder rebuild — pre-render is een optimalisatie.
- */
-export async function generateStaticParams() {
-  const slugs = await getAllPageContentSlugs();
-  return slugs
-    .filter((slug) => !isReservedSlug(slug))
-    .map((slug) => ({ slug }));
-}
+export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  if (isReservedSlug(params.slug)) return {};
-
-  const [page, settings] = await Promise.all([
-    getPageContent(params.slug),
-    getSiteSettings(),
-  ]);
-
-  if (!page) return { title: "Pagina niet gevonden" };
-
+  const activity = await getActivityBySlug(params.slug);
+  if (!activity) return { title: "Activiteit niet gevonden" };
   return {
-    title:       page.seo_title       || page.title || settings?.default_seo_title || "Pagina",
-    description: page.seo_description || page.intro || settings?.default_seo_description || "",
+    title:       activity.title,
+    description: activity.description?.replace(/<[^>]+>/g, "").slice(0, 160),
   };
 }
 
-export default async function DynamicPage({ params }: Props) {
-  // Vaste routes worden door eigen page.tsx files afgehandeld — dit
-  // is een veiligheidsklep mocht iemand handmatig naar /agenda hier komen
-  if (isReservedSlug(params.slug)) notFound();
-
-  const [page, sections, iconMap] = await Promise.all([
-    getPageContent(params.slug),
-    getPageSectionsWithItems(params.slug),
+export default async function ActivityDetailPage({ params }: Props) {
+  const [activity, iconMap] = await Promise.all([
+    getActivityBySlug(params.slug),
     getIconSettings(),
   ]);
 
-  // Geen page_content én geen sections? Dan bestaat de pagina niet.
-  if (!page && sections.length === 0) notFound();
+  if (!activity) notFound();
 
-  const title    = page?.title    || params.slug;
-  const subtitle = page?.subtitle || null;
-  const intro    = page?.intro    || null;
-  const body     = page?.body     || null;
-  const pageIcon = page?.icon || resolveIconKey(iconMap, ICON_KEYS.pageSectionDefault);
+  const dateIcon     = resolveIconKey(iconMap, ICON_KEYS.activityDate);
+  const locationIcon = resolveIconKey(iconMap, ICON_KEYS.activityLocation);
 
-  const ctaSections   = sections.filter((s) => s.type === "cta");
-  const otherSections = sections.filter((s) => s.type !== "cta");
+  const imageUrl = getAssetUrl(activity.image as never);
 
   return (
     <>
-      {/* Page header — zelfde stijl als andere statische pagina's */}
-      <section className="bg-slate-mosque py-16 relative overflow-hidden">
+      <section className="relative bg-slate-mosque text-white py-16 overflow-hidden">
         <div className="absolute inset-0 pattern-overlay" />
+        {imageUrl && (
+          <div className="absolute inset-0 opacity-20">
+            <Image src={imageUrl} alt={activity.title} fill className="object-cover" />
+          </div>
+        )}
         <Container className="relative z-10">
-          <SectionTitle
-            title={title}
-            subtitle={subtitle || undefined}
-            light
-          />
+          <Button href="/agenda" variant="ghost" size="sm"
+            className="text-sand/70 hover:text-white mb-6 -ml-1">
+            ← Terug naar agenda
+          </Button>
+          <div className="max-w-2xl">
+            {activity.featured && (
+              <span className="inline-block bg-taupe text-white text-xs font-body px-3 py-1 rounded-full mb-4">
+                Uitgelicht
+              </span>
+            )}
+            <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl text-white mb-4 leading-tight">
+              {activity.title}
+            </h1>
+            <div className="flex flex-wrap gap-4 text-sand/80 text-sm font-body">
+              <span className="flex items-center gap-2">
+                <Icon name={dateIcon} className="w-4 h-4" />
+                {formatDate(activity.start_date, "EEEE d MMMM yyyy")}
+              </span>
+              {activity.end_date && (
+                <span className="flex items-center gap-2">
+                  t/m {formatDate(activity.end_date, "d MMMM yyyy")}
+                </span>
+              )}
+              {activity.location && (
+                <span className="flex items-center gap-2">
+                  <Icon name={locationIcon} className="w-4 h-4" />
+                  {activity.location}
+                </span>
+              )}
+            </div>
+          </div>
         </Container>
         <div className="absolute bottom-0 left-0 right-0">
           <svg viewBox="0 0 1440 40" fill="none" preserveAspectRatio="none" className="w-full">
@@ -101,39 +94,37 @@ export default async function DynamicPage({ params }: Props) {
         </div>
       </section>
 
-      {/* Page-content body (alleen als gevuld) */}
-      {(intro || body) && (
-        <section className="bg-sand-50 py-12 lg:py-16">
-          <Container narrow>
-            {pageIcon && (
-              <div className="flex justify-center mb-6">
-                <div className="w-14 h-14 rounded-2xl bg-slate-mosque/10 flex items-center justify-center text-slate-mosque">
-                  <Icon name={pageIcon} className="w-7 h-7" strokeWidth={1.75} />
-                </div>
-              </div>
-            )}
+      <section className="bg-sand-50 py-12 lg:py-16">
+        <Container narrow>
+          {imageUrl && (
+            <div className="relative h-64 sm:h-80 rounded-2xl overflow-hidden mb-8 shadow-md">
+              <Image src={imageUrl} alt={activity.title} fill className="object-cover" />
+            </div>
+          )}
 
-            {intro && (
-              <p className="font-body text-lg text-taupe-dark leading-relaxed mb-8 text-balance text-center">
-                {intro}
-              </p>
-            )}
+          <div
+            className="prose prose-lg max-w-none font-body text-ink leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: activity.description || "" }}
+          />
 
-            {body && (
-              <div
-                className="prose prose-lg max-w-none font-body text-ink leading-relaxed prose-headings:font-display prose-headings:text-ink prose-a:text-slate-mosque"
-                dangerouslySetInnerHTML={{ __html: body }}
+          {activity.registration_enabled && (
+            <div className="mt-10">
+              <RegistrationForm
+                type="activity"
+                sourceSlug={activity.slug}
+                sourceTitle={activity.title}
+                targetGender={activity.target_gender ?? null}
               />
-            )}
-          </Container>
-        </section>
-      )}
+            </div>
+          )}
 
-      {/* Sections (geen cta) */}
-      <PageSectionsList sections={otherSections} />
-
-      {/* CTA-sections altijd onderaan */}
-      <PageSectionsList sections={ctaSections} />
+          <div className="mt-10 pt-6 border-t border-sand-200">
+            <Button href="/agenda" variant="outline">
+              ← Terug naar alle activiteiten
+            </Button>
+          </div>
+        </Container>
+      </section>
     </>
   );
 }

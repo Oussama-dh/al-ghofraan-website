@@ -4,7 +4,7 @@
 import { useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
-import type { RegistrationType } from "@/types/directus";
+import type { Gender, RegistrationType, TargetGender } from "@/types/directus";
 
 interface RegistrationFormProps {
   /** Type bron — bepaalt naar welke collectie geschreven wordt */
@@ -13,6 +13,13 @@ interface RegistrationFormProps {
   sourceSlug:  string;
   /** Titel van de bron — wordt meegegeven voor weergave in admin */
   sourceTitle: string;
+  /**
+   * Doelgroep van de bron op geslacht:
+   *  - "male"   → alleen mannen mogen inschrijven
+   *  - "female" → alleen vrouwen mogen inschrijven
+   *  - "mixed"  (of leeg) → mannen en vrouwen
+   */
+  targetGender?: TargetGender | null;
   /** Optionele eigen titel boven het formulier */
   heading?:    string;
   /** Optionele inleidende tekst */
@@ -25,7 +32,7 @@ interface FormState {
   email:   string;
   phone:   string;
   age:     string;
-  gender:  "" | "m" | "f" | "other" | "unspecified";
+  gender:  "" | Gender;
   notes:   string;
   consent: boolean;
 }
@@ -40,15 +47,60 @@ const initialState: FormState = {
   consent: false,
 };
 
+/**
+ * Bepaal welke gender-opties getoond worden + initial value op basis van targetGender.
+ *  - male      → alleen "Man",   pre-selected
+ *  - female    → alleen "Vrouw", pre-selected
+ *  - mixed/leeg → beide opties, leeg
+ */
+function resolveGenderConfig(target: TargetGender | null | undefined): {
+  options:      Array<{ value: Gender; label: string }>;
+  initialValue: "" | Gender;
+  notice:       string | null;
+  locked:       boolean;
+} {
+  if (target === "male") {
+    return {
+      options:      [{ value: "male", label: "Man" }],
+      initialValue: "male",
+      notice:       "Deze inschrijving is alleen voor mannen.",
+      locked:       true,
+    };
+  }
+  if (target === "female") {
+    return {
+      options:      [{ value: "female", label: "Vrouw" }],
+      initialValue: "female",
+      notice:       "Deze inschrijving is alleen voor vrouwen.",
+      locked:       true,
+    };
+  }
+  return {
+    options: [
+      { value: "male",   label: "Man"   },
+      { value: "female", label: "Vrouw" },
+    ],
+    initialValue: "",
+    notice:       null,
+    locked:       false,
+  };
+}
+
 export default function RegistrationForm({
   type,
   sourceSlug,
   sourceTitle,
+  targetGender,
   heading = "Inschrijven",
   intro,
   className,
 }: RegistrationFormProps) {
-  const [form,    setForm]    = useState<FormState>(initialState);
+  const genderConfig = resolveGenderConfig(targetGender);
+
+  const [form,    setForm]    = useState<FormState>({
+    ...initialState,
+    gender: genderConfig.initialValue,
+  });
   const [status,  setStatus]  = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [message, setMessage] = useState<string>("");
 
@@ -61,9 +113,19 @@ export default function RegistrationForm({
     if (status === "submitting") return;
 
     // Lichte client-side validatie — echte validatie zit in de API
-    if (!form.name.trim() || !form.email.trim() || !form.consent) {
+    if (!form.name.trim() || !form.email.trim()) {
       setStatus("error");
-      setMessage("Vul alstublieft uw naam, e-mailadres in en accepteer het privacy-akkoord.");
+      setMessage("Vul alstublieft uw naam en e-mailadres in.");
+      return;
+    }
+    if (!form.gender) {
+      setStatus("error");
+      setMessage("Geslacht is verplicht.");
+      return;
+    }
+    if (!form.consent) {
+      setStatus("error");
+      setMessage("U moet akkoord gaan met de verwerking van uw gegevens.");
       return;
     }
 
@@ -79,9 +141,9 @@ export default function RegistrationForm({
           source_slug: sourceSlug,
           name:    form.name.trim(),
           email:   form.email.trim(),
+          gender:  form.gender,
           phone:   form.phone.trim() || undefined,
           age:     form.age ? Number(form.age) : undefined,
-          gender:  form.gender || undefined,
           notes:   form.notes.trim() || undefined,
           consent: form.consent,
         }),
@@ -100,7 +162,7 @@ export default function RegistrationForm({
 
       setStatus("success");
       setMessage("Bedankt voor uw inschrijving! We nemen zo snel mogelijk contact met u op.");
-      setForm(initialState);
+      setForm({ ...initialState, gender: genderConfig.initialValue });
     } catch {
       setStatus("error");
       setMessage("Er ging iets mis met de verbinding. Probeer het later opnieuw.");
@@ -126,7 +188,8 @@ export default function RegistrationForm({
     "w-full rounded-lg border border-sand-200 bg-white px-4 py-2.5 " +
     "font-body text-base text-ink placeholder:text-taupe/60 " +
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-mosque " +
-    "focus-visible:border-slate-mosque transition-colors";
+    "focus-visible:border-slate-mosque transition-colors " +
+    "disabled:bg-sand-100 disabled:cursor-not-allowed";
 
   const labelClass = "block font-body text-sm font-medium text-ink mb-1.5";
 
@@ -140,13 +203,23 @@ export default function RegistrationForm({
       noValidate
     >
       <h3 className="font-display text-xl sm:text-2xl text-ink mb-1">{heading}</h3>
-      <p className="font-body text-sm text-taupe-dark mb-6">
+      <p className="font-body text-sm text-taupe-dark mb-4">
         {intro || (
           <>
             U schrijft zich in voor: <strong>{sourceTitle}</strong>
           </>
         )}
       </p>
+
+      {/* Doelgroep-banner — alleen voor male/female only */}
+      {genderConfig.notice && (
+        <div
+          className="mb-6 p-3 rounded-lg bg-taupe/10 border border-taupe/20 font-body text-sm text-ink"
+          role="note"
+        >
+          {genderConfig.notice}
+        </div>
+      )}
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
@@ -194,6 +267,27 @@ export default function RegistrationForm({
         </div>
 
         <div>
+          <label htmlFor="reg-gender" className={labelClass}>
+            Geslacht <span className="text-red-600" aria-hidden>*</span>
+          </label>
+          <select
+            id="reg-gender"
+            required
+            disabled={genderConfig.locked}
+            className={inputClass}
+            value={form.gender}
+            onChange={(e) => update("gender", e.target.value as FormState["gender"])}
+          >
+            {!genderConfig.locked && <option value="">— Maak een keuze —</option>}
+            {genderConfig.options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
           <label htmlFor="reg-age" className={labelClass}>
             Leeftijd
           </label>
@@ -207,23 +301,6 @@ export default function RegistrationForm({
             value={form.age}
             onChange={(e) => update("age", e.target.value)}
           />
-        </div>
-
-        <div>
-          <label htmlFor="reg-gender" className={labelClass}>
-            Geslacht
-          </label>
-          <select
-            id="reg-gender"
-            className={inputClass}
-            value={form.gender}
-            onChange={(e) => update("gender", e.target.value as FormState["gender"])}
-          >
-            <option value="">— Niet opgeven —</option>
-            <option value="m">Man</option>
-            <option value="f">Vrouw</option>
-            <option value="other">Anders</option>
-          </select>
         </div>
 
         <div className="sm:col-span-2">
