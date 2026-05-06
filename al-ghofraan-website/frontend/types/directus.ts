@@ -47,12 +47,23 @@ export interface PrayerTimeFile {
 export interface SiteSettings {
   id: string | number;
   site_name: string;
+  /** Subtitel onder de site-naam in header (bv. "DawahCommissie") */
+  site_subtitle?: string | null;
   logo?: string | DirectusFile | null;
+  /** Apart logo voor de footer. Als leeg, valt terug op `logo`. */
+  footer_logo?: string | DirectusFile | null;
   favicon?: string | DirectusFile | null;
   og_image?: string | DirectusFile | null;
   contact_email?: string | null;
   phone?: string | null;
   address?: string | null;
+  /** Latijnse titel in footer-branding (bv. "Al-Ghofraan") */
+  footer_title?: string | null;
+  /** Arabische titel in footer-branding (bv. "المسجد الغفران") */
+  footer_arabic_title?: string | null;
+  /** Beschrijvende tekst onder footer-branding */
+  footer_description?: string | null;
+  /** Verouderd alias voor footer_description — blijft werken als fallback */
   footer_text?: string | null;
   copyright_text?: string | null;
   footer_enabled?: boolean | null;
@@ -207,6 +218,10 @@ export interface Registration {
   source_id: string;           // id van het bron-item
   source_slug: string;
   source_title: string;
+  /** M2O naar education_programs.id (alleen bij type=education) */
+  education_program?: string | null;
+  /** M2O naar activities.id (alleen bij type=activity) */
+  activity?: string | null;
   name: string;
   email: string;
   phone?: string | null;
@@ -255,6 +270,35 @@ export interface PrayerTimeRow {
   ishaa: string;
 }
 
+// ─── donations ───────────────────────────────────────────────
+export type DonationType   = "one_time" | "monthly";
+export type DonationStatus =
+  | "pending"
+  | "paid"
+  | "failed"
+  | "cancelled"
+  | "active"
+  | "ended";
+
+export interface Donation {
+  id: string;
+  type: DonationType;
+  status: DonationStatus;
+  /** Bedrag in eurocenten — altijd integer */
+  amount: number;
+  currency: string;
+  donor_name?: string | null;
+  donor_email: string;
+  message?: string | null;
+  stripe_session_id?: string | null;
+  stripe_payment_intent_id?: string | null;
+  stripe_subscription_id?: string | null;
+  stripe_customer_id?: string | null;
+  raw_event?: Record<string, unknown> | null;
+  created_at?: string | null;
+  paid_at?: string | null;
+}
+
 // ─── SDK Schema ──────────────────────────────────────────────
 export interface DirectusSchema {
   activities: Activity[];
@@ -268,4 +312,5 @@ export interface DirectusSchema {
   page_section_items: PageSectionItem[];
   education_programs: EducationProgram[];
   registrations: Registration[];
+  donations: Donation[];
 }

@@ -25,6 +25,7 @@ export default function Header({ settings, navItems, logoUrl }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const siteName = settings?.site_name || "Al-Ghofraan";
+  const subtitle = settings?.site_subtitle || "DawahCommissie";
   const items = (navItems && navItems.length > 0 ? navItems : FALLBACK_NAV)
     .slice()
     .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
@@ -63,9 +64,11 @@ export default function Header({ settings, navItems, logoUrl }: HeaderProps) {
               <div className="font-display text-lg leading-tight text-ink">
                 {siteName}
               </div>
-              <div className="font-body text-xs text-taupe leading-none tracking-wide">
-                DawahCommissie
-              </div>
+              {subtitle && (
+                <div className="font-body text-xs text-taupe leading-none tracking-wide">
+                  {subtitle}
+                </div>
+              )}
             </div>
           </Link>
 

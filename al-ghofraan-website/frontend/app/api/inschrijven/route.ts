@@ -250,22 +250,24 @@ export async function POST(request: Request) {
 
   // Registratie schrijven
   try {
-    await directusServer.request(
-      createItem("registrations", {
-        type:              body.type,
-        source_collection: src.sourceCollection,
-        source_id:         src.sourceId,
-        source_slug:       body.source_slug,
-        source_title:      src.sourceTitle,
-        name:              body.name,
-        email:             body.email,
-        phone:             body.phone ?? null,
-        age:               body.age ?? null,
-        gender:            body.gender,
-        notes:             body.notes ?? null,
-        status:            "new",
-      } as never)
-    );
+await directusServer.request(
+  createItem("registrations", {
+    type:              body.type,
+    source_collection: src.sourceCollection,
+    source_id:         src.sourceId,
+    source_slug:       body.source_slug,
+    source_title:      src.sourceTitle,
+    education_program: null,
+    activity:          null,
+    name:              body.name,
+    email:             body.email,
+    phone:             body.phone ?? null,
+    age:               body.age ?? null,
+    gender:            body.gender,
+    notes:             body.notes ?? null,
+    status:            "new",
+  } as never)
+);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

@@ -86,17 +86,65 @@ De website blokkeert deze automatisch — je krijgt geen "pagina niet gevonden" 
 
 ## 3. Footer aanpassen
 
-Directus → **Site Settings**:
-- `footer_text` — korte beschrijving onder logo
-- `copyright_text` — leeg laten = automatisch met huidig jaar
-- `footer_enabled` — uit = footer verbergen
-- `address`, `contact_email`, `phone`
-- `social_links` — JSON, bv:
-  ```json
-  { "facebook": "https://...", "instagram": "https://...", "youtube": "", "whatsapp": "" }
-  ```
+De volledige footer is beheerbaar via Directus → **Site Settings**.
 
-Footer-menu komt uit **Navigation Items** met `location` = `footer` of `both`.
+### Footer-branding (links onderaan)
+
+| Veld                   | Wat het doet                                                                |
+|------------------------|------------------------------------------------------------------------------|
+| `footer_logo`          | Logo specifiek voor de footer. Als leeg, valt de site terug op `logo`.       |
+| `footer_title`         | Latijnse titel naast/onder het logo (bv. "Al-Ghofraan"). Default: site_name. |
+| `footer_arabic_title`  | Arabische titel daaronder (bv. "المسجد الغفران").                             |
+| `footer_description`   | Beschrijvende tekst onder de titel.                                          |
+
+> ℹ️ `footer_text` blijft als verouderd alias bestaan en wordt gebruikt als
+> `footer_description` leeg is — voor backwards compatibility.
+
+### Verschil tussen `logo` en `footer_logo`
+
+- **`logo`** — verschijnt in de header linksboven. PNG/SVG met
+  **transparante achtergrond** werkt het beste op de witte header.
+- **`footer_logo`** — verschijnt onderaan op de donkere
+  achtergrond. Vaak werkt een lichte/witte variant van het logo daar
+  beter. Als je geen apart footer-logo uploadt, gebruikt de footer
+  automatisch `logo` op een lichte container.
+
+Beide velden zijn echte File-uploads in Directus → klik op het veld om
+een afbeelding te uploaden of te selecteren uit de bibliotheek.
+
+### Algemene footer-instellingen
+
+| Veld             | Wat het doet                                                            |
+|------------------|--------------------------------------------------------------------------|
+| `footer_enabled` | Uit = footer volledig verbergen                                          |
+| `copyright_text` | Vrije tekst onderaan. Leeg = automatisch met huidige jaar + site-naam    |
+| `address`        | Adres in contact-kolom (meerdere regels OK)                              |
+| `contact_email`  | E-mailadres in contact-kolom                                             |
+| `phone`          | Telefoon in contact-kolom                                                |
+| `social_links`   | JSON met links naar Facebook/Instagram/YouTube/WhatsApp (zie hieronder)  |
+
+Voorbeeld `social_links`:
+```json
+{ "facebook": "https://facebook.com/...", "instagram": "https://instagram.com/...", "youtube": "", "whatsapp": "" }
+```
+
+Lege strings of ontbrekende keys = die social-link wordt niet getoond.
+
+### Footer-menu
+
+Komt uit **Navigation Items** met `location` = `footer` of `both`.
+Zie sectie 1, stap 3 voor hoe je items toevoegt.
+
+### Wat als de footer-afbeelding niet zichtbaar is?
+
+1. **Refresh hard** (Cmd/Ctrl+Shift+R) — afbeelding kan gecached zijn
+2. **Check Directus** → Site Settings → klik op `footer_logo` → is het
+   bestand zichtbaar in de preview?
+3. **Check rechten** → het bestand moet niet als "private" gemarkeerd zijn
+4. **Veld-interface** → het veld moet de Image-uploadknop tonen, niet
+   een tekst-input. Als dat fout zit, draai `npm run seed` opnieuw —
+   stap 1i patcht oude UUID-input velden naar correcte `file-image`
+   interface
 
 ---
 
@@ -119,6 +167,12 @@ Directus → **Site Settings** → upload bestanden in de juiste velden.
 > 💡 SVG is meestal de beste keuze: scherp op alle schermen, ook op
 > retina-displays. Geen logo bij de hand? Tip: laat een ontwerper een
 > transparante SVG maken op een vierkant canvas (bv. 256×256px).
+
+### Site-subtitel (klein tekstje onder de site-naam in de header)
+
+- **Veld:** `site_subtitle`
+- **Default:** "DawahCommissie"
+- Leeg laten = subtitel verbergen
 
 ### Favicon
 
@@ -426,6 +480,140 @@ de agenda. Inschrijvingen daarop landen óók in **Registrations** met
 > een geldig server-token (Directus → Settings → Access Tokens). Zonder dat
 > token werkt het inschrijfformulier niet en krijgt de bezoeker een vriendelijke
 > foutmelding.
+
+### 12.1 Inschrijvingen bekijken per cursus of activiteit
+
+Inschrijvingen worden centraal beheerd in de **Registrations**-collectie.
+Elke inschrijving heeft een relatie naar het bijbehorende onderwijsprogramma
+of de activiteit (zie velden `education_program` en `activity`).
+
+> ℹ️ Eerder stond hier dat je inschrijvingen ook **vanuit** een programma
+> of activiteit kon zien (een aparte "Inschrijvingen"-tab). Dat is uit de
+> seed verwijderd: het leverde een database-fout op
+> (`column activities.registrations does not exist`) onder Directus 11.
+> In plaats daarvan filter je nu in de Registrations-collectie zelf.
+
+**Filteren op één specifieke cursus:**
+
+1. Directus → **Registrations**
+2. Klik bovenaan op het filter-icoon
+3. Kies veld `education_program` → operator `Is equal to` → selecteer de cursus
+4. (Optioneel) sla op als preset via de drie puntjes rechtsboven →
+   "Save preset" → naam: bv. "Fiqh-cursus inschrijvingen"
+
+**Filteren op één specifieke activiteit:**
+
+Hetzelfde proces, maar kies veld `activity` in plaats van `education_program`.
+
+**Snel een hele kolom inschrijvingen vinden:**
+
+| Wil je zien…                                 | Filter zo                                               |
+|----------------------------------------------|---------------------------------------------------------|
+| Alle onderwijs-inschrijvingen                | `type = education`                                      |
+| Alle activiteit-inschrijvingen               | `type = activity`                                       |
+| Inschrijvingen voor één programma            | `education_program = <selecteer programma>`             |
+| Inschrijvingen voor één activiteit           | `activity = <selecteer activiteit>`                     |
+| Alleen vrouwen voor een cursus               | combineer `education_program = X` met `gender = female` |
+| Nieuwe (onbehandelde) inschrijvingen         | `status = new`                                          |
+| Bevestigde aanmeldingen                      | `status = confirmed`                                    |
+
+Je kunt meerdere filters combineren — bijvoorbeeld "alle vrouwen voor de
+Fiqh-cursus die nog op `new` staan". Sla die als preset op zodat je 'm
+later snel terugvindt.
+
+> 💡 **Inschrijvingen van vóór deze update** hebben de relaties
+> (`education_program` / `activity`) niet automatisch gevuld. Die blijven
+> wel zichtbaar in de algemene Registrations-lijst (filter op `type` of
+> `source_slug`), maar verschijnen niet in een filter op programma/activiteit.
+> Wil je oude inschrijvingen alsnog koppelen, open dan de inschrijving in
+> Directus en kies handmatig het programma of de activiteit.
+
+---
+
+## 13. Donaties bekijken en beheren
+
+Donaties komen binnen via Stripe Checkout (iDEAL of creditcard) en worden
+automatisch geregistreerd in Directus → **Donations**.
+
+> 💡 **Stripe Dashboard blijft de bron van waarheid** voor betalingen,
+> refunds en abonnementsbeheer. De Donations-collectie is een overzicht
+> voor de DawahCommissie — geen vervanging van Stripe.
+
+### Donaties openen
+
+Directus → **Donations**. Sortering staat op nieuwste eerst. Filter op
+`type` (eenmalig/maandelijks) of `status` om snel te vinden wat je zoekt.
+
+### Velden per donatie
+
+| Veld                       | Inhoud                                                  |
+|----------------------------|---------------------------------------------------------|
+| `type`                     | `one_time` (eenmalig) of `monthly` (maandelijks)        |
+| `status`                   | Zie tabel hieronder                                     |
+| `amount`                   | Bedrag in **eurocenten** — bv. 2500 = €25,00            |
+| `currency`                 | Altijd `eur`                                             |
+| `donor_name`               | Naam van de donor (optioneel ingevuld)                  |
+| `donor_email`              | Verplicht — gaat ook naar Stripe voor de bevestigings-mail |
+| `message`                  | Bericht/notitie van de donor (indien ingevuld)          |
+| `stripe_session_id`        | Stripe Checkout-id — om snel terug te vinden in Stripe  |
+| `stripe_payment_intent_id` | Voor eenmalige donaties                                 |
+| `stripe_subscription_id`   | Voor maandelijkse donaties                              |
+| `created_at` / `paid_at`   | Tijdstip aanmaak en betaling                            |
+| `raw_event`                | Laatste Stripe-payload — alleen voor diagnostiek        |
+
+### Status uitgelegd
+
+| Status      | Betekenis                                                            |
+|-------------|----------------------------------------------------------------------|
+| `pending`   | Donor is doorgestuurd naar Stripe, maar betaling is nog niet rond    |
+| `paid`      | Eenmalige donatie is succesvol betaald                               |
+| `active`    | Maandelijkse donatie loopt — er komen elke maand betalingen binnen   |
+| `failed`    | Een betaling is mislukt (bv. afgekeurde kaart bij maandelijks)       |
+| `cancelled` | Checkout-sessie is verlopen (donor heeft niet betaald)               |
+| `ended`     | Maandelijkse donatie is opgezegd                                     |
+
+> ⚠️ **Niet handmatig wijzigen:** statussen worden automatisch bijgewerkt
+> via Stripe webhooks. Een handmatige wijziging wordt mogelijk overschreven
+> bij een volgend Stripe-event. Bij twijfel: open de donatie in het Stripe
+> Dashboard via `stripe_session_id`.
+
+### Verschil eenmalig vs. maandelijks
+
+- **Eenmalig** (`type = one_time`): één betaling, status gaat van `pending`
+  → `paid`. Daarna gebeurt er niets meer met dit record.
+- **Maandelijks** (`type = monthly`): Stripe maakt een abonnement aan en
+  schrijft elke maand automatisch af. Status gaat van `pending` → `active`.
+  Bij een mislukte maandelijkse incasso komt er een aparte event binnen
+  en kan de status tijdelijk op `failed` staan. Bij opzegging wordt het
+  record `ended`.
+
+### Een donatie terugzoeken in Stripe
+
+1. Open de donatie in Directus
+2. Kopieer `stripe_session_id`
+3. Stripe Dashboard → zoekbalk bovenaan → plak het id
+4. Daar zie je: betaalmethode, kaart-fingerprint (geanonimiseerd),
+   refunds, factuur, etc.
+
+### Refunds en opzeggingen
+
+Doe deze acties **altijd in Stripe**, niet in Directus:
+
+- **Refund** (eenmalig): Stripe Dashboard → Payments → Refund
+- **Maandelijkse donatie stopzetten**: Stripe Dashboard → Customers →
+  Subscriptions → Cancel
+
+Stripe stuurt automatisch het bijbehorende webhook-event, en de status in
+Directus wordt automatisch bijgewerkt.
+
+### Veiligheid
+
+- Bezoekers kunnen `donations` **niet** lezen of opvragen via de website
+- Stripe Checkout hosted op `checkout.stripe.com` — geen kaartgegevens
+  raken onze server of database
+- De webhook-route verifieert élke binnenkomende request met de Stripe
+  signing secret — fake events worden geweigerd
+- Voor de eerste keer instellen van Stripe: zie **`docs/STRIPE_SETUP.md`**
 
 ---
 
