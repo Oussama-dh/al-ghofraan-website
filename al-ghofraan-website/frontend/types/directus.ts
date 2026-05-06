@@ -215,13 +215,9 @@ export interface Registration {
   id: string;
   type: RegistrationType;
   source_collection: string;   // "activities" | "education_programs"
-  source_id: string;           // id van het bron-item
+  source_id: string;           // id van het bron-item (string ipv int — werkt voor beide id-types)
   source_slug: string;
   source_title: string;
-  /** M2O naar education_programs.id (alleen bij type=education) */
-  education_program?: string | null;
-  /** M2O naar activities.id (alleen bij type=activity) */
-  activity?: string | null;
   name: string;
   email: string;
   phone?: string | null;

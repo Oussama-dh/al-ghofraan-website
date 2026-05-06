@@ -249,25 +249,26 @@ export async function POST(request: Request) {
   }
 
   // Registratie schrijven
+  // Geen relationele FK — bewust. Filtering en historie verlopen via
+  // source_collection / source_id / source_slug / source_title.
+  // Zie scripts/seed/steps/13-registration-relations.mjs voor de historie.
   try {
-await directusServer.request(
-  createItem("registrations", {
-    type:              body.type,
-    source_collection: src.sourceCollection,
-    source_id:         src.sourceId,
-    source_slug:       body.source_slug,
-    source_title:      src.sourceTitle,
-    education_program: null,
-    activity:          null,
-    name:              body.name,
-    email:             body.email,
-    phone:             body.phone ?? null,
-    age:               body.age ?? null,
-    gender:            body.gender,
-    notes:             body.notes ?? null,
-    status:            "new",
-  } as never)
-);
+    await directusServer.request(
+      createItem("registrations", {
+        type:              body.type,
+        source_collection: src.sourceCollection,
+        source_id:         src.sourceId,
+        source_slug:       body.source_slug,
+        source_title:      src.sourceTitle,
+        name:              body.name,
+        email:             body.email,
+        phone:             body.phone ?? null,
+        age:               body.age ?? null,
+        gender:            body.gender,
+        notes:             body.notes ?? null,
+        status:            "new",
+      } as never)
+    );
 
     return NextResponse.json({ ok: true });
   } catch (err) {

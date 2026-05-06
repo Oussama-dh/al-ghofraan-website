@@ -2,7 +2,6 @@
 
 import type { Metadata }  from "next";
 import { notFound }       from "next/navigation";
-import Image              from "next/image";
 import Container          from "@/components/ui/Container";
 import Button             from "@/components/ui/Button";
 import { Icon }           from "@/lib/icons";
@@ -51,7 +50,8 @@ export default async function ActivityDetailPage({ params }: Props) {
         <div className="absolute inset-0 pattern-overlay" />
         {imageUrl && (
           <div className="absolute inset-0 opacity-20">
-            <Image src={imageUrl} alt={activity.title} fill className="object-cover" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imageUrl} alt={activity.title} className="w-full h-full object-cover" />
           </div>
         )}
         <Container className="relative z-10">
@@ -98,7 +98,8 @@ export default async function ActivityDetailPage({ params }: Props) {
         <Container narrow>
           {imageUrl && (
             <div className="relative h-64 sm:h-80 rounded-2xl overflow-hidden mb-8 shadow-md">
-              <Image src={imageUrl} alt={activity.title} fill className="object-cover" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={imageUrl} alt={activity.title} className="absolute inset-0 w-full h-full object-cover" />
             </div>
           )}
 
@@ -113,6 +114,7 @@ export default async function ActivityDetailPage({ params }: Props) {
                 type="activity"
                 sourceSlug={activity.slug}
                 sourceTitle={activity.title}
+                targetGender={activity.target_gender ?? null}
               />
             </div>
           )}

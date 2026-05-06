@@ -15,6 +15,7 @@ import { setupRegistrationRelations } from "./steps/13-registration-relations.mj
 import { setupDonations }           from "./steps/14-donations.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
 import { setupFooterFields }        from "./steps/01i-footer-fields.mjs";
+import { setupFileImageFields }     from "./steps/01j-file-image-fields.mjs";
 import { setupPermissions }         from "./steps/02-permissions.mjs";
 import { seedNavigation }           from "./steps/03-navigation.mjs";
 import { seedSiteSettings }         from "./steps/04-site-settings.mjs";
@@ -48,10 +49,11 @@ try {
   await fixPrayerTimeFileField(client);  // 1g. file-veld relatie repareren
   await setupEducationPrograms(client);     // 11. education_programs (collectie + voorbeelden)
   await setupRegistrations(client);         // 12. registrations (alleen collectie — geen public access)
-  await setupRegistrationRelations(client); // 13. M2O + O2M relaties tussen registrations / programs / activities
+  await setupRegistrationRelations(client); // 13. opruimen oude/verkeerde registrations-relaties
   await setupDonations(client);             // 14. donations (Stripe-gevuld, geen public access)
   await setupTargetGender(client);          // 1h. target_gender velden + gender keuzes bijwerken
   await setupFooterFields(client);          // 1i. footer + branding velden in site_settings
+  await setupFileImageFields(client);       // 1j. heel alle file/image velden naar correcte interface
   await setupPermissions(client);           // 2.  permissies (NA alle collecties!)
   await seedNavigation(client);          // 3.  menu
   await seedSiteSettings(client);        // 4.  site-instellingen

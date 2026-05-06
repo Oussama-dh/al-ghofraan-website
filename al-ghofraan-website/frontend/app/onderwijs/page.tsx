@@ -2,7 +2,6 @@
 
 import type { Metadata } from "next";
 import Link              from "next/link";
-import Image             from "next/image";
 import Container         from "@/components/ui/Container";
 import SectionTitle      from "@/components/ui/SectionTitle";
 import { Icon }          from "@/lib/icons";
@@ -77,11 +76,11 @@ export default async function OnderwijsPage() {
                   >
                     <div className="relative h-48 bg-sand overflow-hidden">
                       {imageUrl ? (
-                        <Image
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
                           src={imageUrl}
                           alt={program.title}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-500"
+                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
                         <div className="absolute inset-0 pattern-overlay flex items-center justify-center">

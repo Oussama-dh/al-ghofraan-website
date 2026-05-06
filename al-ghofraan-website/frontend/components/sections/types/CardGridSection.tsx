@@ -1,6 +1,5 @@
 // components/sections/types/CardGridSection.tsx
 
-import Image          from "next/image";
 import Link           from "next/link";
 import Container      from "@/components/ui/Container";
 import SectionTitle   from "@/components/ui/SectionTitle";
@@ -57,12 +56,11 @@ export default function CardGridSection({ section }: { section: SectionWithItems
                 )}>
                   {itemImage ? (
                     <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden mb-4 bg-sand-100">
-                      <Image
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
                         src={itemImage}
                         alt={item.title || ""}
-                        fill
-                        sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                        className="object-cover"
+                        className="absolute inset-0 w-full h-full object-cover"
                       />
                     </div>
                   ) : item.icon ? (

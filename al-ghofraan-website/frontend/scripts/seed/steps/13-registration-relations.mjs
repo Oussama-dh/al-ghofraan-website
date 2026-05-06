@@ -1,38 +1,38 @@
 // scripts/seed/steps/13-registration-relations.mjs
 //
-// Maakt M2O-relaties aan tussen registrations en zowel education_programs als
-// activities. Hierdoor kan de /api/inschrijven route bij elke nieuwe inschrijving
-// een echte FK invullen (registrations.education_program of registrations.activity).
+// HISTORIE — wat hier eerder stond, en waarom we het terugdraaien:
 //
-// BELANGRIJK — geen alias/related-items velden:
-// In een eerdere versie werd een alias-veld aangemaakt op
-// `education_programs.registrations` en `activities.registrations`. Onder
-// Directus 11 leverde dat een database-error op:
+//   v1: alias-velden op education_programs.registrations en activities.registrations.
+//       Resultaat: Directus 11 zag deze als gewone DB-kolommen.
+//       Fout: "column activities.registrations does not exist".
 //
-//   column activities.registrations does not exist
+//   v2: M2O-velden op registrations.education_program en registrations.activity
+//       als type "uuid".
+//       Resultaat: bestaande activities/education_programs hebben integer-IDs.
+//       Fout: "invalid input syntax for type uuid: \"3\"" bij inschrijven.
 //
-// Reden: het veld werd in sommige situaties als gewone string-kolom gezien
-// in plaats van puur als alias. We slaan die alias-velden daarom over en
-// documenteren in docs/CMS_BEHEER.md hoe een redacteur de inschrijvingen
-// per cursus/activiteit terugvindt via filters in de Registrations-collectie.
+//   v3 (deze versie): we laten relationele velden helemaal achterwege.
+//       source_id / source_slug / source_title zijn voldoende voor opzoeken
+//       en filteren. Filteren in Directus gaat via de Registrations-collectie
+//       (zie docs/CMS_BEHEER.md sectie 12.1).
 //
-// Wat deze stap doet (idempotent):
-//   1. Eventueel verkeerd aangemaakte alias/database-velden weer opruimen
-//   2. registrations.education_program  (M2O → education_programs)
-//   3. registrations.activity           (M2O → activities)
-//   4. /relations entries met one_field=null (geen inverse alias)
+// Wat deze stap nu doet — uitsluitend opruimen, idempotent:
+//   - verwijder eventuele eerder aangemaakte M2O-velden op registrations
+//   - verwijder bijbehorende /relations entries
+//   - verwijder eventuele alias-velden op education_programs / activities
 //
-// Bestaande source_id / source_slug / source_title velden blijven intact.
+// Bestaande inschrijvingen blijven 100% intact: source_id/source_slug/
+// source_title staan los van deze relationele velden.
 
-import { ensureField } from "../lib/helpers.mjs";
+const REGISTRATIONS_M2O_FIELDS = ["education_program", "activity"];
 
-const CLEANUP_TARGETS = [
+const ALIAS_TARGETS = [
   { collection: "education_programs", field: "registrations" },
   { collection: "activities",         field: "registrations" },
 ];
 
-async function dropFieldIfExists(client, collection, field) {
-  // Bestaat het veld in /fields ?
+async function dropFieldIfExists(client, collection, field, label = "") {
+  // Bestaat het veld in /fields?
   let existing;
   try {
     const resp = await client.get(`/fields/${collection}/${field}`);
@@ -40,133 +40,64 @@ async function dropFieldIfExists(client, collection, field) {
   } catch {
     return false; // bestaat niet — niets te doen
   }
-
   if (!existing) return false;
-
-  // Heuristiek: een correct alias-veld heeft type "alias" + special bevat "o2m" of "no-data".
-  // Een verkeerd aangemaakt veld heeft type "string"/"uuid"/etc. of mist de special.
-  const isCleanAlias =
-    existing.type === "alias" &&
-    Array.isArray(existing.meta?.special) &&
-    (existing.meta.special.includes("o2m") || existing.meta.special.includes("no-data"));
-
-  if (isCleanAlias) {
-    // Schoon alias-veld — laten staan kan ook problemen geven (zelfde fout in DB).
-    // Beter: nu helemaal verwijderen zodat het nieuwe gedrag voorspelbaar is.
-    console.log(`  · ${collection}.${field}: bestaand alias-veld wordt opgeruimd`);
-  } else {
-    console.log(`  ⚠️  ${collection}.${field}: verkeerd aangemaakt veld gedetecteerd (type=${existing.type}) — wordt verwijderd`);
-  }
 
   try {
     await client.delete(`/fields/${collection}/${field}`);
-    console.log(`  ✓ ${collection}.${field} verwijderd`);
+    console.log(`  ✓ verwijderd: ${collection}.${field}${label ? ` (${label})` : ""}`);
     return true;
   } catch (err) {
-    console.warn(`  ⚠️  Verwijderen van ${collection}.${field} mislukt: ${err.message}`);
-    console.warn(`     Handmatig in Directus: Settings → Data Model → ${collection} → veld ${field} → trash-icoon`);
+    console.warn(`  ⚠️  verwijderen ${collection}.${field} mislukt: ${err.message}`);
+    console.warn(
+      `     Handmatige fallback: Directus → Settings → Data Model → ${collection} → ` +
+      `klik op ${field} → prullenbak-icoon → bevestig`
+    );
     return false;
   }
 }
 
-async function ensureRelation(client, def) {
-  const { collection, field, related_collection } = def;
+async function dropRelationIfExists(client, collection, field) {
   let existing;
   try {
     const resp = await client.get(`/relations/${collection}/${field}`);
     existing = resp?.data;
   } catch {
-    existing = null;
+    return false; // bestaat niet
   }
-
-  const correct =
-    existing &&
-    existing.collection         === collection &&
-    existing.field              === field &&
-    existing.related_collection === related_collection;
-
-  if (correct) {
-    console.log(`  · relatie ${collection}.${field} → ${related_collection} bestaat al`);
-    return false;
-  }
+  if (!existing) return false;
 
   try {
-    await client.post("/relations", def);
-    console.log(`  ✓ relatie ${collection}.${field} → ${related_collection} aangemaakt`);
+    await client.delete(`/relations/${collection}/${field}`);
+    console.log(`  ✓ relatie verwijderd: ${collection}.${field}`);
     return true;
   } catch (err) {
-    const msg = err.message || "";
-    if (msg.includes("already exists") || msg.includes("RECORD_NOT_UNIQUE")) {
-      console.log(`  · relatie ${collection}.${field} bestond al (andere vorm)`);
-      return false;
-    }
-    console.warn(`  ⚠️  relatie ${collection}.${field} aanmaken mislukt: ${msg}`);
+    console.warn(`  ⚠️  relatie ${collection}.${field} verwijderen mislukt: ${err.message}`);
     return false;
   }
 }
 
 export async function setupRegistrationRelations(client) {
-  console.log("\n🔗 Stap 13 · M2O relaties: registrations → education_programs / activities");
+  console.log("\n🔗 Stap 13 · Opruimen oude registrations-relaties");
+  console.log("  (relationele koppeling werd ingewisseld voor source_id/source_slug/source_title)");
 
-  // ─── 1. Opruimen ────────────────────────────────────────────
-  // Verwijder eventuele eerdere foutieve "registrations" alias-velden op
-  // education_programs / activities die de seed deden falen.
-  for (const target of CLEANUP_TARGETS) {
-    await dropFieldIfExists(client, target.collection, target.field);
+  // 1. Eerst /relations weghalen — anders blokkeren ze het verwijderen van de velden
+  for (const field of REGISTRATIONS_M2O_FIELDS) {
+    await dropRelationIfExists(client, "registrations", field);
   }
 
-  // ─── 2. M2O velden op registrations ────────────────────────
-  await ensureField(client, "registrations", {
-    field: "education_program",
-    type:  "uuid",
-    meta:  {
-      width:     "half",
-      interface: "select-dropdown-m2o",
-      special:   ["m2o"],
-      options:   { template: "{{title}}" },
-      note:      "Gekoppeld onderwijsprogramma (alleen bij type=education).",
-    },
-    schema:{ foreign_key_table: "education_programs" },
-  });
+  // 2. M2O-velden op registrations
+  for (const field of REGISTRATIONS_M2O_FIELDS) {
+    await dropFieldIfExists(client, "registrations", field, "oud M2O-veld");
+  }
 
-  await ensureField(client, "registrations", {
-    field: "activity",
-    type:  "uuid",
-    meta:  {
-      width:     "half",
-      interface: "select-dropdown-m2o",
-      special:   ["m2o"],
-      options:   { template: "{{title}}" },
-      note:      "Gekoppelde activiteit (alleen bij type=activity).",
-    },
-    schema:{ foreign_key_table: "activities" },
-  });
-
-  // ─── 3. /relations entries (zonder inverse alias!) ─────────
-  await ensureRelation(client, {
-    collection:         "registrations",
-    field:              "education_program",
-    related_collection: "education_programs",
-    meta: {
-      one_field:           null,        // bewust GEEN inverse alias
-      sort_field:          null,
-      one_deselect_action: "nullify",
-    },
-    schema: { on_delete: "SET NULL" },
-  });
-
-  await ensureRelation(client, {
-    collection:         "registrations",
-    field:              "activity",
-    related_collection: "activities",
-    meta: {
-      one_field:           null,
-      sort_field:          null,
-      one_deselect_action: "nullify",
-    },
-    schema: { on_delete: "SET NULL" },
-  });
+  // 3. Eventuele alias-velden uit een nóg eerdere poging
+  for (const target of ALIAS_TARGETS) {
+    await dropFieldIfExists(client, target.collection, target.field, "oud alias-veld");
+  }
 
   console.log("✓ Stap 13 voltooid");
-  console.log("  💡 Filter op programma/activiteit doe je in de Registrations-collectie zelf — zie docs/CMS_BEHEER.md sectie 12");
+  console.log(
+    "  💡 Inschrijvingen filteren per cursus/activiteit gaat via " +
+    "Registrations → filter op source_slug. Zie docs/CMS_BEHEER.md sectie 12.1."
+  );
 }
