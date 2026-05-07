@@ -164,7 +164,7 @@ export async function seedExamplePages(client) {
     title:               "Doe mee!",
     intro:               "Neem contact op om je aan te sluiten bij ons jongerenprogramma.",
     primary_cta_label:   "Meld je aan",
-    primary_cta_href:    "mailto:el-masoudi@hotmail.com",
+    primary_cta_href:    "/contact",
     secondary_cta_label: "Bekijk de agenda",
     secondary_cta_href:  "/agenda",
     icon:                "hand-heart",

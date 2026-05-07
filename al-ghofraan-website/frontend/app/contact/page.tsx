@@ -34,11 +34,12 @@ export default async function ContactPage() {
     getSiteSettings(),
   ]);
 
-  const title    = page?.title    || "Contact";
-  const subtitle = page?.subtitle || "Wij horen graag van u";
-  const intro    = page?.intro;
+  const title       = page?.title    || "Contact";
+  const subtitle    = page?.subtitle || "Wij horen graag van u";
+  const arabicTitle = page?.arabic_title || "اتصل بنا";
+  const intro       = page?.intro;
 
-  const email   = settings?.contact_email || "el-masoudi@hotmail.com";
+  const email   = settings?.contact_email || null;
   const phone   = settings?.phone || null;
   const address = settings?.address || null;
 
@@ -54,7 +55,7 @@ export default async function ContactPage() {
         <Container className="relative z-10">
           <SectionTitle
             title={title}
-            arabic="اتصل بنا"
+            arabic={arabicTitle}
             subtitle={subtitle}
             light
           />

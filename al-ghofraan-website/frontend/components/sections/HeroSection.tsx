@@ -6,12 +6,15 @@ interface HeroSectionProps {
   title?:    string;
   subtitle?: string;
   intro?:    string;
+  /** Arabische tekst boven de titel. Default: Bismillah. */
+  arabic?:   string;
 }
 
 export default function HeroSection({
   title    = "Kennis, geloof en gemeenschap",
   subtitle = "DawahCommissie · Moskee Al-Ghofraan",
   intro    = "De DawahCommissie van moskee Al-Ghofraan organiseert lezingen, activiteiten en programma's om de moslimgemeenschap te verbinden, te versterken en te inspireren.",
+  arabic   = "بسم الله الرحمن الرحيم",
 }: HeroSectionProps) {
   // Splits titel om de laatste 1-2 woorden visueel uit te lichten
   const titleParts = splitTitleForAccent(title);
@@ -32,7 +35,7 @@ export default function HeroSection({
       <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-24">
         <div className="max-w-2xl">
           <p className="font-arabic text-3xl text-taupe mb-4 animate-fade-in" lang="ar">
-            بسم الله الرحمن الرحيم
+            {arabic}
           </p>
 
           <div className="flex items-center gap-3 mb-6 animate-fade-in animation-delay-100">

@@ -13,6 +13,7 @@ import {
   getAssetUrl,
   ICON_KEYS,
 } from "@/lib/directus";
+import { getSiteUrl } from "@/lib/utils";
 
 // In development direct verse data ophalen — wijzigingen in Directus
 // zijn meteen zichtbaar na refresh. In productie weer gewone caching.
@@ -49,9 +50,7 @@ export async function generateMetadata(): Promise<Metadata> {
       default:  settings?.default_seo_title || siteName,
     },
     description,
-    metadataBase: new URL(
-      process.env.NEXT_PUBLIC_SITE_URL || "https://al-ghofraan.com"
-    ),
+    metadataBase: new URL(getSiteUrl()),
     openGraph: {
       siteName,
       locale: "nl_NL",

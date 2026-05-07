@@ -10,6 +10,7 @@ import { CalendarDays }           from "lucide-react";
 import {
   getActivePrayerTimeFile,
   getInternalAssetUrl,
+  getPageContent,
   getSiteSettings,
   getPageSectionsWithItems,
 } from "@/lib/directus";
@@ -26,11 +27,22 @@ import type { PrayerTimeRow }     from "@/types/directus";
 export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
 export const revalidate = 3600;
 
+const HEADER_FALLBACK = {
+  title:  "Gebedstijden",
+  arabic: "مواقيت الصلاة",
+};
+
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSiteSettings();
+  const [page, settings] = await Promise.all([
+    getPageContent("gebedstijden"),
+    getSiteSettings(),
+  ]);
   return {
-    title:       "Gebedstijden",
-    description: settings?.default_seo_description || "Bekijk de actuele gebedstijden voor dit jaar.",
+    title:       page?.seo_title || page?.title || HEADER_FALLBACK.title,
+    description:
+      page?.seo_description ||
+      settings?.default_seo_description ||
+      "Bekijk de actuele gebedstijden voor dit jaar.",
   };
 }
 
@@ -44,8 +56,13 @@ const FALLBACK_ROW: PrayerTimeRow = {
   ishaa:    "21:15",
 };
 
+// Gebruik FALLBACK_ROW alleen voor de "highlight"-berekening;
+// in de UI tonen we hem nooit als echte tijd op productie.
+const SHOW_FALLBACK_PREVIEW = process.env.NODE_ENV !== "production";
+
 export default async function GebedstijdenPage() {
   const sectionsPromise = getPageSectionsWithItems("gebedstijden");
+  const pagePromise     = getPageContent("gebedstijden");
 
   let allRows: PrayerTimeRow[] = [];
   let monthRows: PrayerTimeRow[] = [];
@@ -96,6 +113,7 @@ export default async function GebedstijdenPage() {
   }
 
   const sections      = await sectionsPromise;
+  const page          = await pagePromise;
   const ctaSections   = sections.filter((s) => s.type === "cta");
   const otherSections = sections.filter((s) => s.type !== "cta");
 
@@ -128,9 +146,9 @@ const mm = String(todayParts.month).padStart(2, "0");
         <div className="absolute inset-0 pattern-overlay" />
         <Container className="relative z-10">
           <SectionTitle
-            title="Gebedstijden"
-            arabic="مواقيت الصلاة"
-            subtitle={subtitleText}
+            title={page?.title || HEADER_FALLBACK.title}
+            arabic={page?.arabic_title || HEADER_FALLBACK.arabic}
+            subtitle={page?.subtitle || subtitleText}
             light
           />
         </Container>
@@ -157,19 +175,31 @@ const mm = String(todayParts.month).padStart(2, "0");
               <span className="w-2 h-8 bg-slate-mosque rounded-full inline-block" />
               Vandaag — {dd}-{mm}
             </h2>
-            <TodayPrayerCard
-              row={todayRow || FALLBACK_ROW}
-              nextPrayerKey={nextPrayerKey}
-            />
-            {!todayRow && allRows.length === 0 && (
-              <p className="font-body text-xs text-taupe mt-3 text-center">
-                * Tijden zijn indicatief. Upload het juiste CSV-bestand via Directus.
-              </p>
-            )}
-            {todayRow && nextPrayerKey === null && (
-              <p className="font-body text-xs text-taupe mt-3 text-center">
-                Alle gebeden van vandaag zijn voorbij. Tot morgen, in shaa Allah.
-              </p>
+
+            {todayRow ? (
+              <>
+                <TodayPrayerCard row={todayRow} nextPrayerKey={nextPrayerKey} />
+                {nextPrayerKey === null && (
+                  <p className="font-body text-xs text-taupe mt-3 text-center">
+                    Alle gebeden van vandaag zijn voorbij. Tot morgen, in shaa Allah.
+                  </p>
+                )}
+              </>
+            ) : SHOW_FALLBACK_PREVIEW ? (
+              // In dev een visuele preview tonen (handig zonder CSV)
+              <>
+                <TodayPrayerCard row={FALLBACK_ROW} nextPrayerKey={nextPrayerKey} />
+                <p className="font-body text-xs text-taupe mt-3 text-center">
+                  * Demo-tijden (alleen lokaal zichtbaar). Upload het juiste CSV-bestand via Directus.
+                </p>
+              </>
+            ) : (
+              // In productie GEEN nep-tijden tonen — duidelijke melding ipv misleidende data
+              <div className="bg-white border border-sand-200 rounded-2xl p-8 text-center">
+                <p className="font-body text-taupe-dark">
+                  Gebedstijden zijn tijdelijk niet beschikbaar.
+                </p>
+              </div>
             )}
           </div>
 

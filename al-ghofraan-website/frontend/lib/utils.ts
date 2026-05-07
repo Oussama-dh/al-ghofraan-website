@@ -80,3 +80,91 @@ export function buildWhatsAppUrl(
   }
   return base;
 }
+
+/**
+ * Geeft de canonical site-URL terug zonder trailing slash.
+ *
+ * Volgorde:
+ *   1. process.env.NEXT_PUBLIC_SITE_URL  (zowel server- als client-side beschikbaar)
+ *   2. fallback http://localhost:3000   (alleen voor local dev / build-time)
+ *
+ * Gebruik dit voor alle plekken waar een ABSOLUTE URL nodig is:
+ *   - Stripe success_url / cancel_url
+ *   - canonical / Open Graph URLs
+ *   - e-mail- of webhook-bevestigingen
+ *
+ * Voor interne links (bv. "/contact", "/doneren") is dit NIET nodig;
+ * gebruik daar gewoon het pad.
+ *
+ * Bij domeinwijziging hoef je alleen NEXT_PUBLIC_SITE_URL aan te passen
+ * in je productie-env (en de Stripe webhook endpoint in Stripe Dashboard).
+ */
+export function getSiteUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  return raw.replace(/\/+$/, "");
+}
+
+/**
+ * Haal de YouTube video-ID uit een willekeurige YouTube-URL.
+ * Geeft null terug als de URL niet herkend wordt — zo kan de UI die
+ * video gewoon overslaan in plaats van een runtime error te geven.
+ *
+ * Ondersteunde vormen:
+ *   - https://www.youtube.com/watch?v=VIDEO_ID
+ *   - https://youtube.com/watch?v=VIDEO_ID
+ *   - https://youtu.be/VIDEO_ID
+ *   - https://www.youtube.com/shorts/VIDEO_ID
+ *   - https://youtube.com/shorts/VIDEO_ID
+ *   - https://www.youtube.com/embed/VIDEO_ID
+ */
+export function extractYouTubeId(url: string | null | undefined): string | null {
+  if (!url || typeof url !== "string") return null;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    return null;
+  }
+
+  const host = parsed.hostname.replace(/^www\./, "").toLowerCase();
+
+  // youtu.be/VIDEO_ID
+  if (host === "youtu.be") {
+    const id = parsed.pathname.replace(/^\/+/, "").split("/")[0];
+    return isValidYouTubeId(id) ? id : null;
+  }
+
+  // youtube.com / m.youtube.com / youtube-nocookie.com
+  if (host === "youtube.com" || host === "m.youtube.com" || host === "youtube-nocookie.com") {
+    // /watch?v=VIDEO_ID
+    const v = parsed.searchParams.get("v");
+    if (v && isValidYouTubeId(v)) return v;
+
+    // /shorts/VIDEO_ID  /embed/VIDEO_ID  /v/VIDEO_ID
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    if (parts.length >= 2 && ["shorts", "embed", "v", "live"].includes(parts[0])) {
+      return isValidYouTubeId(parts[1]) ? parts[1] : null;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * YouTube video-IDs zijn 11 tekens [A-Za-z0-9_-]. Strikte check
+ * voorkomt dat we malformed strings naar een embed-URL plakken.
+ */
+function isValidYouTubeId(id: string | null | undefined): boolean {
+  return !!id && /^[A-Za-z0-9_-]{11}$/.test(id);
+}
+
+/**
+ * Bouw een privacyvriendelijke YouTube-embed URL (no-cookie).
+ * Geeft null terug als de bron-URL ongeldig is.
+ */
+export function buildYouTubeEmbedUrl(youtubeUrl: string | null | undefined): string | null {
+  const id = extractYouTubeId(youtubeUrl);
+  if (!id) return null;
+  return `https://www.youtube-nocookie.com/embed/${id}`;
+}

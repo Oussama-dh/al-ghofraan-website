@@ -1,9 +1,18 @@
 // scripts/seed/steps/05-page-content.mjs
+//
+// Vult page_content met initiële teksten voor home / dawahcommissie / doneren.
+// Soft-create: bestaat een slug al, dan wordt NIETS overschreven — handmatige
+// edits van de beheerder blijven intact. Alleen bij eerste seed worden de
+// onderstaande defaults aangemaakt.
+//
+// Geen hardcoded e-mailadressen meer in body's: bezoekers worden naar /contact
+// verwezen. De admin kan daarna zelf het echte adres invullen via
+// site_settings.contact_email of in de body via de rich-text editor.
 
-import { upsertItem } from "../lib/helpers.mjs";
+import { softCreateItem } from "../lib/helpers.mjs";
 
 export async function seedPageContent(client) {
-  console.log("\n📄 Stap 5 · Pagina-content");
+  console.log("\n📄 Stap 5 · Pagina-content (soft-create — bestaande edits blijven intact)");
 
   const pages = [
     {
@@ -36,27 +45,27 @@ export async function seedPageContent(client) {
         verspreiden op een toegankelijke, authentieke en inspirerende manier.</p>
 
         <h2>Onze missie</h2>
-        <p>Wij geloven dat Da'wa — de uitnodiging tot de islam — begint met
+        <p>Wij geloven dat Da'wa &mdash; de uitnodiging tot de islam &mdash; begint met
         het goede voorbeeld geven. Door middel van educatieve programma's,
         dialoog en gemeenschapsactiviteiten willen wij een brug slaan tussen
         de moslimgemeenschap en de bredere samenleving.</p>
 
         <blockquote>
           <p><em>"Nodig uit naar de weg van uw Heer met wijsheid en schone vermaning."</em><br>
-          — Soera An-Nahl 16:125</p>
+          &mdash; Soera An-Nahl 16:125</p>
         </blockquote>
 
         <h2>Wat wij doen</h2>
         <ul>
-          <li><strong>Wekelijkse lezingen</strong> — toegankelijke lezingen na de vrijdagsalaat</li>
-          <li><strong>Islamitische cursussen</strong> — Tawheed, Fiqh, Arabisch, Qur'aanrecitatie</li>
-          <li><strong>Open dagen</strong> — voor niet-moslims en geïnteresseerden</li>
-          <li><strong>Jeugdprogramma's</strong> — speciaal voor jongeren</li>
+          <li><strong>Wekelijkse lezingen</strong> &mdash; toegankelijke lezingen na de vrijdagsalaat</li>
+          <li><strong>Islamitische cursussen</strong> &mdash; Tawheed, Fiqh, Arabisch, Qur'aanrecitatie</li>
+          <li><strong>Open dagen</strong> &mdash; voor niet-moslims en geïnteresseerden</li>
+          <li><strong>Jeugdprogramma's</strong> &mdash; speciaal voor jongeren</li>
         </ul>
 
         <h2>Contact</h2>
         <p>Heeft u vragen of wilt u samenwerken? Neem contact met ons op via
-        <a href="mailto:el-masoudi@hotmail.com">el-masoudi@hotmail.com</a>.</p>
+        <a href="/contact">onze contactpagina</a>.</p>
       `.trim(),
       seo_title:       "Over de DawahCommissie Al-Ghofraan",
       seo_description: "Leer meer over de DawahCommissie van moskee Al-Ghofraan — onze missie, visie en activiteiten.",
@@ -67,23 +76,20 @@ export async function seedPageContent(client) {
       slug:     "doneren",
       title:    "Steun de DawahCommissie",
       subtitle: "Uw bijdrage maakt een verschil voor de gehele gemeenschap",
-      intro:    "Binnenkort kunt u hier veilig online doneren.",
+      intro:    "Uw bijdrage helpt ons om kennis, gemeenschap en dienstbaarheid te blijven dragen.",
       body: `
-        <p>We werken aan een veilige en eenvoudige donatiemogelijkheid via Stripe.
-        Uw bijdrage is van onschatbare waarde voor ons werk.</p>
-
-        <p>Wilt u nu al bijdragen? Neem contact met ons op via
-        <a href="mailto:el-masoudi@hotmail.com">el-masoudi@hotmail.com</a>.</p>
-
         <h3>Waarvoor wordt uw donatie gebruikt?</h3>
         <ul>
-          <li><strong>Educatieve programma's</strong> — lezingen, cursussen en studiemateriaal</li>
-          <li><strong>Moskee-activiteiten</strong> — evenementen en open dagen</li>
-          <li><strong>Da'wa &amp; outreach</strong> — informatieverspreiding en interfaith dialoog</li>
+          <li><strong>Educatieve programma's</strong> &mdash; lezingen, cursussen en studiemateriaal</li>
+          <li><strong>Moskee-activiteiten</strong> &mdash; evenementen en open dagen</li>
+          <li><strong>Da'wa &amp; outreach</strong> &mdash; informatieverspreiding en interfaith dialoog</li>
         </ul>
 
         <p><em>"En wat u ook aan goeds uitgeeft, dat is voor uzelf."</em><br>
-        — Soera Al-Baqara 2:272</p>
+        &mdash; Soera Al-Baqara 2:272</p>
+
+        <p>Heeft u vragen over donaties? Neem gerust contact op via
+        <a href="/contact">onze contactpagina</a>.</p>
       `.trim(),
       seo_title:       "Doneren — DawahCommissie Al-Ghofraan",
       seo_description: "Steun de DawahCommissie van moskee Al-Ghofraan met een donatie.",
@@ -92,7 +98,7 @@ export async function seedPageContent(client) {
   ];
 
   for (const page of pages) {
-    await upsertItem(client, "page_content", "slug", page.slug, page);
+    await softCreateItem(client, "page_content", "slug", page.slug, page);
   }
 
   console.log("✓ Stap 5 voltooid");

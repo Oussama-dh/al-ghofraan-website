@@ -23,7 +23,7 @@ import { NextResponse } from "next/server";
 import { getStripe, isStripeConfigured } from "@/lib/stripe";
 import { directusServer, getDonationCampaignBySlug } from "@/lib/directus";
 import { createItem } from "@directus/sdk";
-import { formatEurFromCents } from "@/lib/utils";
+import { formatEurFromCents, getSiteUrl } from "@/lib/utils";
 import type { DonationType, DonationCampaign } from "@/types/directus";
 
 export const runtime = "nodejs";
@@ -110,10 +110,16 @@ function parseBody(
 }
 
 function getOrigin(request: Request): string {
+  // 1) NEXT_PUBLIC_SITE_URL is altijd autoritatief als gezet
   const explicit = process.env.NEXT_PUBLIC_SITE_URL;
-  if (explicit) return explicit.replace(/\/$/, "");
-  const url = new URL(request.url);
-  return `${url.protocol}//${url.host}`;
+  if (explicit) return explicit.replace(/\/+$/, "");
+  // 2) Anders: request-host als laatste vangnet (lokaal handig op andere poorten)
+  try {
+    const url = new URL(request.url);
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return getSiteUrl();
+  }
 }
 
 export async function POST(request: Request) {

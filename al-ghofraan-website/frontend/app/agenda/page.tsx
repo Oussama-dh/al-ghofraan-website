@@ -7,6 +7,7 @@ import Container          from "@/components/ui/Container";
 import {
   getActivities,
   getIconSettings,
+  getPageContent,
   getSiteSettings,
   resolveIconKey,
   ICON_KEYS,
@@ -16,20 +17,34 @@ import type { Activity }  from "@/types/directus";
 export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
 export const revalidate = 300;
 
+// Fallbacks worden gebruikt zodra de admin het page_content-record voor
+// "agenda" leeg laat of nog niet heeft aangemaakt — zo blijft de pagina
+// in productie altijd presentabel.
+const FALLBACK = {
+  title:    "Agenda & Activiteiten",
+  arabic:   "الأنشطة والفعاليات",
+  subtitle: "Lezingen, cursussen en evenementen van de DawahCommissie",
+};
+
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSiteSettings();
+  const [page, settings] = await Promise.all([
+    getPageContent("agenda"),
+    getSiteSettings(),
+  ]);
   return {
-    title:       "Agenda",
+    title:       page?.seo_title || page?.title || FALLBACK.title,
     description:
+      page?.seo_description ||
       settings?.default_seo_description ||
       "Bekijk alle aankomende activiteiten, lezingen en evenementen van de DawahCommissie.",
   };
 }
 
 export default async function AgendaPage() {
-  const [activities, iconMap] = await Promise.all([
+  const [activities, iconMap, page] = await Promise.all([
     getActivities() as Promise<Activity[]>,
     getIconSettings(),
+    getPageContent("agenda"),
   ]);
 
   const dateIcon     = resolveIconKey(iconMap, ICON_KEYS.activityDate);
@@ -45,9 +60,9 @@ export default async function AgendaPage() {
         <div className="absolute inset-0 pattern-overlay" />
         <Container className="relative z-10">
           <SectionTitle
-            title="Agenda & Activiteiten"
-            arabic="الأنشطة والفعاليات"
-            subtitle="Lezingen, cursussen en evenementen van de DawahCommissie"
+            title={page?.title || FALLBACK.title}
+            arabic={page?.arabic_title || FALLBACK.arabic}
+            subtitle={page?.subtitle || FALLBACK.subtitle}
             light
           />
         </Container>

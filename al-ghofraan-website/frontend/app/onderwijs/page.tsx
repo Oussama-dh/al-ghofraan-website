@@ -7,6 +7,7 @@ import SectionTitle      from "@/components/ui/SectionTitle";
 import { Icon }          from "@/lib/icons";
 import {
   getEducationPrograms,
+  getPageContent,
   getSiteSettings,
   getAssetUrl,
 } from "@/lib/directus";
@@ -15,18 +16,31 @@ import { formatDate }    from "@/lib/utils";
 export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
 export const revalidate = 600;
 
+const FALLBACK = {
+  title:    "Onderwijs",
+  arabic:   "التعليم",
+  subtitle: "Lessen, cursussen en studiekringen voor de gemeenschap",
+};
+
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSiteSettings();
+  const [page, settings] = await Promise.all([
+    getPageContent("onderwijs"),
+    getSiteSettings(),
+  ]);
   return {
-    title:       "Onderwijs",
+    title:       page?.seo_title || page?.title || FALLBACK.title,
     description:
+      page?.seo_description ||
       settings?.default_seo_description ||
       "Lessen, cursussen en studiekringen aangeboden door de DawahCommissie.",
   };
 }
 
 export default async function OnderwijsPage() {
-  const programs = await getEducationPrograms();
+  const [programs, page] = await Promise.all([
+    getEducationPrograms(),
+    getPageContent("onderwijs"),
+  ]);
 
   return (
     <>
@@ -34,9 +48,9 @@ export default async function OnderwijsPage() {
         <div className="absolute inset-0 pattern-overlay" />
         <Container className="relative z-10">
           <SectionTitle
-            title="Onderwijs"
-            arabic="التعليم"
-            subtitle="Lessen, cursussen en studiekringen voor de gemeenschap"
+            title={page?.title || FALLBACK.title}
+            arabic={page?.arabic_title || FALLBACK.arabic}
+            subtitle={page?.subtitle || FALLBACK.subtitle}
             light
           />
         </Container>

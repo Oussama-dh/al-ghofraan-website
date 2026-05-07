@@ -28,9 +28,10 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 # (na het aanmaken van een endpoint, zie sectie 5)
 STRIPE_WEBHOOK_SECRET=whsec_...
 
-# Optioneel — als de site lokaal op een andere poort draait dan localhost:3000,
-# of voor productie: het externe domein. Wordt gebruikt voor success_url en
-# cancel_url van Stripe Checkout. Default is de host van de inkomende request.
+# Canonical site-URL — gebruikt voor Stripe success_url / cancel_url,
+# OG-tags en canonical metadata. Bron van waarheid voor het domein.
+# Lokaal:    http://localhost:3000
+# Productie: https://al-ghofraan.com  (of het uiteindelijke domein)
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
@@ -160,6 +161,22 @@ Wanneer je klaar bent voor live betalingen:
    ```
 7. Deploy en doe een **test-donatie van €1** om de volledige flow te
    verifiëren — refund die direct via Stripe Dashboard
+
+---
+
+## 7b. Domeinwijziging later
+
+Als het domein later verandert (bv. van `al-ghofraan.com` naar iets anders),
+hoef je voor Stripe **maar twee dingen** aan te passen:
+
+1. **`NEXT_PUBLIC_SITE_URL`** in productie-env — dit dekt de
+   `success_url` en `cancel_url` voor Stripe Checkout, en de
+   canonical/OG-metadata van de site.
+2. **Stripe Dashboard** → Developers → Webhooks → het bestaande endpoint
+   → URL aanpassen naar `https://NIEUW-DOMEIN/api/stripe/webhook`.
+
+Geen code-wijzigingen nodig. Alle URL's worden runtime opgebouwd via
+de `getSiteUrl()` helper in `frontend/lib/utils.ts`.
 
 ---
 

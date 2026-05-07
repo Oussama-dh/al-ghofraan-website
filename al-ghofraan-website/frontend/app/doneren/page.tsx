@@ -49,8 +49,9 @@ export default async function DonerenPage({ searchParams }: Props) {
     getDonationCampaigns(),
   ]);
 
-  const title    = page?.title    || "Steun de DawahCommissie";
-  const subtitle = page?.subtitle || "Uw bijdrage maakt een verschil voor de gehele gemeenschap";
+  const title       = page?.title    || "Steun de DawahCommissie";
+  const subtitle    = page?.subtitle || "Uw bijdrage maakt een verschil voor de gehele gemeenschap";
+  const arabicTitle = page?.arabic_title || "ادعم لجنة الدعوة";
   const intro    = page?.intro;
 
   const donationIcon = page?.icon || resolveIconKey(iconMap, ICON_KEYS.donation);
@@ -67,7 +68,7 @@ export default async function DonerenPage({ searchParams }: Props) {
         <Container className="relative z-10">
           <SectionTitle
             title={title}
-            arabic="ادعم لجنة الدعوة"
+            arabic={arabicTitle}
             subtitle={subtitle}
             light
           />

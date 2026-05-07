@@ -70,6 +70,52 @@ De website blokkeert deze automatisch — je krijgt geen "pagina niet gevonden" 
 
 ---
 
+## 1b. ⭐ Paginaheader (titel + Arabische titel + subtitel) bewerken
+
+De **hero/header** van zowel je zelfgemaakte pagina's *als* de vaste route-pagina's
+(zoals `/agenda`, `/onderwijs`, `/artikelen`, `/gebedstijden`, `/doneren`,
+`/contact`, `/videos`, `/privacy`, `/dawahcommissie` en `/`) wordt beheerd
+via Directus → **Page Content**.
+
+### Welke velden worden in de hero gebruikt?
+
+| Veld          | Waar verschijnt het op de pagina                                 |
+|---------------|------------------------------------------------------------------|
+| `arabic_title` | Arabische tekst **boven** de hoofdtitel (bv. "اتصل بنا")        |
+| `title`        | De grote hoofdtitel                                             |
+| `subtitle`     | Korte zin onder de titel                                        |
+| `intro`        | Introductietekst — gebruikt op pagina's die er ruimte voor hebben |
+
+`arabic_title` is **gewone tekst** (geen HTML). Plak gewoon de Arabische woorden.
+
+### Voor een vaste route bewerken
+
+1. Directus → **Page Content** → zoek het record met de juiste slug:
+   - `/agenda` → slug `agenda`
+   - `/onderwijs` → slug `onderwijs`
+   - `/artikelen` → slug `artikelen`
+   - `/gebedstijden` → slug `gebedstijden`
+   - `/doneren` → slug `doneren`
+   - `/contact` → slug `contact`
+   - `/videos` → slug `videos`
+   - `/privacy` → slug `privacy`
+   - `/dawahcommissie` → slug `dawahcommissie`
+   - `/` → slug `home`
+2. Pas `title`, `arabic_title`, `subtitle`, eventueel `seo_title`/`seo_description` aan
+3. Klik **Save** en refresh de pagina
+
+> 💡 **Tip:** als een veld leeg is, valt de pagina terug op een sensible
+> default in code. Niets stuk — gewoon weer invullen om de waarde aan te passen.
+
+### Bestaat het page_content-record nog niet?
+
+Voor vaste routes worden defaults bij de eerste seed automatisch aangemaakt.
+Als je een record in Directus verwijderd hebt en opnieuw `npm run seed` draait,
+wordt 't opnieuw aangemaakt. Bestaande records blijven onaangeroerd
+(`soft-create`).
+
+---
+
 ## 2. Header aanpassen
 
 **Logo & moskeenaam**: Directus → **Site Settings**
@@ -921,7 +967,129 @@ Tot die tijd: niets nodig.
 
 ---
 
-## Hoe controleer ik dat een wijziging werkt?
+## 18. Video's (`/videos`)
+
+De `videos`-collectie laat je YouTube-video's tonen op `/videos`. Geen
+YouTube-API, geen automatische sync — je beheert zelf welke video's zichtbaar zijn.
+
+### Een nieuwe video toevoegen
+
+1. Ga naar **Content → Videos → Create item**
+2. Vul in:
+   - **status**: `Concept` (terwijl je werkt) of `Gepubliceerd` (zichtbaar op /videos)
+   - **title**: titel die onder de video verschijnt
+   - **description**: 1-3 zinnen (optioneel)
+   - **youtube_url**: plak de volledige YouTube-URL — alle vormen werken:
+     - `https://www.youtube.com/watch?v=VIDEO_ID`
+     - `https://youtu.be/VIDEO_ID`
+     - `https://youtube.com/shorts/VIDEO_ID`
+     - `https://www.youtube.com/shorts/VIDEO_ID`
+   - **featured**: aanvinken voor prominent bovenaan
+   - **sort**: lager getal = eerder (binnen featured/non-featured groep)
+   - **published_at**: datum waarop je hem live wilt zetten
+3. Klik **Save**
+
+### Sortering op /videos
+
+1. Featured-video's eerst
+2. Dan op `sort` oplopend
+3. Dan op `published_at` aflopend (recentste eerst)
+
+### Wat als de URL ongeldig is?
+
+De pagina slaat video's met een onherkenbare YouTube-URL stilletjes over —
+geen kapotte iframes of crashes. Controleer dus zelf even of je de URL
+correct hebt gekopieerd.
+
+### Privacy
+
+Video's worden ingebed via `youtube-nocookie.com` — YouTube zet pas een
+tracking-cookie als de bezoeker daadwerkelijk op play drukt.
+
+---
+
+## 19. Artikelcategorie-filtering (`/artikelen?category=...`)
+
+De artikelen-pagina toont automatisch filterknoppen op basis van de
+`category`-veldwaardes van **gepubliceerde** artikelen.
+
+### Hoe het werkt
+
+- Het filter wordt **dynamisch** opgebouwd uit alle published artikelen
+- Een categorie verschijnt alleen als er minstens 1 gepubliceerd artikel
+  in die categorie staat
+- Zet je het laatste artikel van een categorie op `draft` of `archived`,
+  dan **verdwijnt die categorie automatisch** uit het filter
+- Categorieën worden alfabetisch gesorteerd
+- "Alle" staat altijd vooraan
+
+### Een nieuwe categorie introduceren
+
+Geen aparte stap — typ gewoon de categorie in het `category`-veld bij
+een artikel en zet hem op `published`. De knop verschijnt vanzelf op
+`/artikelen` na een refresh.
+
+### Categorieën consistent houden
+
+`category` is een vrij tekstveld. Wees consistent met hoofdletters/spaties
+zodat "Lezing" en "lezing" niet als twee aparte categorieën worden gezien
+(de matching is case-insensitive in de URL, maar het label op de knop
+gebruikt de waarde uit het eerste artikel dat je tegenkomt).
+
+### URL-formaat
+
+`/artikelen?category=fiqh` → toont alle published artikelen met
+`category` = "Fiqh" (case-insensitive). Als de gevraagde categorie niet
+(meer) bestaat, valt de pagina simpelweg terug op alle artikelen.
+
+---
+
+## 20. Productie — fallback-content & wat de site toont bij lege Directus
+
+De website is zo gebouwd dat álle inhoud uit Directus komt. Voor het zeldzame
+geval dat Directus offline is of een veld leeg, gebruikt de frontend een
+beperkte set neutrale fallbacks. Belangrijk voor productie:
+
+| Onderdeel                        | Bij lege Directus / offline                                                  |
+|----------------------------------|------------------------------------------------------------------------------|
+| Header logo                      | Eenvoudige SVG-mosque                                                        |
+| Footer logo / titel / beschrijving | Generieke Al-Ghofraan branding-tekst                                       |
+| Site-naam / SEO-titels           | "DawahCommissie Al-Ghofraan" als merknaam-fallback                           |
+| Contact-email in footer          | **Niet getoond** — alleen zichtbaar als `site_settings.contact_email` is ingevuld |
+| Activiteiten op homepage         | **Sectie wordt verborgen** (geen demo-data meer)                             |
+| Gebedstijden — vandaag-card      | Productie: **nette melding** "tijdelijk niet beschikbaar". Lokaal dev: demo-card |
+| Artikelen / onderwijs / agenda   | Lege staat met neutrale tekst                                                |
+| Video's                          | Lege staat ("Er zijn momenteel geen video's beschikbaar")                    |
+| FAQ                              | Verborgen als geen items                                                     |
+
+> ✅ **Geen fake data meer in publieke views.** Demo-tijden, demo-activiteiten
+> en placeholder-emails verschijnen NOOIT op productie.
+
+### Wat moet er minimaal in Directus staan voor een nette site?
+
+1. **Site Settings**: `site_name`, `logo`, `contact_email`, `default_seo_title`/`description`
+2. **Page content**: minimaal `home`, `dawahcommissie`, `doneren`, `privacy` op `published`
+3. **Navigation items**: header- en footer-menu's
+4. **Prayer time files**: minstens één CSV als `active`
+5. **Activities** *(optioneel)* — zonder deze blijft de homepage-activiteiten-sectie verborgen
+6. **Donation campaigns** *(optioneel)* — zonder deze toont DonationForm alleen "Algemene donatie"
+
+### Idempotente seed — wat overschrijft het?
+
+`npm run seed` is veilig om opnieuw te draaien. De seed:
+
+- ✅ Maakt collecties, velden en permissies aan als ze ontbreken
+- ✅ Maakt **éénmalig** standaard-pagina's aan (home, dawahcommissie, doneren,
+  contact, privacy) — daarna nooit meer overschreven
+- ✅ Vult lege velden in `site_settings` met defaults — overschrijft géén
+  bestaande waarden
+- ❌ Maakt **geen** voorbeeldactiviteiten meer aan
+- ❌ Overschrijft **geen** handmatige content
+
+Resultaat: na de eerste seed kun je gerust weer `npm run seed` draaien voor
+schemawijzigingen, zonder dat je beheerderswerk verloren gaat.
+
+---
 
 1. Wijzig in Directus → klik **Save**
 2. Vernieuw de pagina in de browser
@@ -934,4 +1102,4 @@ Als iets niet werkt:
 - Matchen `page_slug` en `section_key` exact?
 - Staat de slug niet in de gereserveerde lijst (sectie 1)?
 
-Hulp nodig: stuur een mail naar **el-masoudi@hotmail.com**.
+Hulp nodig: neem contact op met de webbeheerder van de DawahCommissie.

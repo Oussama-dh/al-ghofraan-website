@@ -46,9 +46,10 @@ export default async function DawahcommissiePage() {
     getPageSectionsWithItems("dawahcommissie"),
   ]);
 
-  const title    = page?.title    || "Over de DawahCommissie";
-  const subtitle = page?.subtitle || "Wie zijn wij en wat drijft ons";
-  const body     = page?.body     || FALLBACK_BODY;
+  const title       = page?.title    || "Over de DawahCommissie";
+  const subtitle    = page?.subtitle || "Wie zijn wij en wat drijft ons";
+  const arabicTitle = page?.arabic_title || "لجنة الدعوة";
+  const body        = page?.body     || FALLBACK_BODY;
 
   const pageIcon       = page?.icon || resolveIconKey(iconMap, ICON_KEYS.pageSectionDefault);
   const faqDefaultIcon = resolveIconKey(iconMap, ICON_KEYS.faq);
@@ -64,7 +65,7 @@ export default async function DawahcommissiePage() {
         <Container className="relative z-10">
           <SectionTitle
             title={title}
-            arabic="لجنة الدعوة"
+            arabic={arabicTitle}
             subtitle={subtitle}
             light
           />

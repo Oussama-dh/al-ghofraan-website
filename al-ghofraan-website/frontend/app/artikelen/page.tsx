@@ -7,26 +7,66 @@ import SectionTitle      from "@/components/ui/SectionTitle";
 import { Icon }          from "@/lib/icons";
 import {
   getArticles,
+  getPageContent,
   getSiteSettings,
   getAssetUrl,
 } from "@/lib/directus";
-import { formatDate }    from "@/lib/utils";
+import { formatDate, cn } from "@/lib/utils";
 
 export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
 export const revalidate = 600;
 
+const FALLBACK = {
+  title:    "Artikelen",
+  arabic:   "مقالات",
+  subtitle: "Nieuws, lezingen en reflecties van de DawahCommissie",
+};
+
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSiteSettings();
+  const [page, settings] = await Promise.all([
+    getPageContent("artikelen"),
+    getSiteSettings(),
+  ]);
   return {
-    title:       "Artikelen",
+    title:       page?.seo_title || page?.title || FALLBACK.title,
     description:
+      page?.seo_description ||
       settings?.default_seo_description ||
       "Artikelen, nieuws en reflecties van de DawahCommissie.",
   };
 }
 
-export default async function ArtikelenPage() {
-  const articles = await getArticles();
+interface ArtikelenPageProps {
+  searchParams?: { category?: string };
+}
+
+export default async function ArtikelenPage({ searchParams }: ArtikelenPageProps) {
+  const [articles, page] = await Promise.all([
+    getArticles(),
+    getPageContent("artikelen"),
+  ]);
+
+  // Bouw categorie-lijst dynamisch uit aanwezige published artikelen.
+  // Categorie zonder gepubliceerd artikel verdwijnt automatisch uit het filter.
+  const categories = Array.from(
+    new Set(
+      articles
+        .map((a) => (a.category ?? "").trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b, "nl"));
+
+  // Active filter — case-insensitive match. Bestaat de gevraagde categorie
+  // niet (meer), dan tonen we gewoon alle artikelen — robuust en simpel.
+  const requested = (searchParams?.category ?? "").trim();
+  const activeCategory =
+    requested && categories.some((c) => c.toLowerCase() === requested.toLowerCase())
+      ? categories.find((c) => c.toLowerCase() === requested.toLowerCase())!
+      : null;
+
+  const visible = activeCategory
+    ? articles.filter((a) => (a.category ?? "").toLowerCase() === activeCategory.toLowerCase())
+    : articles;
 
   return (
     <>
@@ -34,9 +74,9 @@ export default async function ArtikelenPage() {
         <div className="absolute inset-0 pattern-overlay" />
         <Container className="relative z-10">
           <SectionTitle
-            title="Artikelen"
-            arabic="مقالات"
-            subtitle="Nieuws, lezingen en reflecties van de DawahCommissie"
+            title={page?.title || FALLBACK.title}
+            arabic={page?.arabic_title || FALLBACK.arabic}
+            subtitle={page?.subtitle || FALLBACK.subtitle}
             light
           />
         </Container>
@@ -49,17 +89,35 @@ export default async function ArtikelenPage() {
 
       <section className="bg-sand-50 py-12 lg:py-16">
         <Container>
-          {articles.length === 0 ? (
+          {/* Categorie-filter — alleen tonen als er categorieën zijn */}
+          {categories.length > 0 && (
+            <div className="mb-8 flex flex-wrap gap-2">
+              <FilterPill href="/artikelen" active={activeCategory === null}>
+                Alle
+              </FilterPill>
+              {categories.map((cat) => (
+                <FilterPill
+                  key={cat}
+                  href={`/artikelen?category=${encodeURIComponent(cat.toLowerCase())}`}
+                  active={activeCategory?.toLowerCase() === cat.toLowerCase()}
+                >
+                  {cat}
+                </FilterPill>
+              ))}
+            </div>
+          )}
+
+          {visible.length === 0 ? (
             <div className="text-center py-20">
               <div className="text-5xl mb-4">📰</div>
               <h3 className="font-display text-2xl text-ink mb-2">Nog geen artikelen</h3>
               <p className="font-body text-taupe-dark">
-                We zijn druk bezig met het schrijven van nieuwe artikelen. Kom binnenkort terug.
+                Er zijn momenteel geen artikelen beschikbaar.
               </p>
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {articles.map((article) => {
+              {visible.map((article) => {
                 const imageId  = typeof article.image === "string" ? article.image : article.image?.id;
                 const imageUrl = imageId ? getAssetUrl(imageId) : null;
                 const tags     = article.tags
@@ -146,5 +204,29 @@ export default async function ArtikelenPage() {
         </Container>
       </section>
     </>
+  );
+}
+
+function FilterPill({
+  href,
+  active,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "font-body text-sm px-4 py-1.5 rounded-full border transition-colors",
+        active
+          ? "bg-slate-mosque text-white border-slate-mosque"
+          : "bg-white text-taupe-dark border-sand-200 hover:border-taupe/50"
+      )}
+    >
+      {children}
+    </Link>
   );
 }

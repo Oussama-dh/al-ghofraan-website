@@ -11,7 +11,7 @@ const PRIVACY_BODY = `
 <p><strong>Laatst bijgewerkt:</strong> bij eerste publicatie. Pas deze datum aan in Directus wanneer u de tekst wijzigt.</p>
 
 <h2>Wie is verantwoordelijk?</h2>
-<p>De DawahCommissie van moskee Al-Ghofraan in Steenbergen is verantwoordelijk voor de verwerking van uw persoonsgegevens via deze website. Voor vragen over privacy kunt u contact opnemen via <a href="mailto:el-masoudi@hotmail.com">el-masoudi@hotmail.com</a>.</p>
+<p>De DawahCommissie van moskee Al-Ghofraan in Steenbergen is verantwoordelijk voor de verwerking van uw persoonsgegevens via deze website. Voor vragen over privacy kunt u contact met ons opnemen via <a href="/contact">onze contactpagina</a>.</p>
 
 <h2>Welke gegevens verzamelen wij?</h2>
 <p>Afhankelijk van wat u op de website doet, kunnen wij de volgende gegevens van u verwerken:</p>
@@ -54,7 +54,7 @@ const PRIVACY_BODY = `
   <li>Bezwaar te maken tegen het gebruik van uw gegevens.</li>
   <li>Een klacht in te dienen bij de Autoriteit Persoonsgegevens.</li>
 </ul>
-<p>Stuur een verzoek naar <a href="mailto:el-masoudi@hotmail.com">el-masoudi@hotmail.com</a> en wij reageren binnen vier weken.</p>
+<p>Stuur een verzoek via <a href="/contact">onze contactpagina</a> en wij reageren binnen vier weken.</p>
 
 <h2>Cookies en tracking</h2>
 <p>Deze website gebruikt <strong>geen tracking cookies en geen analytics</strong>. Er is daarom ook geen cookiebanner nodig. De website gebruikt alleen technisch noodzakelijke functionaliteit om pagina's te laden en formulieren te versturen.</p>
@@ -64,7 +64,7 @@ const PRIVACY_BODY = `
 <p>Wij kunnen deze privacyverklaring aanpassen wanneer wetgeving of werkwijze daarom vraagt. De datum bovenaan toont wanneer de tekst voor het laatst is aangepast.</p>
 
 <h2>Contact bij privacyvragen</h2>
-<p>Heeft u vragen over uw privacy of over deze verklaring? Stuur een mail naar <a href="mailto:el-masoudi@hotmail.com">el-masoudi@hotmail.com</a>.</p>
+<p>Heeft u vragen over uw privacy of over deze verklaring? Neem contact met ons op via <a href="/contact">onze contactpagina</a>.</p>
 `.trim();
 
 /**
