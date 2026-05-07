@@ -74,10 +74,10 @@ services:
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
-      depends_on:
-        - directus
-      networks:
-        - alghofraan_network
+    depends_on:
+      - directus
+    networks:
+      - alghofraan_network
   
 volumes:
   postgres_data:
