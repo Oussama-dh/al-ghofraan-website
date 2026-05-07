@@ -90,6 +90,7 @@ export default async function DynamicPage({ params }: Props) {
         <Container className="relative z-10">
           <SectionTitle
             title={title}
+            arabic={page?.arabic_title || undefined}
             subtitle={subtitle || undefined}
             light
           />

@@ -3,24 +3,37 @@
 import type { Metadata } from "next";
 import Container         from "@/components/ui/Container";
 import SectionTitle      from "@/components/ui/SectionTitle";
-import { getVideos, getSiteSettings } from "@/lib/directus";
-import { buildYouTubeEmbedUrl }       from "@/lib/utils";
+import { getVideos, getPageContent, getSiteSettings } from "@/lib/directus";
+import { buildYouTubeEmbedUrl }                       from "@/lib/utils";
 
 export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
 export const revalidate = 600;
 
+const FALLBACK = {
+  title:    "Video's",
+  arabic:   "فيديوهات",
+  subtitle: "Lezingen, opnames en momentopnames van onze activiteiten",
+};
+
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSiteSettings();
+  const [page, settings] = await Promise.all([
+    getPageContent("videos"),
+    getSiteSettings(),
+  ]);
   return {
-    title:       "Video's",
+    title:       page?.seo_title || page?.title || FALLBACK.title,
     description:
+      page?.seo_description ||
       settings?.default_seo_description ||
       "Video's van de DawahCommissie van moskee Al-Ghofraan.",
   };
 }
 
 export default async function VideosPage() {
-  const all = await getVideos();
+  const [all, page] = await Promise.all([
+    getVideos(),
+    getPageContent("videos"),
+  ]);
 
   // Filter video's met ongeldige YouTube-URL eruit zodat we geen
   // kapotte iframes renderen.
@@ -34,9 +47,9 @@ export default async function VideosPage() {
         <div className="absolute inset-0 pattern-overlay" />
         <Container className="relative z-10">
           <SectionTitle
-            title="Video's"
-            arabic="فيديوهات"
-            subtitle="Lezingen, opnames en momentopnames van onze activiteiten"
+            title={page?.title || FALLBACK.title}
+            arabic={page?.arabic_title || FALLBACK.arabic}
+            subtitle={page?.subtitle || FALLBACK.subtitle}
             light
           />
         </Container>

@@ -366,7 +366,7 @@ export async function getPageContent(slug: string): Promise<PageContent | null> 
           filter: { slug: { _eq: slug }, status: { _eq: "published" } } as never,
           limit:  1,
           fields: [
-            "id", "slug", "title", "subtitle", "intro", "body",
+            "id", "slug", "title", "arabic_title", "subtitle", "intro", "body",
             "seo_title", "seo_description", "status", "icon",
           ],
         })

@@ -98,6 +98,8 @@ export interface PageContent {
   id: string;
   slug: string;
   title: string;
+  /** Optionele Arabische titel die boven de hoofdtitel verschijnt in de hero. */
+  arabic_title?: string | null;
   subtitle?: string | null;
   intro?: string | null;
   body?: string | null;

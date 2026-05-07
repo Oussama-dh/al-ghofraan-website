@@ -70,6 +70,52 @@ De website blokkeert deze automatisch — je krijgt geen "pagina niet gevonden" 
 
 ---
 
+## 1b. ⭐ Paginaheader (titel + Arabische titel + subtitel) bewerken
+
+De **hero/header** van zowel je zelfgemaakte pagina's *als* de vaste route-pagina's
+(zoals `/agenda`, `/onderwijs`, `/artikelen`, `/gebedstijden`, `/doneren`,
+`/contact`, `/videos`, `/privacy`, `/dawahcommissie` en `/`) wordt beheerd
+via Directus → **Page Content**.
+
+### Welke velden worden in de hero gebruikt?
+
+| Veld          | Waar verschijnt het op de pagina                                 |
+|---------------|------------------------------------------------------------------|
+| `arabic_title` | Arabische tekst **boven** de hoofdtitel (bv. "اتصل بنا")        |
+| `title`        | De grote hoofdtitel                                             |
+| `subtitle`     | Korte zin onder de titel                                        |
+| `intro`        | Introductietekst — gebruikt op pagina's die er ruimte voor hebben |
+
+`arabic_title` is **gewone tekst** (geen HTML). Plak gewoon de Arabische woorden.
+
+### Voor een vaste route bewerken
+
+1. Directus → **Page Content** → zoek het record met de juiste slug:
+   - `/agenda` → slug `agenda`
+   - `/onderwijs` → slug `onderwijs`
+   - `/artikelen` → slug `artikelen`
+   - `/gebedstijden` → slug `gebedstijden`
+   - `/doneren` → slug `doneren`
+   - `/contact` → slug `contact`
+   - `/videos` → slug `videos`
+   - `/privacy` → slug `privacy`
+   - `/dawahcommissie` → slug `dawahcommissie`
+   - `/` → slug `home`
+2. Pas `title`, `arabic_title`, `subtitle`, eventueel `seo_title`/`seo_description` aan
+3. Klik **Save** en refresh de pagina
+
+> 💡 **Tip:** als een veld leeg is, valt de pagina terug op een sensible
+> default in code. Niets stuk — gewoon weer invullen om de waarde aan te passen.
+
+### Bestaat het page_content-record nog niet?
+
+Voor vaste routes worden defaults bij de eerste seed automatisch aangemaakt.
+Als je een record in Directus verwijderd hebt en opnieuw `npm run seed` draait,
+wordt 't opnieuw aangemaakt. Bestaande records blijven onaangeroerd
+(`soft-create`).
+
+---
+
 ## 2. Header aanpassen
 
 **Logo & moskeenaam**: Directus → **Site Settings**

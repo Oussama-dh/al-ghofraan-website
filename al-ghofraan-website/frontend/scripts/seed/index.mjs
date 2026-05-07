@@ -18,6 +18,7 @@ import { setupArticles }            from "./steps/16-articles.mjs";
 import { setupContact }             from "./steps/17-contact.mjs";
 import { setupPrivacy }             from "./steps/18-privacy.mjs";
 import { setupVideos }              from "./steps/19-videos.mjs";
+import { setupPageHeaders }         from "./steps/20-page-headers.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
 import { setupFooterFields }        from "./steps/01i-footer-fields.mjs";
 import { setupFileImageFields }     from "./steps/01j-file-image-fields.mjs";
@@ -61,6 +62,7 @@ try {
   await setupContact(client);               // 17. contact_messages (admin-only) + page_content + WhatsApp velden
   await setupPrivacy(client);               // 18. privacyverklaring (page_content) + footer nav-item
   await setupVideos(client);                // 19. videos (publiek leesbaar als published)
+  await setupPageHeaders(client);           // 20. arabic_title veld + soft-create page_content voor vaste routes
   await setupTargetGender(client);          // 1h. target_gender velden + gender keuzes bijwerken
   await setupFooterFields(client);          // 1i. footer + branding velden in site_settings
   await setupFileImageFields(client);       // 1j. heel alle file/image velden naar correcte interface

@@ -102,6 +102,7 @@ export default async function HomePage() {
         title={page?.title    || undefined}
         subtitle={page?.subtitle || undefined}
         intro={page?.intro    || undefined}
+        arabic={page?.arabic_title || undefined}
       />
 
       {/* Body uit page_content (rich text) */}

@@ -7,6 +7,7 @@ import SectionTitle      from "@/components/ui/SectionTitle";
 import { Icon }          from "@/lib/icons";
 import {
   getArticles,
+  getPageContent,
   getSiteSettings,
   getAssetUrl,
 } from "@/lib/directus";
@@ -15,11 +16,21 @@ import { formatDate, cn } from "@/lib/utils";
 export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
 export const revalidate = 600;
 
+const FALLBACK = {
+  title:    "Artikelen",
+  arabic:   "مقالات",
+  subtitle: "Nieuws, lezingen en reflecties van de DawahCommissie",
+};
+
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSiteSettings();
+  const [page, settings] = await Promise.all([
+    getPageContent("artikelen"),
+    getSiteSettings(),
+  ]);
   return {
-    title:       "Artikelen",
+    title:       page?.seo_title || page?.title || FALLBACK.title,
     description:
+      page?.seo_description ||
       settings?.default_seo_description ||
       "Artikelen, nieuws en reflecties van de DawahCommissie.",
   };
@@ -30,7 +41,10 @@ interface ArtikelenPageProps {
 }
 
 export default async function ArtikelenPage({ searchParams }: ArtikelenPageProps) {
-  const articles = await getArticles();
+  const [articles, page] = await Promise.all([
+    getArticles(),
+    getPageContent("artikelen"),
+  ]);
 
   // Bouw categorie-lijst dynamisch uit aanwezige published artikelen.
   // Categorie zonder gepubliceerd artikel verdwijnt automatisch uit het filter.
@@ -60,9 +74,9 @@ export default async function ArtikelenPage({ searchParams }: ArtikelenPageProps
         <div className="absolute inset-0 pattern-overlay" />
         <Container className="relative z-10">
           <SectionTitle
-            title="Artikelen"
-            arabic="مقالات"
-            subtitle="Nieuws, lezingen en reflecties van de DawahCommissie"
+            title={page?.title || FALLBACK.title}
+            arabic={page?.arabic_title || FALLBACK.arabic}
+            subtitle={page?.subtitle || FALLBACK.subtitle}
             light
           />
         </Container>
