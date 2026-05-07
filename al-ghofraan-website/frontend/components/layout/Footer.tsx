@@ -52,7 +52,7 @@ export default function Footer({
     settings?.footer_text         ||
     FALLBACK_DESCRIPTION;
 
-  const email     = settings?.contact_email  || "el-masoudi@hotmail.com";
+  const email     = settings?.contact_email || null;
   const phone     = settings?.phone          || null;
   const address   = settings?.address        || null;
   const social    = settings?.social_links   || {};

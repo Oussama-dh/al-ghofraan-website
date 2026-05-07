@@ -38,7 +38,7 @@ export default async function ContactPage() {
   const subtitle = page?.subtitle || "Wij horen graag van u";
   const intro    = page?.intro;
 
-  const email   = settings?.contact_email || "el-masoudi@hotmail.com";
+  const email   = settings?.contact_email || null;
   const phone   = settings?.phone || null;
   const address = settings?.address || null;
 

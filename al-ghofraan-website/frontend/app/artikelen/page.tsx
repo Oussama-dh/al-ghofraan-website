@@ -54,7 +54,7 @@ export default async function ArtikelenPage() {
               <div className="text-5xl mb-4">📰</div>
               <h3 className="font-display text-2xl text-ink mb-2">Nog geen artikelen</h3>
               <p className="font-body text-taupe-dark">
-                We zijn druk bezig met het schrijven van nieuwe artikelen. Kom binnenkort terug.
+                Er zijn momenteel geen artikelen beschikbaar.
               </p>
             </div>
           ) : (

@@ -7,7 +7,7 @@
 //
 // Idempotent.
 
-import { ensureCollection, ensureField, upsertItem } from "../lib/helpers.mjs";
+import { ensureCollection, ensureField, softCreateItem } from "../lib/helpers.mjs";
 
 export async function setupContact(client) {
   console.log("\n📬 Stap 17 · contact_messages + contactpagina + WhatsApp");
@@ -125,8 +125,8 @@ export async function setupContact(client) {
   });
 
   // ─── page_content "contact" ────────────────────────────────
-  await upsertItem(client, "page_content", "slug", "contact", {
-    slug:        "contact",
+  // Soft-create: bestaat de pagina al, dan blijven handmatige edits intact.
+  await softCreateItem(client, "page_content", "slug", "contact", {
     title:       "Contact",
     subtitle:    "Wij horen graag van u",
     intro:       "Heeft u een vraag, opmerking of voorstel? Neem gerust contact met ons op.",

@@ -80,3 +80,26 @@ export function buildWhatsAppUrl(
   }
   return base;
 }
+
+/**
+ * Geeft de canonical site-URL terug zonder trailing slash.
+ *
+ * Volgorde:
+ *   1. process.env.NEXT_PUBLIC_SITE_URL  (zowel server- als client-side beschikbaar)
+ *   2. fallback http://localhost:3000   (alleen voor local dev / build-time)
+ *
+ * Gebruik dit voor alle plekken waar een ABSOLUTE URL nodig is:
+ *   - Stripe success_url / cancel_url
+ *   - canonical / Open Graph URLs
+ *   - e-mail- of webhook-bevestigingen
+ *
+ * Voor interne links (bv. "/contact", "/doneren") is dit NIET nodig;
+ * gebruik daar gewoon het pad.
+ *
+ * Bij domeinwijziging hoef je alleen NEXT_PUBLIC_SITE_URL aan te passen
+ * in je productie-env (en de Stripe webhook endpoint in Stripe Dashboard).
+ */
+export function getSiteUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  return raw.replace(/\/+$/, "");
+}

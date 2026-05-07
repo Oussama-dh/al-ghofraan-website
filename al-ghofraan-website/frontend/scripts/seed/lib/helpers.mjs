@@ -81,6 +81,38 @@ export async function upsertSingleton(client, collection, data) {
   }
 }
 
+/**
+ * Soft-create: maakt een item alleen aan als er nog géén item is met
+ * deze filterField/filterValue combinatie. Bestaat het al, dan blijft
+ * álle handmatige content (incl. status) intact. Alleen voor seed-data
+ * die de admin daarna zelf mag beheren — geen schema/permissies.
+ *
+ * @param {object}  client
+ * @param {string}  collection
+ * @param {string}  filterField  veld waarop wordt gezocht (bv. "slug")
+ * @param {string}  filterValue  waarde
+ * @param {object}  data         volledige payload (filterField wordt automatisch toegevoegd)
+ */
+export async function softCreateItem(client, collection, filterField, filterValue, data) {
+  const search = await client.get(
+    `/items/${collection}?filter[${filterField}][_eq]=${encodeURIComponent(filterValue)}&limit=1`
+  );
+
+  const existing = search?.data?.[0];
+
+  if (existing) {
+    console.log(`  · ${collection}: "${filterValue}" bestaat al — niet overschreven`);
+    return existing.id;
+  }
+
+  const created = await client.post(`/items/${collection}`, {
+    [filterField]: filterValue,
+    ...data,
+  });
+  console.log(`  ✓ ${collection}: "${filterValue}" aangemaakt`);
+  return created?.data?.id;
+}
+
 // ─── UTIL ───────────────────────────────────────────────────
 
 export function is404(err) {

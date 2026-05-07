@@ -19,40 +19,17 @@ import {
   resolveIconKey,
   ICON_KEYS,
 } from "@/lib/directus";
-import type { Activity, PageSection, PageSectionItem } from "@/types/directus";
+import type { PageSection, PageSectionItem } from "@/types/directus";
 
 export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
 export const revalidate = 600;
-
-const FALLBACK_ACTIVITIES: Activity[] = [
-  {
-    id: "1", status: "published", featured: true,  registration_enabled: false,
-    title: "Vrijdagslezing", slug: "vrijdagslezing",
-    description: "Wekelijkse lezing na de vrijdagssalaat.",
-    start_date: new Date(Date.now() + 7 * 86400000).toISOString(),
-    location: "Moskee Al-Ghofraan",
-  },
-  {
-    id: "2", status: "published", featured: false, registration_enabled: false,
-    title: "Islamitische cursus voor beginners", slug: "islamitische-cursus-beginners",
-    description: "Een toegankelijke introductiecursus over de islam.",
-    start_date: new Date(Date.now() + 14 * 86400000).toISOString(),
-    location: "Moskee Al-Ghofraan",
-  },
-  {
-    id: "3", status: "published", featured: false, registration_enabled: false,
-    title: "Open dag voor niet-moslims", slug: "open-dag-niet-moslims",
-    description: "Kom meer te weten over de islam, bezoek de moskee.",
-    start_date: new Date(Date.now() + 21 * 86400000).toISOString(),
-    location: "Moskee Al-Ghofraan",
-  },
-];
 
 // ─── Fallback voor het missie-sectie blok ────────────────────
 //
 // Wordt alleen gebruikt als er in Directus geen 'mission' sectie
 // staat voor page_slug='home'. Zo blijft de site er goed uitzien
-// vóór de seed loopt of als Directus offline is.
+// vóór de seed loopt of als Directus offline is. Bevat geen
+// concrete claims (datums/locaties), alleen branding-tekst.
 const FALLBACK_MISSION_SECTION: PageSection & { items: PageSectionItem[] } = {
   id: "fallback-mission",
   page_slug: "home",
@@ -102,9 +79,10 @@ export default async function HomePage() {
   const locationIcon    = resolveIconKey(iconMap, ICON_KEYS.activityLocation);
   const prayerTimesIcon = resolveIconKey(iconMap, ICON_KEYS.prayerTimes);
 
-  const list      = activities.length > 0 ? activities : FALLBACK_ACTIVITIES;
-  const featured  = list.filter((a) => a.featured).slice(0, 1);
-  const remaining = list.filter((a) => !a.featured).slice(0, 5);
+  // Activiteiten — alleen tonen wat in Directus staat. Geen demo-fallback,
+  // want fake data met echte data zou bezoekers misleiden.
+  const featured  = activities.filter((a) => a.featured).slice(0, 1);
+  const remaining = activities.filter((a) => !a.featured).slice(0, 5);
   const shown     = [...featured, ...remaining].slice(0, 6);
 
   // Splits sections in: missie (boven activiteiten), overige (onder),
@@ -192,7 +170,7 @@ export default async function HomePage() {
               <div>
                 <h3 className="font-display text-xl text-ink">Gebedstijden</h3>
                 <p className="font-body text-sm text-taupe-dark mt-0.5">
-                  Bekijk de actuele gebedstijden voor Den Haag en omgeving.
+                  Bekijk de actuele gebedstijden van moskee Al-Ghofraan.
                 </p>
               </div>
             </div>

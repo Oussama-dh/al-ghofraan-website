@@ -921,7 +921,51 @@ Tot die tijd: niets nodig.
 
 ---
 
-## Hoe controleer ik dat een wijziging werkt?
+## 18. Productie — fallback-content & wat de site toont bij lege Directus
+
+De website is zo gebouwd dat álle inhoud uit Directus komt. Voor het zeldzame
+geval dat Directus offline is of een veld leeg, gebruikt de frontend een
+beperkte set neutrale fallbacks. Belangrijk voor productie:
+
+| Onderdeel                        | Bij lege Directus / offline                                                  |
+|----------------------------------|------------------------------------------------------------------------------|
+| Header logo                      | Eenvoudige SVG-mosque                                                        |
+| Footer logo / titel / beschrijving | Generieke Al-Ghofraan branding-tekst                                       |
+| Site-naam / SEO-titels           | "DawahCommissie Al-Ghofraan" als merknaam-fallback                           |
+| Contact-email in footer          | **Niet getoond** — alleen zichtbaar als `site_settings.contact_email` is ingevuld |
+| Activiteiten op homepage         | **Sectie wordt verborgen** (geen demo-data meer)                             |
+| Gebedstijden — vandaag-card      | Productie: **nette melding** "tijdelijk niet beschikbaar". Lokaal dev: demo-card |
+| Artikelen / onderwijs / agenda   | Lege staat met neutrale tekst                                                |
+| FAQ                              | Verborgen als geen items                                                     |
+
+> ✅ **Geen fake data meer in publieke views.** Demo-tijden, demo-activiteiten
+> en placeholder-emails verschijnen NOOIT op productie.
+
+### Wat moet er minimaal in Directus staan voor een nette site?
+
+1. **Site Settings**: `site_name`, `logo`, `contact_email`, `default_seo_title`/`description`
+2. **Page content**: minimaal `home`, `dawahcommissie`, `doneren`, `privacy` op `published`
+3. **Navigation items**: header- en footer-menu's
+4. **Prayer time files**: minstens één CSV als `active`
+5. **Activities** *(optioneel)* — zonder deze blijft de homepage-activiteiten-sectie verborgen
+6. **Donation campaigns** *(optioneel)* — zonder deze toont DonationForm alleen "Algemene donatie"
+
+### Idempotente seed — wat overschrijft het?
+
+`npm run seed` is veilig om opnieuw te draaien. De seed:
+
+- ✅ Maakt collecties, velden en permissies aan als ze ontbreken
+- ✅ Maakt **éénmalig** standaard-pagina's aan (home, dawahcommissie, doneren,
+  contact, privacy) — daarna nooit meer overschreven
+- ✅ Vult lege velden in `site_settings` met defaults — overschrijft géén
+  bestaande waarden
+- ❌ Maakt **geen** voorbeeldactiviteiten meer aan
+- ❌ Overschrijft **geen** handmatige content
+
+Resultaat: na de eerste seed kun je gerust weer `npm run seed` draaien voor
+schemawijzigingen, zonder dat je beheerderswerk verloren gaat.
+
+---
 
 1. Wijzig in Directus → klik **Save**
 2. Vernieuw de pagina in de browser
@@ -934,4 +978,4 @@ Als iets niet werkt:
 - Matchen `page_slug` en `section_key` exact?
 - Staat de slug niet in de gereserveerde lijst (sectie 1)?
 
-Hulp nodig: stuur een mail naar **el-masoudi@hotmail.com**.
+Hulp nodig: neem contact op met de webbeheerder van de DawahCommissie.
