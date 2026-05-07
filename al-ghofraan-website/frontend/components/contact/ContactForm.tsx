@@ -182,8 +182,16 @@ export default function ContactForm({ className }: { className?: string }) {
               checked={form.consent} onChange={(e) => update("consent", e.target.checked)}
             />
             <span className="font-body text-sm text-taupe-dark leading-relaxed">
-              Ik ga akkoord dat mijn gegevens worden verwerkt om mijn bericht te beantwoorden.
-              <span className="text-red-600" aria-hidden> *</span>
+              Ik ga akkoord met de{" "}
+              <a
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-slate-mosque underline hover:text-slate-dark"
+              >
+                privacyverklaring
+              </a>
+              .<span className="text-red-600" aria-hidden> *</span>
             </span>
           </label>
         </div>

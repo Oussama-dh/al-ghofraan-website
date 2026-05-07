@@ -16,6 +16,7 @@ import { setupDonations }           from "./steps/14-donations.mjs";
 import { setupDonationCampaigns }   from "./steps/15-donation-campaigns.mjs";
 import { setupArticles }            from "./steps/16-articles.mjs";
 import { setupContact }             from "./steps/17-contact.mjs";
+import { setupPrivacy }             from "./steps/18-privacy.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
 import { setupFooterFields }        from "./steps/01i-footer-fields.mjs";
 import { setupFileImageFields }     from "./steps/01j-file-image-fields.mjs";
@@ -57,6 +58,7 @@ try {
   await setupDonationCampaigns(client);     // 15. donation_campaigns (publiek leesbaar als published)
   await setupArticles(client);              // 16. articles (publiek leesbaar als published)
   await setupContact(client);               // 17. contact_messages (admin-only) + page_content + WhatsApp velden
+  await setupPrivacy(client);               // 18. privacyverklaring (page_content) + footer nav-item
   await setupTargetGender(client);          // 1h. target_gender velden + gender keuzes bijwerken
   await setupFooterFields(client);          // 1i. footer + branding velden in site_settings
   await setupFileImageFields(client);       // 1j. heel alle file/image velden naar correcte interface

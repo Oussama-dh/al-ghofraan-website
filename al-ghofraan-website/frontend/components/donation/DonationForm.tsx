@@ -378,7 +378,16 @@ export default function DonationForm({ campaigns = [], className }: DonationForm
 
       <p className="mt-4 font-body text-xs text-taupe-dark/80 text-center leading-relaxed">
         U wordt doorgestuurd naar de beveiligde betaalomgeving van Stripe.<br />
-        iDEAL en creditcard worden ondersteund. Geen kaartgegevens komen op deze site terecht.
+        iDEAL en creditcard worden ondersteund. Geen kaartgegevens komen op deze site terecht.<br />
+        Door verder te gaan accepteert u onze{" "}
+        <a
+          href="/privacy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-slate-mosque underline hover:text-slate-dark"
+        >
+          privacyverklaring
+        </a>.
       </p>
     </form>
   );

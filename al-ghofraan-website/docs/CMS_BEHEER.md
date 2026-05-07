@@ -849,6 +849,78 @@ Directus → **Contact Messages**. Sortering staat op nieuwste eerst.
 
 ---
 
+## 17. Privacyverklaring
+
+De privacyverklaring staat op `/privacy` en is een gewone pagina via
+`page_content`. Footer-link verwijst er automatisch naar.
+
+### Waar de tekst beheerd wordt
+
+Directus → **Page Content** → zoek `slug = privacy`. Daar bewerk je:
+
+| Veld              | Wat het doet                                                        |
+|-------------------|----------------------------------------------------------------------|
+| `title`           | "Privacyverklaring" — staat in de hero-banner en in de browser-tab  |
+| `subtitle`        | Korte ondertitel boven de tekst                                     |
+| `intro`           | Inleidende alinea boven de body                                     |
+| `body`            | De volledige privacy-tekst (rich text)                              |
+| `seo_title`       | Optioneel — overschrijft default SEO-titel                          |
+| `seo_description` | Voor Google/social previews                                         |
+| `status`          | Laat op `published` staan om de pagina online te houden             |
+
+### Wanneer aanpassen?
+
+Werk de privacyverklaring bij wanneer:
+
+- Je een nieuwe verwerker toevoegt (bv. een mailservice of analytics-tool)
+- Bewaartermijnen wijzigen
+- De wettelijke vereisten veranderen (bv. AVG-aanpassingen)
+- Je nieuwe gegevens gaat verzamelen via een nieuw formulier
+
+> 💡 **Datum bovenaan bijwerken.** Update de zin "Laatst bijgewerkt:" in
+> de body wanneer je de tekst aanpast — dat geeft bezoekers vertrouwen
+> dat de tekst recent is.
+
+### Hoe formulieren ernaar verwijzen
+
+De drie formulieren met een verplichte privacy-akkoord linken naar `/privacy`:
+
+- **Contactformulier** (`/contact`)
+- **Inschrijfformulier** (`/onderwijs/<slug>`, `/agenda/<slug>`)
+- **Donatieformulier** (`/doneren`) — accepteert privacyverklaring impliciet
+  bij doorgaan naar Stripe
+
+Alle drie openen `/privacy` in een nieuw tabblad zodat de bezoeker zijn
+formulier-invoer niet kwijtraakt.
+
+### Cookiebanner — niet nodig
+
+Deze website gebruikt **geen tracking cookies en geen analytics**. Daarom
+is een cookiebanner niet nodig. Mocht je in de toekomst Google Analytics,
+Meta Pixel of vergelijkbaar toevoegen, dan moet je:
+
+1. De privacyverklaring uitbreiden met een sectie over die tool
+2. Een cookiebanner met opt-in toevoegen vóór die scripts laden
+3. Documenteren welke cookies/trackers worden ingezet
+
+Tot die tijd: niets nodig.
+
+### Privacy-pagina verbergen of opnieuw opbouwen
+
+- **Verbergen** → zet `status` op `draft` of `archived`. De pagina wordt
+  dan een 404. De footer-link blijft staan maar leidt naar 404 — verwijder
+  ook de footer-link in **Navigation Items** als je dit langer dan een dag
+  doet.
+- **Opnieuw opbouwen** → verwijder de page_content rij + footer-nav-item
+  in Directus, daarna `npm run seed`. De seed maakt beide opnieuw aan met
+  de standaard-tekst.
+
+> ⚠️ **Belangrijk:** zodra je de tekst handmatig hebt aangepast in Directus,
+> overschrijft `npm run seed` jouw wijzigingen NIET meer. De seed maakt de
+> rij alleen aan als hij nog niet bestaat.
+
+---
+
 ## Hoe controleer ik dat een wijziging werkt?
 
 1. Wijzig in Directus → klik **Save**
