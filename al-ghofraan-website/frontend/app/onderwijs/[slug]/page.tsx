@@ -8,7 +8,6 @@ import { Icon }          from "@/lib/icons";
 import RegistrationForm  from "@/components/registration/RegistrationForm";
 import {
   getEducationProgramBySlug,
-  getAllEducationProgramSlugs,
   getAssetUrl,
 } from "@/lib/directus";
 import { formatDate }    from "@/lib/utils";
@@ -17,14 +16,9 @@ interface Props {
   params: { slug: string };
 }
 
-export const dynamic       = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
-export const revalidate    = 300;
+export const dynamic = "force-dynamic";
 export const dynamicParams = true;
 
-export async function generateStaticParams() {
-  const slugs = await getAllEducationProgramSlugs();
-  return slugs.map((slug) => ({ slug }));
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const program = await getEducationProgramBySlug(params.slug);
