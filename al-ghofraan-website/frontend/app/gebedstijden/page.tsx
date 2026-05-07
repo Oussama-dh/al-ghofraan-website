@@ -1,12 +1,12 @@
 // app/gebedstijden/page.tsx
 
-import type { Metadata }          from "next";
-import Container                  from "@/components/ui/Container";
-import SectionTitle               from "@/components/ui/SectionTitle";
-import Button                     from "@/components/ui/Button";
+import type { Metadata } from "next";
+import Container from "@/components/ui/Container";
+import SectionTitle from "@/components/ui/SectionTitle";
+import Button from "@/components/ui/Button";
 import PrayerTimesTable, { TodayPrayerCard } from "@/components/ui/PrayerTimesTable";
-import { PageSectionsList }       from "@/components/sections/PageSectionRenderer";
-import { CalendarDays }           from "lucide-react";
+import { PageSectionsList } from "@/components/sections/PageSectionRenderer";
+import { CalendarDays } from "lucide-react";
 import {
   getActivePrayerTimeFile,
   getInternalAssetUrl,
@@ -21,27 +21,27 @@ import {
   formatPrayerFileTitle,
   getAmsterdamDateParts,
 } from "@/lib/prayerTimes";
-import type { PrayerTimeRow }     from "@/types/directus";
+import type { PrayerTimeRow } from "@/types/directus";
 
-export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
+export const dynamic = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
 export const revalidate = 3600;
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
   return {
-    title:       "Gebedstijden",
+    title: "Gebedstijden",
     description: settings?.default_seo_description || "Bekijk de actuele gebedstijden voor dit jaar.",
   };
 }
 
 const FALLBACK_ROW: PrayerTimeRow = {
-  datum:    "—",
-  fajr:     "05:30",
+  datum: "—",
+  fajr: "05:30",
   shoeroeq: "07:15",
-  dhoehr:   "13:00",
-  asr:      "16:30",
-  maghrib:  "19:45",
-  ishaa:    "21:15",
+  dhoehr: "13:00",
+  asr: "16:30",
+  maghrib: "19:45",
+  ishaa: "21:15",
 };
 
 // Gebruik FALLBACK_ROW alleen voor de "highlight"-berekening;
@@ -67,25 +67,26 @@ export default async function GebedstijdenPage() {
           : (prayerFile.file as { id: string })?.id;
 
       if (fileId) {
-      const assetUrl = getInternalAssetUrl(fileId);
+        const assetUrl = getInternalAssetUrl(fileId);
         if (assetUrl) {
-          const token   = process.env.DIRECTUS_TOKEN;
+          const token = process.env.DIRECTUS_TOKEN;
           const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
 
           const isDev = process.env.NODE_ENV !== "production";
           const resp = await fetch(assetUrl, {
             headers,
-            cache: isDev ? "no-store" : "default",
-            next:  isDev ? undefined  : { revalidate: 3600 },
+            ...(isDev
+              ? { cache: "no-store" as const }
+              : { next: { revalidate: 3600 } }),
           });
           if (resp.ok) {
             const csv = await resp.text();
-            allRows   = parsePrayerTimesCSV(csv);
+            allRows = parsePrayerTimesCSV(csv);
             monthRows = getCurrentMonthRows(allRows);
-            todayRow  = getTodaysPrayerTimes(allRows);
-            fileInfo  = {
-              title:       prayerFile.title,
-              year:        prayerFile.year,
+            todayRow = getTodaysPrayerTimes(allRows);
+            fileInfo = {
+              title: prayerFile.title,
+              year: prayerFile.year,
               uploaded_at: prayerFile.uploaded_at,
             };
           }
@@ -99,8 +100,8 @@ export default async function GebedstijdenPage() {
     error = "Gebedstijden konden niet worden geladen.";
   }
 
-  const sections      = await sectionsPromise;
-  const ctaSections   = sections.filter((s) => s.type === "cta");
+  const sections = await sectionsPromise;
+  const ctaSections = sections.filter((s) => s.type === "cta");
   const otherSections = sections.filter((s) => s.type !== "cta");
 
   // Bereken eerstvolgend gebed o.b.v. huidige tijd. Bij geen todayRow of
@@ -108,12 +109,12 @@ export default async function GebedstijdenPage() {
   // Bij rendering met de FALLBACK_ROW gebruiken we de fallback-row zelf
   // zodat de "volgende"-tag ook in offline state plausibel oogt.
   const rowForHighlight = todayRow || FALLBACK_ROW;
-  const nextPrayerKey   = getNextPrayerKey(rowForHighlight);
+  const nextPrayerKey = getNextPrayerKey(rowForHighlight);
 
   // Vandaag-header label (dd-mm)
-const todayParts = getAmsterdamDateParts();
-const dd = String(todayParts.day).padStart(2, "0");
-const mm = String(todayParts.month).padStart(2, "0");
+  const todayParts = getAmsterdamDateParts();
+  const dd = String(todayParts.day).padStart(2, "0");
+  const mm = String(todayParts.month).padStart(2, "0");
 
   // Highlight in tabel matcht op datum-string van vandaag-rij
   const todayDatum = todayRow?.datum;

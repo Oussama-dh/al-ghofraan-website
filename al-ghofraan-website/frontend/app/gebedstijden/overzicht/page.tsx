@@ -1,22 +1,22 @@
 // app/gebedstijden/overzicht/page.tsx
 
-import type { Metadata }      from "next";
-import Container               from "@/components/ui/Container";
-import SectionTitle            from "@/components/ui/SectionTitle";
-import Button                  from "@/components/ui/Button";
-import PrayerTimesOverview     from "@/components/ui/PrayerTimesOverview";
-import { ChevronLeft }         from "lucide-react";
+import type { Metadata } from "next";
+import Container from "@/components/ui/Container";
+import SectionTitle from "@/components/ui/SectionTitle";
+import Button from "@/components/ui/Button";
+import PrayerTimesOverview from "@/components/ui/PrayerTimesOverview";
+import { ChevronLeft } from "lucide-react";
 import { getActivePrayerTimeFile, getInternalAssetUrl, getSiteSettings, getPageSectionsWithItems } from "@/lib/directus";
 import { parsePrayerTimesCSV } from "@/lib/prayerTimes";
-import type { PrayerTimeRow }  from "@/types/directus";
+import type { PrayerTimeRow } from "@/types/directus";
 
-export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
+export const dynamic = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
 export const revalidate = 3600;
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
   return {
-    title:       "Gebedstijden overzicht",
+    title: "Gebedstijden overzicht",
     description: settings?.default_seo_description || "Maandoverzicht van alle gebedstijden.",
   };
 }
@@ -36,23 +36,24 @@ export default async function GebedstijdenOverzichtPage() {
           : (prayerFile.file as { id: string })?.id;
 
       if (fileId) {
-      const assetUrl = getInternalAssetUrl(fileId);
+        const assetUrl = getInternalAssetUrl(fileId);
         if (assetUrl) {
-          const token   = process.env.DIRECTUS_TOKEN;
+          const token = process.env.DIRECTUS_TOKEN;
           const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
 
           const isDev = process.env.NODE_ENV !== "production";
           const resp = await fetch(assetUrl, {
             headers,
-            cache: isDev ? "no-store" : "default",
-            next:  isDev ? undefined  : { revalidate: 3600 },
+            ...(isDev
+              ? { cache: "no-store" as const }
+              : { next: { revalidate: 3600 } }),
           });
           if (resp.ok) {
             const csv = await resp.text();
-            allRows   = parsePrayerTimesCSV(csv);
-            fileInfo  = {
-              title:       prayerFile.title,
-              year:        prayerFile.year,
+            allRows = parsePrayerTimesCSV(csv);
+            fileInfo = {
+              title: prayerFile.title,
+              year: prayerFile.year,
               uploaded_at: prayerFile.uploaded_at,
             };
           }

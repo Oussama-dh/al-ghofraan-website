@@ -48,12 +48,11 @@ const headers: HeadersInit = token
 
 const response = await fetch(assetUrl, {
   headers,
-  cache: process.env.NODE_ENV === "development" ? "no-store" : "force-cache",
-  next:
-    process.env.NODE_ENV === "development"
-      ? undefined
-      : { revalidate: 3600 },
+  ...(process.env.NODE_ENV === "development"
+    ? { cache: "no-store" as const }
+    : { next: { revalidate: 3600 } }),
 });
+
 
     if (!response.ok) {
       throw new Error(`Kon bestand niet downloaden: ${response.status}`);
