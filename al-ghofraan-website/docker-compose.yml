@@ -65,7 +65,7 @@ services:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
-    environment:
+  environment:
     NODE_ENV: development
     NEXT_PUBLIC_DIRECTUS_URL: ${NEXT_PUBLIC_DIRECTUS_URL:-http://localhost:8055}
     DIRECTUS_URL: ${DIRECTUS_URL:-http://directus:8055}
