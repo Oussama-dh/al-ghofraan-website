@@ -66,14 +66,15 @@ services:
       - /app/node_modules
       - /app/.next
     environment:
-      NODE_ENV: development
-      NEXT_PUBLIC_DIRECTUS_URL: http://localhost:8055
-      DIRECTUS_URL: http://directus:8055
-      DIRECTUS_TOKEN: ${DIRECTUS_TOKEN:-}
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
-      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
-      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+environment:
+    NODE_ENV: development
+    NEXT_PUBLIC_DIRECTUS_URL: ${NEXT_PUBLIC_DIRECTUS_URL:-http://localhost:8055}
+    DIRECTUS_URL: ${DIRECTUS_URL:-http://directus:8055}
+    DIRECTUS_TOKEN: ${DIRECTUS_TOKEN:-}
+    STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
+    STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+    NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
     depends_on:
       - directus
     networks:
