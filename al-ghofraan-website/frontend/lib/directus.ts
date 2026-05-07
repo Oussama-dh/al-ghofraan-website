@@ -22,6 +22,7 @@ import type {
   EducationProgram,
   DonationCampaign,
   Article,
+  Video,
 } from "@/types/directus";
 
 const DIRECTUS_INTERNAL_URL =
@@ -326,6 +327,32 @@ export async function getAllArticleSlugs(): Promise<string[]> {
       return (result as Array<{ slug: string }>).map((r) => r.slug).filter(Boolean);
     },
     "getAllArticleSlugs",
+    []
+  );
+}
+
+// ─── Videos ──────────────────────────────────────────────────
+const VIDEO_FIELDS = [
+  "id", "status", "title", "description", "youtube_url",
+  "sort", "featured", "published_at", "created_at",
+];
+
+export async function getVideos(): Promise<Video[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("videos", {
+          filter: { status: { _eq: "published" } } as never,
+          // Featured eerst, dan handmatige sort oplopend, dan recent gepubliceerd eerst.
+          // Directus negeert null-values bij sort op deze manier voorspelbaar.
+          sort:   ["-featured", "sort", "-published_at"],
+          limit:  -1,
+          fields: VIDEO_FIELDS,
+        })
+      );
+      return result as unknown as Video[];
+    },
+    "getVideos",
     []
   );
 }

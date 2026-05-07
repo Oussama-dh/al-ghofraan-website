@@ -921,7 +921,84 @@ Tot die tijd: niets nodig.
 
 ---
 
-## 18. Productie — fallback-content & wat de site toont bij lege Directus
+## 18. Video's (`/videos`)
+
+De `videos`-collectie laat je YouTube-video's tonen op `/videos`. Geen
+YouTube-API, geen automatische sync — je beheert zelf welke video's zichtbaar zijn.
+
+### Een nieuwe video toevoegen
+
+1. Ga naar **Content → Videos → Create item**
+2. Vul in:
+   - **status**: `Concept` (terwijl je werkt) of `Gepubliceerd` (zichtbaar op /videos)
+   - **title**: titel die onder de video verschijnt
+   - **description**: 1-3 zinnen (optioneel)
+   - **youtube_url**: plak de volledige YouTube-URL — alle vormen werken:
+     - `https://www.youtube.com/watch?v=VIDEO_ID`
+     - `https://youtu.be/VIDEO_ID`
+     - `https://youtube.com/shorts/VIDEO_ID`
+     - `https://www.youtube.com/shorts/VIDEO_ID`
+   - **featured**: aanvinken voor prominent bovenaan
+   - **sort**: lager getal = eerder (binnen featured/non-featured groep)
+   - **published_at**: datum waarop je hem live wilt zetten
+3. Klik **Save**
+
+### Sortering op /videos
+
+1. Featured-video's eerst
+2. Dan op `sort` oplopend
+3. Dan op `published_at` aflopend (recentste eerst)
+
+### Wat als de URL ongeldig is?
+
+De pagina slaat video's met een onherkenbare YouTube-URL stilletjes over —
+geen kapotte iframes of crashes. Controleer dus zelf even of je de URL
+correct hebt gekopieerd.
+
+### Privacy
+
+Video's worden ingebed via `youtube-nocookie.com` — YouTube zet pas een
+tracking-cookie als de bezoeker daadwerkelijk op play drukt.
+
+---
+
+## 19. Artikelcategorie-filtering (`/artikelen?category=...`)
+
+De artikelen-pagina toont automatisch filterknoppen op basis van de
+`category`-veldwaardes van **gepubliceerde** artikelen.
+
+### Hoe het werkt
+
+- Het filter wordt **dynamisch** opgebouwd uit alle published artikelen
+- Een categorie verschijnt alleen als er minstens 1 gepubliceerd artikel
+  in die categorie staat
+- Zet je het laatste artikel van een categorie op `draft` of `archived`,
+  dan **verdwijnt die categorie automatisch** uit het filter
+- Categorieën worden alfabetisch gesorteerd
+- "Alle" staat altijd vooraan
+
+### Een nieuwe categorie introduceren
+
+Geen aparte stap — typ gewoon de categorie in het `category`-veld bij
+een artikel en zet hem op `published`. De knop verschijnt vanzelf op
+`/artikelen` na een refresh.
+
+### Categorieën consistent houden
+
+`category` is een vrij tekstveld. Wees consistent met hoofdletters/spaties
+zodat "Lezing" en "lezing" niet als twee aparte categorieën worden gezien
+(de matching is case-insensitive in de URL, maar het label op de knop
+gebruikt de waarde uit het eerste artikel dat je tegenkomt).
+
+### URL-formaat
+
+`/artikelen?category=fiqh` → toont alle published artikelen met
+`category` = "Fiqh" (case-insensitive). Als de gevraagde categorie niet
+(meer) bestaat, valt de pagina simpelweg terug op alle artikelen.
+
+---
+
+## 20. Productie — fallback-content & wat de site toont bij lege Directus
 
 De website is zo gebouwd dat álle inhoud uit Directus komt. Voor het zeldzame
 geval dat Directus offline is of een veld leeg, gebruikt de frontend een
@@ -936,6 +1013,7 @@ beperkte set neutrale fallbacks. Belangrijk voor productie:
 | Activiteiten op homepage         | **Sectie wordt verborgen** (geen demo-data meer)                             |
 | Gebedstijden — vandaag-card      | Productie: **nette melding** "tijdelijk niet beschikbaar". Lokaal dev: demo-card |
 | Artikelen / onderwijs / agenda   | Lege staat met neutrale tekst                                                |
+| Video's                          | Lege staat ("Er zijn momenteel geen video's beschikbaar")                    |
 | FAQ                              | Verborgen als geen items                                                     |
 
 > ✅ **Geen fake data meer in publieke views.** Demo-tijden, demo-activiteiten

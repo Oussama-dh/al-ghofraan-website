@@ -352,6 +352,19 @@ export interface Article {
   updated_at?: string | null;
 }
 
+// ─── videos ──────────────────────────────────────────────────
+export interface Video {
+  id: number;
+  status: "draft" | "published" | "archived";
+  title: string;
+  description?: string | null;
+  youtube_url: string;
+  sort?: number | null;
+  featured: boolean;
+  published_at?: string | null;
+  created_at?: string | null;
+}
+
 // ─── contact_messages ────────────────────────────────────────
 export type ContactMessageStatus = "new" | "read" | "replied" | "archived";
 
@@ -382,5 +395,6 @@ export interface DirectusSchema {
   donations: Donation[];
   donation_campaigns: DonationCampaign[];
   articles: Article[];
+  videos: Video[];
   contact_messages: ContactMessage[];
 }

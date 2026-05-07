@@ -80,6 +80,14 @@ Open Directus admin en controleer per item:
 
 - [ ] Voorbeeldartikel uit seed staat op `draft` of is verwijderd
 - [ ] Echte gepubliceerde artikelen zijn nagekeken op `featured`/`category`
+- [ ] Categorie-filterknoppen op `/artikelen` verschijnen logisch (alleen categorieën met minstens 1 published artikel)
+
+### Videos
+
+- [ ] `/videos` toont de gewenste video's
+- [ ] Alleen video's op `published` zijn zichtbaar
+- [ ] Iedere `youtube_url` rendert een werkende embed (geen blanco kaartjes)
+- [ ] Video-volgorde klopt (featured eerst, daarna `sort`, daarna `published_at`)
 
 ### Donation campaigns
 
@@ -134,6 +142,9 @@ Loop deze door op productie:
 - [ ] `/contact` — formulier verstuurt en WhatsApp-knop opent als nummer is gezet
 - [ ] `/doneren` — DonationForm rendert + Stripe Checkout opent succesvol
 - [ ] `/privacy` — gepubliceerd, datum klopt, geen oude e-mails
+- [ ] `/videos` — toont video's of nette lege staat (geen kapotte iframes)
+- [ ] `/robots.txt` — laadt en verwijst naar `${SITE_URL}/sitemap.xml`
+- [ ] `/sitemap.xml` — laadt en bevat alle vaste publieke routes incl. `/videos`
 - [ ] Custom dynamische pagina's via `/[slug]` werken zoals gewenst
 
 ## 7. Header & footer
