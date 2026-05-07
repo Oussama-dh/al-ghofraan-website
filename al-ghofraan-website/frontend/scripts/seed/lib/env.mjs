@@ -49,15 +49,15 @@ export function loadEnv() {
 
   const merged = { ...fileEnv, ...process.env };
 
-  const env = {
-    DIRECTUS_URL:
-      merged.DIRECTUS_PUBLIC_URL ||
-      merged.NEXT_PUBLIC_DIRECTUS_URL ||
-      merged.DIRECTUS_URL ||
-      "http://localhost:8055",
-    DIRECTUS_ADMIN_EMAIL:    merged.DIRECTUS_ADMIN_EMAIL    || "admin@al-ghofraan.com",
-    DIRECTUS_ADMIN_PASSWORD: merged.DIRECTUS_ADMIN_PASSWORD || "Admin1234!",
-  };
+const env = {
+  DIRECTUS_URL:
+    merged.DIRECTUS_URL ||
+    merged.DIRECTUS_PUBLIC_URL ||
+    merged.NEXT_PUBLIC_DIRECTUS_URL ||
+    "http://localhost:8055",
+  DIRECTUS_ADMIN_EMAIL: merged.DIRECTUS_ADMIN_EMAIL || "admin@al-ghofraan.com",
+  DIRECTUS_ADMIN_PASSWORD: merged.DIRECTUS_ADMIN_PASSWORD || "Admin1234!",
+};
 
   if (!env.DIRECTUS_ADMIN_EMAIL || !env.DIRECTUS_ADMIN_PASSWORD) {
     throw new Error(
