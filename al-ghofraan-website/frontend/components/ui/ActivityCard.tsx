@@ -1,7 +1,6 @@
 // components/ui/ActivityCard.tsx
 
 import Link  from "next/link";
-import Image from "next/image";
 import { ArrowRight, Star } from "lucide-react";
 import type { Activity } from "@/types/directus";
 import { formatDate, formatDateShort, cn } from "@/lib/utils";
@@ -51,11 +50,11 @@ const imageUrl = imageId ? getAssetUrl(imageId) : null;
         )}
       >
 {imageUrl ? (
-  <Image
+  // eslint-disable-next-line @next/next/no-img-element
+  <img
     src={imageUrl}
     alt={activity.title}
-    fill
-    className="object-cover group-hover:scale-105 transition-transform duration-500"
+    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
   />
 ) : (
           <div className="absolute inset-0 pattern-overlay bg-sand flex items-center justify-center">

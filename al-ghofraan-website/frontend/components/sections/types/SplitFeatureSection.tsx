@@ -5,7 +5,6 @@
 //   - Rechts: ofwel een afbeelding (als section.image gezet is),
 //     ofwel het decoratieve Arabische woord-blok (card_title_ar / tags)
 
-import Image                  from "next/image";
 import Container               from "@/components/ui/Container";
 import SectionTitle            from "@/components/ui/SectionTitle";
 import Button                  from "@/components/ui/Button";
@@ -112,12 +111,11 @@ export default function SplitFeatureSection({ section }: Props) {
           {/* RECHTER KOLOM — afbeelding heeft voorrang, anders decoratief blok */}
           {imageUrl ? (
             <div className="relative aspect-square rounded-3xl overflow-hidden hidden md:block">
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={imageUrl}
                 alt={title || "Sectie afbeelding"}
-                fill
-                className="object-cover"
-                sizes="(min-width: 768px) 50vw, 100vw"
+                className="absolute inset-0 w-full h-full object-cover"
               />
             </div>
           ) : (card_title_ar || card_subtitle || tags.length > 0) ? (

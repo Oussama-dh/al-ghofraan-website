@@ -327,9 +327,16 @@ export default function RegistrationForm({
               onChange={(e) => update("consent", e.target.checked)}
             />
             <span className="font-body text-sm text-taupe-dark leading-relaxed">
-              Ik ga akkoord dat mijn gegevens worden verwerkt voor deze inschrijving
-              door de DawahCommissie van moskee Al-Ghofraan.
-              <span className="text-red-600" aria-hidden> *</span>
+              Ik ga akkoord met de{" "}
+              <a
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-slate-mosque underline hover:text-slate-dark"
+              >
+                privacyverklaring
+              </a>
+              .<span className="text-red-600" aria-hidden> *</span>
             </span>
           </label>
         </div>

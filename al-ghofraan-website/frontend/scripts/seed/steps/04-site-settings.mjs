@@ -4,8 +4,12 @@
 
 const DEFAULTS = {
   site_name:                "Al-Ghofraan",
+  site_subtitle:            "DawahCommissie",
   contact_email:            "el-masoudi@hotmail.com",
   footer_text:              "De DawahCommissie van moskee Al-Ghofraan organiseert lezingen, activiteiten en programma's voor de moslimgemeenschap.",
+  footer_title:             "Al-Ghofraan",
+  footer_arabic_title:      "المسجد الغفران",
+  footer_description:       "De DawahCommissie van moskee Al-Ghofraan organiseert lezingen, activiteiten en programma's voor de moslimgemeenschap.",
   default_seo_title:        "DawahCommissie Al-Ghofraan",
   default_seo_description:  "Lezingen, activiteiten en programma's voor de moslimgemeenschap.",
 };

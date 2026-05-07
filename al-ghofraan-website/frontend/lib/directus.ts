@@ -20,6 +20,8 @@ import type {
   PageSection,
   PageSectionItem,
   EducationProgram,
+  DonationCampaign,
+  Article,
 } from "@/types/directus";
 
 const DIRECTUS_INTERNAL_URL =
@@ -210,6 +212,120 @@ export async function getAllEducationProgramSlugs(): Promise<string[]> {
       return (result as Array<{ slug: string }>).map((r) => r.slug).filter(Boolean);
     },
     "getAllEducationProgramSlugs",
+    []
+  );
+}
+
+// ─── Donation campaigns ──────────────────────────────────────
+const CAMPAIGN_FIELDS = [
+  "id", "status", "title", "slug", "description", "image",
+  "goal_amount", "goal_amount_display",
+  "allow_one_time", "allow_monthly",
+  "suggested_amounts", "default_amount",
+  "featured", "sort",
+];
+
+export async function getDonationCampaigns(): Promise<DonationCampaign[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("donation_campaigns", {
+          filter: {
+            status:         { _eq: "published" },
+            // Tenminste één donatie-type moet toegestaan zijn — anders nutteloos
+            _or: [
+              { allow_one_time: { _eq: true } },
+              { allow_monthly:  { _eq: true } },
+            ],
+          } as never,
+          sort:   ["-featured", "sort", "title"],
+          limit:  -1,
+          fields: CAMPAIGN_FIELDS,
+        })
+      );
+      return result as unknown as DonationCampaign[];
+    },
+    "getDonationCampaigns",
+    []
+  );
+}
+
+export async function getDonationCampaignBySlug(slug: string): Promise<DonationCampaign | null> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("donation_campaigns", {
+          filter: { slug: { _eq: slug }, status: { _eq: "published" } } as never,
+          limit:  1,
+          fields: CAMPAIGN_FIELDS,
+        })
+      );
+      return ((result as unknown as DonationCampaign[])[0]) ?? null;
+    },
+    `getDonationCampaignBySlug(${slug})`,
+    null
+  );
+}
+
+// ─── Articles ────────────────────────────────────────────────
+const ARTICLE_LIST_FIELDS = [
+  "id", "status", "title", "slug", "excerpt", "image",
+  "author_name", "category", "tags", "published_at",
+  "featured", "sort",
+];
+const ARTICLE_FULL_FIELDS = [
+  ...ARTICLE_LIST_FIELDS,
+  "body", "seo_title", "seo_description", "created_at", "updated_at",
+];
+
+export async function getArticles(): Promise<Article[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("articles", {
+          filter: { status: { _eq: "published" } } as never,
+          sort:   ["-featured", "-published_at"],
+          limit:  -1,
+          fields: ARTICLE_LIST_FIELDS,
+        })
+      );
+      return result as unknown as Article[];
+    },
+    "getArticles",
+    []
+  );
+}
+
+export async function getArticleBySlug(slug: string): Promise<Article | null> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("articles", {
+          filter: { slug: { _eq: slug }, status: { _eq: "published" } } as never,
+          limit:  1,
+          fields: ARTICLE_FULL_FIELDS,
+        })
+      );
+      return ((result as unknown as Article[])[0]) ?? null;
+    },
+    `getArticleBySlug(${slug})`,
+    null
+  );
+}
+
+export async function getAllArticleSlugs(): Promise<string[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("articles", {
+          filter: { status: { _eq: "published" } } as never,
+          limit:  -1,
+          fields: ["slug"],
+        })
+      );
+      return (result as Array<{ slug: string }>).map((r) => r.slug).filter(Boolean);
+    },
+    "getAllArticleSlugs",
     []
   );
 }

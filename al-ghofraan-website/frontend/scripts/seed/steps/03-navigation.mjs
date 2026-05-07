@@ -12,7 +12,9 @@ export async function seedNavigation(client) {
     { label: "Over ons",      href: "/dawahcommissie", sort: 20, highlight: false, external: false, active: true, location: "both"   },
     { label: "Agenda",        href: "/agenda",         sort: 30, highlight: false, external: false, active: true, location: "both"   },
     { label: "Onderwijs",     href: "/onderwijs",      sort: 35, highlight: false, external: false, active: true, location: "header" },
+    { label: "Artikelen",     href: "/artikelen",      sort: 38, highlight: false, external: false, active: true, location: "both"   },
     { label: "Gebedstijden",  href: "/gebedstijden",   sort: 40, highlight: false, external: false, active: true, location: "both"   },
+    { label: "Contact",       href: "/contact",        sort: 45, highlight: false, external: false, active: true, location: "both"   },
     { label: "Doneren",       href: "/doneren",        sort: 50, highlight: true,  external: false, active: true, location: "both"   },
   ];
 

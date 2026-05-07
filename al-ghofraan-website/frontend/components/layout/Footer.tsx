@@ -1,13 +1,17 @@
 // components/layout/Footer.tsx
 
 import Link  from "next/link";
-import Image from "next/image";
 import { Icon } from "@/lib/icons";
 import type { NavigationItem, SiteSettings } from "@/types/directus";
 
 interface FooterProps {
   settings:     SiteSettings | null;
   navItems?:    NavigationItem[];
+  /**
+   * Logo voor de footer. Wordt door app/layout.tsx ingevuld met
+   * site_settings.footer_logo (anders site_settings.logo).
+   * Beide gaan via getAssetUrl — een publieke URL geschikt voor de browser.
+   */
   logoUrl?:     string | null;
   emailIcon?:   string;
   phoneIcon?:   string;
@@ -15,14 +19,16 @@ interface FooterProps {
 }
 
 const FALLBACK_NAV: NavigationItem[] = [
-  { id: "f1", label: "Home",                  href: "/",               sort: 10, highlight: false, external: false, active: true },
+  { id: "f1", label: "Home",                   href: "/",               sort: 10, highlight: false, external: false, active: true },
   { id: "f2", label: "Over de DawahCommissie", href: "/dawahcommissie", sort: 20, highlight: false, external: false, active: true },
-  { id: "f3", label: "Agenda",                href: "/agenda",         sort: 30, highlight: false, external: false, active: true },
-  { id: "f4", label: "Gebedstijden",          href: "/gebedstijden",   sort: 40, highlight: false, external: false, active: true },
-  { id: "f5", label: "Doneren",               href: "/doneren",        sort: 50, highlight: true,  external: false, active: true },
+  { id: "f3", label: "Agenda",                 href: "/agenda",         sort: 30, highlight: false, external: false, active: true },
+  { id: "f4", label: "Gebedstijden",           href: "/gebedstijden",   sort: 40, highlight: false, external: false, active: true },
+  { id: "f5", label: "Doneren",                href: "/doneren",        sort: 50, highlight: true,  external: false, active: true },
 ];
 
-const FALLBACK_FOOTER_TEXT =
+const FALLBACK_TITLE        = "Al-Ghofraan";
+const FALLBACK_ARABIC_TITLE = "المسجد الغفران";
+const FALLBACK_DESCRIPTION  =
   "De DawahCommissie van moskee Al-Ghofraan organiseert lezingen, " +
   "activiteiten en programma's voor de moslimgemeenschap.";
 
@@ -34,14 +40,23 @@ export default function Footer({
   phoneIcon   = "phone",
   addressIcon = "map-pin",
 }: FooterProps) {
-  const year       = new Date().getFullYear();
-  const siteName   = settings?.site_name      || "Al-Ghofraan";
-  const email      = settings?.contact_email   || "el-masoudi@hotmail.com";
-  const phone      = settings?.phone           || null;
-  const address    = settings?.address         || null;
-  const social     = settings?.social_links    || {};
-  const footerText = settings?.footer_text     || FALLBACK_FOOTER_TEXT;
-  const copyright  = settings?.copyright_text  ||
+  const year = new Date().getFullYear();
+
+  // Branding — alles uit site_settings met nette fallbacks
+  const siteName     = settings?.site_name || FALLBACK_TITLE;
+  const title        = settings?.footer_title        || siteName               || FALLBACK_TITLE;
+  const arabicTitle  = settings?.footer_arabic_title || FALLBACK_ARABIC_TITLE;
+  // footer_description heeft voorrang boven het verouderde footer_text alias
+  const description  =
+    settings?.footer_description ||
+    settings?.footer_text         ||
+    FALLBACK_DESCRIPTION;
+
+  const email     = settings?.contact_email  || "el-masoudi@hotmail.com";
+  const phone     = settings?.phone          || null;
+  const address   = settings?.address        || null;
+  const social    = settings?.social_links   || {};
+  const copyright = settings?.copyright_text ||
     `© ${year} ${siteName} — DawahCommissie. Alle rechten voorbehouden.`;
 
   const items = (navItems && navItems.length > 0 ? navItems : FALLBACK_NAV)
@@ -57,64 +72,79 @@ export default function Footer({
           {/* Branding */}
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
-              {logoUrl && (
-                <div className="w-10 h-10 relative shrink-0 bg-white/10 rounded-lg p-1.5">
-                  <Image
-                    src={logoUrl}
-                    alt={`${siteName} logo`}
-                    fill
-                    sizes="40px"
-                    className="object-contain"
-                  />
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logoUrl}
+                  alt={`${title} logo`}
+                  className="h-12 w-auto max-w-[160px] object-contain shrink-0 bg-white/10 rounded-lg p-1.5"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center shrink-0">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-white">
+                    <path d="M12 2l2 4h2l1 2H7l1-2h2l2-4z" fill="currentColor" opacity="0.9" />
+                    <rect x="9"  y="8"  width="6"  height="12" rx="1"   fill="currentColor" />
+                    <rect x="6"  y="18" width="12" height="2"  rx="0.5" fill="currentColor" />
+                  </svg>
                 </div>
               )}
               <div>
-                <div className="font-display text-2xl text-white">{siteName}</div>
-                <div className="font-arabic text-base text-sand/70" lang="ar">
-                  المسجد الغفران
-                </div>
+                <div className="font-display text-2xl text-white">{title}</div>
+                {arabicTitle && (
+                  <div className="font-arabic text-base text-sand/70" lang="ar">
+                    {arabicTitle}
+                  </div>
+                )}
               </div>
             </div>
             <p className="font-body text-sm text-sand/70 leading-relaxed max-w-xs">
-              {footerText}
+              {description}
             </p>
 
-{social && Object.values(social).some(Boolean) && (
-  <div className="flex flex-wrap gap-3 mt-2 text-sm">
-    {social.facebook && (
-      <Link
-        href={social.facebook}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="hover:text-bluegray transition-colors"
-      >
-        Facebook
-      </Link>
-    )}
-
-    {social.instagram && (
-      <Link
-        href={social.instagram}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="hover:text-bluegray transition-colors"
-      >
-        Instagram
-      </Link>
-    )}
-
-    {social.youtube && (
-      <Link
-        href={social.youtube}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="hover:text-bluegray transition-colors"
-      >
-        YouTube
-      </Link>
-    )}
-  </div>
-)}
+            {social && Object.values(social).some(Boolean) && (
+              <div className="flex flex-wrap gap-3 mt-2 text-sm">
+                {social.facebook && (
+                  <Link
+                    href={social.facebook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-bluegray transition-colors"
+                  >
+                    Facebook
+                  </Link>
+                )}
+                {social.instagram && (
+                  <Link
+                    href={social.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-bluegray transition-colors"
+                  >
+                    Instagram
+                  </Link>
+                )}
+                {social.youtube && (
+                  <Link
+                    href={social.youtube}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-bluegray transition-colors"
+                  >
+                    YouTube
+                  </Link>
+                )}
+                {social.whatsapp && (
+                  <Link
+                    href={social.whatsapp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-bluegray transition-colors"
+                  >
+                    WhatsApp
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Navigatie */}
@@ -185,19 +215,5 @@ export default function Footer({
         </div>
       </div>
     </footer>
-  );
-}
-
-function SocialLink({ href, label, children }: { href: string; label: string; children: React.ReactNode }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={label}
-      className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
-    >
-      {children}
-    </a>
   );
 }

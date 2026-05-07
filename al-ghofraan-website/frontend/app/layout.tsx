@@ -89,10 +89,11 @@ export default async function RootLayout({
     getIconSettings(),
   ]);
 
-  const logoUrl     = getAssetUrl(settings?.logo || null);
-  const emailIcon   = resolveIconKey(iconMap, ICON_KEYS.contactEmail);
-  const phoneIcon   = resolveIconKey(iconMap, ICON_KEYS.contactPhone);
-  const addressIcon = resolveIconKey(iconMap, ICON_KEYS.contactAddress);
+  const logoUrl       = getAssetUrl(settings?.logo || null);
+  const footerLogoUrl = getAssetUrl(settings?.footer_logo || null) || logoUrl;
+  const emailIcon     = resolveIconKey(iconMap, ICON_KEYS.contactEmail);
+  const phoneIcon     = resolveIconKey(iconMap, ICON_KEYS.contactPhone);
+  const addressIcon   = resolveIconKey(iconMap, ICON_KEYS.contactAddress);
 
   const showFooter = settings?.footer_enabled !== false; // default true
 
@@ -109,7 +110,7 @@ export default async function RootLayout({
           <Footer
             settings={settings}
             navItems={footerNav}
-            logoUrl={logoUrl}
+            logoUrl={footerLogoUrl}
             emailIcon={emailIcon}
             phoneIcon={phoneIcon}
             addressIcon={addressIcon}

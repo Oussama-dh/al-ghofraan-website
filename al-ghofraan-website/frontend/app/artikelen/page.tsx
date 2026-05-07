@@ -1,4 +1,4 @@
-// app/onderwijs/page.tsx
+// app/artikelen/page.tsx
 
 import type { Metadata } from "next";
 import Link              from "next/link";
@@ -6,7 +6,7 @@ import Container         from "@/components/ui/Container";
 import SectionTitle      from "@/components/ui/SectionTitle";
 import { Icon }          from "@/lib/icons";
 import {
-  getEducationPrograms,
+  getArticles,
   getSiteSettings,
   getAssetUrl,
 } from "@/lib/directus";
@@ -18,15 +18,15 @@ export const revalidate = 600;
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
   return {
-    title:       "Onderwijs",
+    title:       "Artikelen",
     description:
       settings?.default_seo_description ||
-      "Lessen, cursussen en studiekringen aangeboden door de DawahCommissie.",
+      "Artikelen, nieuws en reflecties van de DawahCommissie.",
   };
 }
 
-export default async function OnderwijsPage() {
-  const programs = await getEducationPrograms();
+export default async function ArtikelenPage() {
+  const articles = await getArticles();
 
   return (
     <>
@@ -34,9 +34,9 @@ export default async function OnderwijsPage() {
         <div className="absolute inset-0 pattern-overlay" />
         <Container className="relative z-10">
           <SectionTitle
-            title="Onderwijs"
-            arabic="التعليم"
-            subtitle="Lessen, cursussen en studiekringen voor de gemeenschap"
+            title="Artikelen"
+            arabic="مقالات"
+            subtitle="Nieuws, lezingen en reflecties van de DawahCommissie"
             light
           />
         </Container>
@@ -49,29 +49,27 @@ export default async function OnderwijsPage() {
 
       <section className="bg-sand-50 py-12 lg:py-16">
         <Container>
-          {programs.length === 0 ? (
+          {articles.length === 0 ? (
             <div className="text-center py-20">
-              <div className="text-5xl mb-4">📚</div>
-              <h3 className="font-display text-2xl text-ink mb-2">
-                Momenteel geen aanbod
-              </h3>
+              <div className="text-5xl mb-4">📰</div>
+              <h3 className="font-display text-2xl text-ink mb-2">Nog geen artikelen</h3>
               <p className="font-body text-taupe-dark">
-                Houd onze pagina in de gaten voor nieuwe lessen en cursussen.
+                We zijn druk bezig met het schrijven van nieuwe artikelen. Kom binnenkort terug.
               </p>
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {programs.map((program) => {
-                const imageId =
-                  typeof program.image === "string"
-                    ? program.image
-                    : program.image?.id;
+              {articles.map((article) => {
+                const imageId  = typeof article.image === "string" ? article.image : article.image?.id;
                 const imageUrl = imageId ? getAssetUrl(imageId) : null;
+                const tags     = article.tags
+                  ? article.tags.split(",").map((t) => t.trim()).filter(Boolean)
+                  : [];
 
                 return (
                   <Link
-                    key={program.id}
-                    href={`/onderwijs/${program.slug}`}
+                    key={article.id}
+                    href={`/artikelen/${article.slug}`}
                     className="group flex flex-col bg-white rounded-2xl overflow-hidden border border-sand-200 hover:border-taupe/50 shadow-sm hover:shadow-md transition-all duration-300"
                   >
                     <div className="relative h-48 bg-sand overflow-hidden">
@@ -79,54 +77,64 @@ export default async function OnderwijsPage() {
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={imageUrl}
-                          alt={program.title}
+                          alt={article.title}
                           className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
                         <div className="absolute inset-0 pattern-overlay flex items-center justify-center">
-                          <Icon name="graduation-cap" className="w-12 h-12 text-taupe/40" strokeWidth={1.5} />
+                          <Icon name="book-open" className="w-12 h-12 text-taupe/40" strokeWidth={1.5} />
                         </div>
                       )}
-                      {program.registration_enabled && (
-                        <span className="absolute top-3 right-3 bg-slate-mosque text-white text-xs font-body font-medium px-3 py-1 rounded-full shadow-sm">
-                          Inschrijving open
+                      {article.featured && (
+                        <span className="absolute top-3 right-3 bg-taupe text-white text-xs font-body font-medium px-3 py-1 rounded-full shadow-sm">
+                          ★ Uitgelicht
                         </span>
                       )}
                     </div>
 
                     <div className="flex flex-col flex-1 p-5">
-                      {program.target_group && (
+                      {article.category && (
                         <span className="font-body text-xs uppercase tracking-wider text-taupe mb-1">
-                          {program.target_group}
+                          {article.category}
                         </span>
                       )}
                       <h3 className="font-display text-xl text-ink group-hover:text-slate-mosque transition-colors">
-                        {program.title}
+                        {article.title}
                       </h3>
 
-                      {program.description && (
+                      {article.excerpt && (
                         <p className="font-body text-taupe-dark text-sm leading-relaxed mt-2 flex-1 line-clamp-3">
-                          {program.description.replace(/<[^>]+>/g, "")}
+                          {article.excerpt}
                         </p>
                       )}
 
                       <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-taupe text-sm font-body">
-                        {program.teacher && (
+                        {article.author_name && (
                           <span className="flex items-center gap-1.5">
                             <Icon name="user" className="w-4 h-4" />
-                            {program.teacher}
+                            {article.author_name}
                           </span>
                         )}
-                        {program.start_date && (
+                        {article.published_at && (
                           <span className="flex items-center gap-1.5">
                             <Icon name="calendar" className="w-4 h-4" />
-                            {formatDate(program.start_date, "d MMM yyyy")}
+                            {formatDate(article.published_at, "d MMM yyyy")}
                           </span>
                         )}
                       </div>
 
-                      <div className="mt-4 flex items-center text-slate-mosque text-sm font-medium font-body group-hover:gap-2 transition-all">
-                        <span>Meer informatie</span>
+                      {tags.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1">
+                          {tags.slice(0, 3).map((tag) => (
+                            <span key={tag} className="font-body text-xs px-2 py-0.5 rounded-full bg-sand-100 text-taupe-dark">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="mt-4 flex items-center text-slate-mosque text-sm font-medium font-body">
+                        <span>Lees verder</span>
                         <Icon name="arrow-right" className="ml-1 w-4 h-4 group-hover:translate-x-1 transition-transform" />
                       </div>
                     </div>

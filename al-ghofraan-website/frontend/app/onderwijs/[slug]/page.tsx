@@ -2,7 +2,6 @@
 
 import type { Metadata } from "next";
 import { notFound }      from "next/navigation";
-import Image             from "next/image";
 import Container         from "@/components/ui/Container";
 import Button            from "@/components/ui/Button";
 import { Icon }          from "@/lib/icons";
@@ -51,7 +50,8 @@ export default async function EducationProgramDetailPage({ params }: Props) {
         <div className="absolute inset-0 pattern-overlay" />
         {imageUrl && (
           <div className="absolute inset-0 opacity-20">
-            <Image src={imageUrl} alt={program.title} fill className="object-cover" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imageUrl} alt={program.title} className="w-full h-full object-cover" />
           </div>
         )}
         <Container className="relative z-10">
@@ -111,7 +111,8 @@ export default async function EducationProgramDetailPage({ params }: Props) {
         <Container narrow>
           {imageUrl && (
             <div className="relative h-64 sm:h-80 rounded-2xl overflow-hidden mb-8 shadow-md">
-              <Image src={imageUrl} alt={program.title} fill className="object-cover" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={imageUrl} alt={program.title} className="absolute inset-0 w-full h-full object-cover" />
             </div>
           )}
 

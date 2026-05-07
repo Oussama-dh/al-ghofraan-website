@@ -47,17 +47,32 @@ export interface PrayerTimeFile {
 export interface SiteSettings {
   id: string | number;
   site_name: string;
+  /** Subtitel onder de site-naam in header (bv. "DawahCommissie") */
+  site_subtitle?: string | null;
   logo?: string | DirectusFile | null;
+  /** Apart logo voor de footer. Als leeg, valt terug op `logo`. */
+  footer_logo?: string | DirectusFile | null;
   favicon?: string | DirectusFile | null;
   og_image?: string | DirectusFile | null;
   contact_email?: string | null;
   phone?: string | null;
   address?: string | null;
+  /** Latijnse titel in footer-branding (bv. "Al-Ghofraan") */
+  footer_title?: string | null;
+  /** Arabische titel in footer-branding (bv. "المسجد الغفران") */
+  footer_arabic_title?: string | null;
+  /** Beschrijvende tekst onder footer-branding */
+  footer_description?: string | null;
+  /** Verouderd alias voor footer_description — blijft werken als fallback */
   footer_text?: string | null;
   copyright_text?: string | null;
   footer_enabled?: boolean | null;
   default_seo_title?: string | null;
   default_seo_description?: string | null;
+  /** WhatsApp nummer in internationaal formaat (bv. "31612345678" of "+31 6 12345678" — wordt ge-normaliseerd) */
+  whatsapp_number?: string | null;
+  /** Voorgevulde tekst voor de WhatsApp-knop op /contact */
+  whatsapp_default_message?: string | null;
   social_links?: {
     facebook?: string;
     instagram?: string;
@@ -204,7 +219,7 @@ export interface Registration {
   id: string;
   type: RegistrationType;
   source_collection: string;   // "activities" | "education_programs"
-  source_id: string;           // id van het bron-item
+  source_id: string;           // id van het bron-item (string ipv int — werkt voor beide id-types)
   source_slug: string;
   source_title: string;
   name: string;
@@ -255,6 +270,102 @@ export interface PrayerTimeRow {
   ishaa: string;
 }
 
+// ─── donation_campaigns ──────────────────────────────────────
+export interface DonationCampaign {
+  id: number;
+  status: "draft" | "published" | "archived";
+  title: string;
+  slug: string;
+  description?: string | null;
+  image?: string | DirectusFile | null;
+  /** Doelbedrag in eurocenten */
+  goal_amount?: number | null;
+  /** Leesbare weergave, bv. "€5.000" */
+  goal_amount_display?: string | null;
+  allow_one_time: boolean;
+  allow_monthly: boolean;
+  /** JSON array met euro-bedragen, bv. [5, 10, 25, 50, 100] */
+  suggested_amounts?: number[] | null;
+  /** Voorgeselecteerd bedrag in EURO'S */
+  default_amount?: number | null;
+  featured: boolean;
+  sort?: number | null;
+  created_at?: string | null;
+}
+
+// ─── donations ───────────────────────────────────────────────
+export type DonationType   = "one_time" | "monthly";
+export type DonationStatus =
+  | "pending"
+  | "paid"
+  | "failed"
+  | "cancelled"
+  | "active"
+  | "ended";
+
+export interface Donation {
+  id: string;
+  type: DonationType;
+  status: DonationStatus;
+  /** Bedrag in eurocenten — altijd integer. Bewaard voor exact overeenkomen met Stripe. */
+  amount: number;
+  /** Leesbare weergave, bv. "€25,00". Wordt automatisch ingevuld bij aanmaken/updaten. */
+  amount_display?: string | null;
+  currency: string;
+  donor_name?: string | null;
+  donor_email: string;
+  message?: string | null;
+  stripe_session_id?: string | null;
+  stripe_payment_intent_id?: string | null;
+  stripe_subscription_id?: string | null;
+  stripe_customer_id?: string | null;
+  raw_event?: Record<string, unknown> | null;
+  created_at?: string | null;
+  paid_at?: string | null;
+  /** M2O naar donation_campaigns.id — null bij algemene donatie */
+  campaign?: number | null;
+  /** Slug van de campagne ten tijde van donatie (historisch correct) */
+  campaign_slug?: string | null;
+  /** Titel van de campagne ten tijde van donatie. "Algemene donatie" bij geen campagne. */
+  campaign_title?: string | null;
+}
+
+// ─── articles ────────────────────────────────────────────────
+export interface Article {
+  id: number;
+  status: "draft" | "published" | "archived";
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  body?: string | null;
+  image?: string | DirectusFile | null;
+  author_name?: string | null;
+  category?: string | null;
+  /** CSV string ("ramadan,gemeenschap"). Eenvoudig en toegankelijk. */
+  tags?: string | null;
+  published_at?: string | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  featured: boolean;
+  sort?: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+// ─── contact_messages ────────────────────────────────────────
+export type ContactMessageStatus = "new" | "read" | "replied" | "archived";
+
+export interface ContactMessage {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string | null;
+  subject: string;
+  message: string;
+  status: ContactMessageStatus;
+  created_at?: string | null;
+}
+
 // ─── SDK Schema ──────────────────────────────────────────────
 export interface DirectusSchema {
   activities: Activity[];
@@ -268,4 +379,8 @@ export interface DirectusSchema {
   page_section_items: PageSectionItem[];
   education_programs: EducationProgram[];
   registrations: Registration[];
+  donations: Donation[];
+  donation_campaigns: DonationCampaign[];
+  articles: Article[];
+  contact_messages: ContactMessage[];
 }

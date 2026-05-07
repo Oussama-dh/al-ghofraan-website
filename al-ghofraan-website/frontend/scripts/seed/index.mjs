@@ -11,7 +11,15 @@ import { setupPageSlugInput }       from "./steps/01f-page-slug-input.mjs";
 import { fixPrayerTimeFileField }   from "./steps/01g-fix-prayer-time-file-field.mjs";
 import { setupEducationPrograms }   from "./steps/11-education-programs.mjs";
 import { setupRegistrations }       from "./steps/12-registrations.mjs";
+import { setupRegistrationRelations } from "./steps/13-registration-relations.mjs";
+import { setupDonations }           from "./steps/14-donations.mjs";
+import { setupDonationCampaigns }   from "./steps/15-donation-campaigns.mjs";
+import { setupArticles }            from "./steps/16-articles.mjs";
+import { setupContact }             from "./steps/17-contact.mjs";
+import { setupPrivacy }             from "./steps/18-privacy.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
+import { setupFooterFields }        from "./steps/01i-footer-fields.mjs";
+import { setupFileImageFields }     from "./steps/01j-file-image-fields.mjs";
 import { setupPermissions }         from "./steps/02-permissions.mjs";
 import { seedNavigation }           from "./steps/03-navigation.mjs";
 import { seedSiteSettings }         from "./steps/04-site-settings.mjs";
@@ -43,10 +51,18 @@ try {
   await setupSectionExtras(client);      // 1e. extra section + item velden
   await setupPageSlugInput(client);      // 1f. page_slug dropdown → input
   await fixPrayerTimeFileField(client);  // 1g. file-veld relatie repareren
-  await setupEducationPrograms(client);  // 11. education_programs (collectie + voorbeelden)
-  await setupRegistrations(client);      // 12. registrations (alleen collectie — geen public access)
-  await setupTargetGender(client);       // 1h. target_gender velden + gender keuzes bijwerken
-  await setupPermissions(client);        // 2.  permissies (NA alle collecties!)
+  await setupEducationPrograms(client);     // 11. education_programs (collectie + voorbeelden)
+  await setupRegistrations(client);         // 12. registrations (alleen collectie — geen public access)
+  await setupRegistrationRelations(client); // 13. opruimen oude/verkeerde registrations-relaties
+  await setupDonations(client);             // 14. donations (Stripe-gevuld, geen public access)
+  await setupDonationCampaigns(client);     // 15. donation_campaigns (publiek leesbaar als published)
+  await setupArticles(client);              // 16. articles (publiek leesbaar als published)
+  await setupContact(client);               // 17. contact_messages (admin-only) + page_content + WhatsApp velden
+  await setupPrivacy(client);               // 18. privacyverklaring (page_content) + footer nav-item
+  await setupTargetGender(client);          // 1h. target_gender velden + gender keuzes bijwerken
+  await setupFooterFields(client);          // 1i. footer + branding velden in site_settings
+  await setupFileImageFields(client);       // 1j. heel alle file/image velden naar correcte interface
+  await setupPermissions(client);           // 2.  permissies (NA alle collecties!)
   await seedNavigation(client);          // 3.  menu
   await seedSiteSettings(client);        // 4.  site-instellingen
   await seedPageContent(client);         // 5.  pagina's

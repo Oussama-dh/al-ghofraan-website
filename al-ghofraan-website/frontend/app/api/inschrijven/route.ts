@@ -249,6 +249,9 @@ export async function POST(request: Request) {
   }
 
   // Registratie schrijven
+  // Geen relationele FK — bewust. Filtering en historie verlopen via
+  // source_collection / source_id / source_slug / source_title.
+  // Zie scripts/seed/steps/13-registration-relations.mjs voor de historie.
   try {
     await directusServer.request(
       createItem("registrations", {

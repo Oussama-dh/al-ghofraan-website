@@ -3,14 +3,15 @@
 import type { Metadata } from "next";
 import Container         from "@/components/ui/Container";
 import SectionTitle      from "@/components/ui/SectionTitle";
-import { CreditCard }    from "lucide-react";
 import { Icon }          from "@/lib/icons";
 import { PageSectionsList } from "@/components/sections/PageSectionRenderer";
+import DonationForm      from "@/components/donation/DonationForm";
 import {
   getPageContent,
   getIconSettings,
   getSiteSettings,
   getPageSectionsWithItems,
+  getDonationCampaigns,
   resolveIconKey,
   ICON_KEYS,
 } from "@/lib/directus";
@@ -24,6 +25,10 @@ const DONATIE_DOELEN = [
   { emoji: "🌍", titel: "Da'wa & outreach",       beschrijving: "Informatieverspreiding en interfaith dialoog" },
 ];
 
+interface Props {
+  searchParams?: { geannuleerd?: string };
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const [page, settings] = await Promise.all([
     getPageContent("doneren"),
@@ -35,23 +40,25 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function DonerenPage() {
-  const [page, iconMap, settings, sections] = await Promise.all([
+export default async function DonerenPage({ searchParams }: Props) {
+  const [page, iconMap, settings, sections, campaigns] = await Promise.all([
     getPageContent("doneren"),
     getIconSettings(),
     getSiteSettings(),
     getPageSectionsWithItems("doneren"),
+    getDonationCampaigns(),
   ]);
 
   const title    = page?.title    || "Steun de DawahCommissie";
   const subtitle = page?.subtitle || "Uw bijdrage maakt een verschil voor de gehele gemeenschap";
-  const intro    = page?.intro    || "Binnenkort kunt u hier veilig online doneren.";
+  const intro    = page?.intro;
 
   const donationIcon = page?.icon || resolveIconKey(iconMap, ICON_KEYS.donation);
-  const contactEmail = settings?.contact_email || "el-masoudi@hotmail.com";
 
   const ctaSections   = sections.filter((s) => s.type === "cta");
   const otherSections = sections.filter((s) => s.type !== "cta");
+
+  const cancelled = searchParams?.geannuleerd === "1";
 
   return (
     <>
@@ -74,46 +81,49 @@ export default async function DonerenPage() {
 
       <section className="bg-sand-50 py-12 lg:py-20">
         <Container narrow>
-          <div className="bg-white rounded-3xl border border-sand-200 shadow-sm p-8 sm:p-12 text-center mb-10">
-            <div className="w-20 h-20 bg-slate-mosque/10 rounded-full flex items-center justify-center text-slate-mosque mx-auto mb-6">
-              <Icon name={donationIcon} className="w-10 h-10" strokeWidth={1.5} />
+          {/* Quran-vers + intro */}
+          <div className="text-center mb-10">
+            <div className="w-16 h-16 bg-slate-mosque/10 rounded-full flex items-center justify-center text-slate-mosque mx-auto mb-5">
+              <Icon name={donationIcon} className="w-8 h-8" strokeWidth={1.5} />
             </div>
 
             <div className="font-arabic text-2xl text-taupe mb-3" lang="ar">
               وَمَا تُنفِقُوا مِنْ خَيْرٍ فَلِأَنفُسِكُمْ
             </div>
-            <p className="font-body text-xs text-taupe-dark mb-6 italic">
+            <p className="font-body text-xs text-taupe-dark mb-4 italic">
               &ldquo;En wat u ook aan goeds uitgeeft, dat is voor uzelf.&rdquo; &mdash; Soera Al-Baqara 2:272
             </p>
 
-            <h2 className="font-display text-3xl text-ink mb-4">
-              Binnenkort kunt u hier veilig doneren
-            </h2>
-            <p className="font-body text-taupe-dark text-lg leading-relaxed max-w-md mx-auto mb-8">
-              {intro}
-            </p>
-
-            <div className="inline-flex items-center gap-2 bg-taupe/20 text-taupe-dark px-8 py-4 rounded-full font-body font-medium cursor-default text-base">
-              <CreditCard className="w-5 h-5" strokeWidth={2} />
-              Online doneren — binnenkort beschikbaar
-            </div>
-
-            <p className="font-body text-xs text-taupe mt-4">
-              Wilt u nu al bijdragen? Neem contact met ons op via{" "}
-              <a href={`mailto:${contactEmail}`} className="text-slate-mosque underline hover:no-underline">
-                {contactEmail}
-              </a>
-            </p>
+            {intro && (
+              <p className="font-body text-taupe-dark text-base leading-relaxed max-w-md mx-auto">
+                {intro}
+              </p>
+            )}
           </div>
 
+          {/* Geannuleerd-melding */}
+          {cancelled && (
+            <div
+              className="mb-6 p-4 rounded-lg bg-taupe/10 border border-taupe/20 text-ink font-body text-sm text-center"
+              role="status"
+            >
+              De betaling is geannuleerd. Geen bedrag is afgeschreven — u kunt het opnieuw proberen wanneer u wilt.
+            </div>
+          )}
+
+          {/* Donatie­formulier */}
+          <DonationForm campaigns={campaigns} />
+
+          {/* Beheerbare body uit Directus */}
           {page?.body && (
             <div
-              className="prose prose-lg max-w-none font-body text-ink leading-relaxed prose-headings:font-display prose-headings:text-ink prose-a:text-slate-mosque mb-12"
+              className="prose prose-lg max-w-none font-body text-ink leading-relaxed prose-headings:font-display prose-headings:text-ink prose-a:text-slate-mosque mt-12"
               dangerouslySetInnerHTML={{ __html: page.body }}
             />
           )}
 
-          <div>
+          {/* Doelen */}
+          <div className="mt-14">
             <h3 className="font-display text-2xl text-ink mb-6 text-center">
               Waarvoor wordt uw bijdrage gebruikt?
             </h3>
