@@ -21,10 +21,10 @@
 
 import { NextResponse } from "next/server";
 import { getStripe, isStripeConfigured } from "@/lib/stripe";
-import { directusServer } from "@/lib/directus";
+import { directusServer, getDonationCampaignBySlug } from "@/lib/directus";
 import { createItem } from "@directus/sdk";
 import { formatEurFromCents } from "@/lib/utils";
-import type { DonationType } from "@/types/directus";
+import type { DonationType, DonationCampaign } from "@/types/directus";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,19 +34,21 @@ const MIN_AMOUNT_CENTS  = 100;       // €1
 const MAX_AMOUNT_CENTS  = 5_000_00;  // €5.000 — sanity cap
 
 interface IncomingBody {
-  type?:         unknown;
-  amount_cents?: unknown;
-  donor_name?:   unknown;
-  donor_email?:  unknown;
-  message?:      unknown;
+  type?:          unknown;
+  amount_cents?:  unknown;
+  donor_name?:    unknown;
+  donor_email?:   unknown;
+  message?:       unknown;
+  campaign_slug?: unknown;
 }
 
 interface ParsedBody {
-  type:         DonationType;
-  amount_cents: number;
-  donor_name:   string;
-  donor_email:  string;
-  message?:     string;
+  type:           DonationType;
+  amount_cents:   number;
+  donor_name:     string;
+  donor_email:    string;
+  message?:       string;
+  campaign_slug?: string;
 }
 
 function parseBody(
@@ -98,6 +100,12 @@ function parseBody(
     out.message = message;
   }
 
+  if (raw.campaign_slug !== undefined && String(raw.campaign_slug).trim()) {
+    const slug = String(raw.campaign_slug).trim();
+    if (slug.length > 200) return { ok: false, error: "Campagne-slug is te lang." };
+    out.campaign_slug = slug;
+  }
+
   return { ok: true, data: out };
 }
 
@@ -121,8 +129,7 @@ export async function POST(request: Request) {
       { status: 503 }
     );
   }
-  
-  const stripe = getStripe();
+
   let raw: IncomingBody;
   try {
     raw = (await request.json()) as IncomingBody;
@@ -135,6 +142,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error }, { status: 400 });
   }
   const body = parsed.data;
+
+  // ─── Campagne ophalen + valideren (optioneel) ─────────────
+  let campaign: DonationCampaign | null = null;
+  if (body.campaign_slug) {
+    campaign = await getDonationCampaignBySlug(body.campaign_slug);
+    if (!campaign) {
+      return NextResponse.json(
+        { error: "Donatiedoel niet gevonden of niet beschikbaar." },
+        { status: 404 }
+      );
+    }
+    if (body.type === "one_time" && !campaign.allow_one_time) {
+      return NextResponse.json(
+        { error: "Voor dit doel zijn eenmalige donaties niet beschikbaar." },
+        { status: 400 }
+      );
+    }
+    if (body.type === "monthly" && !campaign.allow_monthly) {
+      return NextResponse.json(
+        { error: "Voor dit doel zijn maandelijkse donaties niet beschikbaar." },
+        { status: 400 }
+      );
+    }
+  }
+
+  const campaignTitle = campaign?.title ?? "Algemene donatie";
+  const campaignSlug  = campaign?.slug  ?? "";
+  const campaignId    = campaign?.id    ?? null;
 
   const origin = getOrigin(request);
 
@@ -150,11 +185,15 @@ export async function POST(request: Request) {
     amount_cents:   String(body.amount_cents),
     amount_display: amountDisplay,
     source:         "website",
+    campaign_id:    campaignId !== null ? String(campaignId) : "",
+    campaign_slug:  campaignSlug,
+    campaign_title: campaignTitle,
   };
 
   let session;
   try {
     if (body.type === "one_time") {
+      const stripe = getStripe();
       session = await stripe.checkout.sessions.create({
         mode: "payment",
         // iDEAL voor NL + card voor internationale donaties.
@@ -166,8 +205,8 @@ export async function POST(request: Request) {
               currency:      "eur",
               unit_amount:   body.amount_cents,
               product_data: {
-                name:        "Donatie aan DawahCommissie Al-Ghofraan",
-                description: "Eenmalige donatie",
+                name:        campaign ? campaignTitle : "Donatie aan DawahCommissie Al-Ghofraan",
+                description: campaign ? "Eenmalige donatie" : "Eenmalige algemene donatie",
               },
             },
             quantity: 1,
@@ -197,6 +236,7 @@ export async function POST(request: Request) {
       // betaalmethode (iDEAL is one-shot). Voor maandelijkse donaties is
       // card de standaard. Stripe regelt SEPA-mandate intern als de
       // gebruiker daarvoor kiest in checkout.
+      const stripe = getStripe();
       session = await stripe.checkout.sessions.create({
         mode: "subscription",
         payment_method_types: ["card"],
@@ -207,7 +247,9 @@ export async function POST(request: Request) {
               unit_amount: body.amount_cents,
               recurring:   { interval: "month" },
               product_data: {
-                name:        "Maandelijkse donatie aan DawahCommissie Al-Ghofraan",
+                name: campaign
+                  ? `${campaignTitle} (maandelijks)`
+                  : "Maandelijkse donatie aan DawahCommissie Al-Ghofraan",
               },
             },
             quantity: 1,
@@ -254,6 +296,9 @@ export async function POST(request: Request) {
         donor_email:       body.donor_email,
         message:           body.message ?? null,
         stripe_session_id: session.id,
+        campaign:          campaignId,
+        campaign_slug:     campaignSlug || null,
+        campaign_title:    campaignTitle,
       } as never)
     );
   } catch (err) {

@@ -79,6 +79,12 @@ async function createDonationFromSession(
     const type   = session.mode === "subscription" ? "monthly" : "one_time";
     const amount =
       typeof session.amount_total === "number" ? session.amount_total : 0;
+
+    const campaignIdMeta = (session.metadata?.campaign_id as string) || "";
+    const campaignId     = campaignIdMeta ? Number(campaignIdMeta) : null;
+    const campaignSlug   = (session.metadata?.campaign_slug  as string) || "";
+    const campaignTitle  = (session.metadata?.campaign_title as string) || "Algemene donatie";
+
     const created = await directusServer.request(
       createItem("donations", {
         type,
@@ -93,6 +99,9 @@ async function createDonationFromSession(
           (session.customer_details?.email as string) ||
           "",
         stripe_session_id: session.id,
+        campaign:          Number.isFinite(campaignId) ? campaignId : null,
+        campaign_slug:     campaignSlug || null,
+        campaign_title:    campaignTitle,
       } as never)
     );
     return (created as { id?: string })?.id ?? null;
@@ -235,15 +244,8 @@ export async function POST(request: Request) {
   const rawBody = await request.text();
 
   let event: Stripe.Event;
-  if (!isStripeConfigured()) {
-  return NextResponse.json(
-    { error: "Stripe is niet geconfigureerd." },
-    { status: 503 }
-  );
-}
-
-const stripe = getStripe();
   try {
+    const stripe = getStripe();
     event = stripe.webhooks.constructEvent(rawBody, sig, WEBHOOK_SECRET);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "onbekende fout";

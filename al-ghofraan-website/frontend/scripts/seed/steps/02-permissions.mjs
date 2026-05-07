@@ -12,8 +12,10 @@ const COLLECTIONS = [
   { collection: "page_sections",      filter: { active:    { _eq: true       } } },
   { collection: "page_section_items", filter: { active:    { _eq: true       } } },
   { collection: "education_programs", filter: { status:    { _eq: "published" } } },
-  // BEWUST GEEN public-permissies voor `registrations`:
-  // de /api/inschrijven route schrijft server-side via DIRECTUS_TOKEN.
+  { collection: "donation_campaigns", filter: { status:    { _eq: "published" } } },
+  { collection: "articles",           filter: { status:    { _eq: "published" } } },
+  // BEWUST GEEN public-permissies voor `registrations`, `donations` en
+  // `contact_messages`: die routes schrijven server-side via DIRECTUS_TOKEN.
   { collection: "directus_files",     filter: null },
 ];
 

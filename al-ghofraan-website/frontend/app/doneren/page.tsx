@@ -11,6 +11,7 @@ import {
   getIconSettings,
   getSiteSettings,
   getPageSectionsWithItems,
+  getDonationCampaigns,
   resolveIconKey,
   ICON_KEYS,
 } from "@/lib/directus";
@@ -40,11 +41,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function DonerenPage({ searchParams }: Props) {
-  const [page, iconMap, settings, sections] = await Promise.all([
+  const [page, iconMap, settings, sections, campaigns] = await Promise.all([
     getPageContent("doneren"),
     getIconSettings(),
     getSiteSettings(),
     getPageSectionsWithItems("doneren"),
+    getDonationCampaigns(),
   ]);
 
   const title    = page?.title    || "Steun de DawahCommissie";
@@ -110,7 +112,7 @@ export default async function DonerenPage({ searchParams }: Props) {
           )}
 
           {/* Donatie­formulier */}
-          <DonationForm />
+          <DonationForm campaigns={campaigns} />
 
           {/* Beheerbare body uit Directus */}
           {page?.body && (

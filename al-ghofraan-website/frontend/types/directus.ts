@@ -69,6 +69,10 @@ export interface SiteSettings {
   footer_enabled?: boolean | null;
   default_seo_title?: string | null;
   default_seo_description?: string | null;
+  /** WhatsApp nummer in internationaal formaat (bv. "31612345678" of "+31 6 12345678" — wordt ge-normaliseerd) */
+  whatsapp_number?: string | null;
+  /** Voorgevulde tekst voor de WhatsApp-knop op /contact */
+  whatsapp_default_message?: string | null;
   social_links?: {
     facebook?: string;
     instagram?: string;
@@ -266,6 +270,29 @@ export interface PrayerTimeRow {
   ishaa: string;
 }
 
+// ─── donation_campaigns ──────────────────────────────────────
+export interface DonationCampaign {
+  id: number;
+  status: "draft" | "published" | "archived";
+  title: string;
+  slug: string;
+  description?: string | null;
+  image?: string | DirectusFile | null;
+  /** Doelbedrag in eurocenten */
+  goal_amount?: number | null;
+  /** Leesbare weergave, bv. "€5.000" */
+  goal_amount_display?: string | null;
+  allow_one_time: boolean;
+  allow_monthly: boolean;
+  /** JSON array met euro-bedragen, bv. [5, 10, 25, 50, 100] */
+  suggested_amounts?: number[] | null;
+  /** Voorgeselecteerd bedrag in EURO'S */
+  default_amount?: number | null;
+  featured: boolean;
+  sort?: number | null;
+  created_at?: string | null;
+}
+
 // ─── donations ───────────────────────────────────────────────
 export type DonationType   = "one_time" | "monthly";
 export type DonationStatus =
@@ -295,6 +322,48 @@ export interface Donation {
   raw_event?: Record<string, unknown> | null;
   created_at?: string | null;
   paid_at?: string | null;
+  /** M2O naar donation_campaigns.id — null bij algemene donatie */
+  campaign?: number | null;
+  /** Slug van de campagne ten tijde van donatie (historisch correct) */
+  campaign_slug?: string | null;
+  /** Titel van de campagne ten tijde van donatie. "Algemene donatie" bij geen campagne. */
+  campaign_title?: string | null;
+}
+
+// ─── articles ────────────────────────────────────────────────
+export interface Article {
+  id: number;
+  status: "draft" | "published" | "archived";
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  body?: string | null;
+  image?: string | DirectusFile | null;
+  author_name?: string | null;
+  category?: string | null;
+  /** CSV string ("ramadan,gemeenschap"). Eenvoudig en toegankelijk. */
+  tags?: string | null;
+  published_at?: string | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  featured: boolean;
+  sort?: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+// ─── contact_messages ────────────────────────────────────────
+export type ContactMessageStatus = "new" | "read" | "replied" | "archived";
+
+export interface ContactMessage {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string | null;
+  subject: string;
+  message: string;
+  status: ContactMessageStatus;
+  created_at?: string | null;
 }
 
 // ─── SDK Schema ──────────────────────────────────────────────
@@ -311,4 +380,7 @@ export interface DirectusSchema {
   education_programs: EducationProgram[];
   registrations: Registration[];
   donations: Donation[];
+  donation_campaigns: DonationCampaign[];
+  articles: Article[];
+  contact_messages: ContactMessage[];
 }

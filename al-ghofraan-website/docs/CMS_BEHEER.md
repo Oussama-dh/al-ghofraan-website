@@ -142,9 +142,35 @@ Zie sectie 1, stap 3 voor hoe je items toevoegt.
    bestand zichtbaar in de preview?
 3. **Check rechten** → het bestand moet niet als "private" gemarkeerd zijn
 4. **Veld-interface** → het veld moet de Image-uploadknop tonen, niet
-   een tekst-input. Als dat fout zit, draai `npm run seed` opnieuw —
-   stap 1i patcht oude UUID-input velden naar correcte `file-image`
-   interface
+   een tekst-input. Zo niet:
+   - Draai `npm run seed` opnieuw — stap 1i en 1j patchen oude UUID-input
+     velden automatisch naar correcte `file-image` interface
+   - Werkt dat niet? Volg de handmatige fix hieronder.
+
+### Handmatige fix als een File-field als gewone Input verschijnt
+
+Soms staat een veld in Directus weergegeven als simpele tekst-input in
+plaats van een upload-knop. Stappen om het te repareren:
+
+1. Directus → **Settings** (tandwiel-icoon links onder)
+2. **Data Model** → kies de collectie (bv. `site_settings`, `activities`,
+   `education_programs`, `prayer_time_files`)
+3. Klik op het veld dat verkeerd staat (bv. `logo`, `footer_logo`, `image`,
+   `file`)
+4. Aan de rechterkant zie je **Interface** → klik op het potlood-icoon
+5. Kies:
+   - Voor afbeeldingen: **Image** (`file-image`)
+   - Voor andere bestanden (bv. CSV): **File** (`file`)
+6. Klik **Save**
+
+Bestand-data wordt **niet** verwijderd door deze actie — alleen de
+admin-weergave verandert. Refresh de Directus admin (Ctrl+Shift+R)
+om het nieuwe veld te zien.
+
+> 💡 Velden die deze stap soms nodig hebben: `site_settings.logo`,
+> `site_settings.footer_logo`, `prayer_time_files.file`,
+> `activities.image`, `education_programs.image`,
+> `page_sections.image`, `page_section_items.image`.
 
 ---
 
@@ -484,49 +510,57 @@ de agenda. Inschrijvingen daarop landen óók in **Registrations** met
 ### 12.1 Inschrijvingen bekijken per cursus of activiteit
 
 Inschrijvingen worden centraal beheerd in de **Registrations**-collectie.
-Elke inschrijving heeft een relatie naar het bijbehorende onderwijsprogramma
-of de activiteit (zie velden `education_program` en `activity`).
+Elke inschrijving bevat de bron-info als platte tekst:
 
-> ℹ️ Eerder stond hier dat je inschrijvingen ook **vanuit** een programma
-> of activiteit kon zien (een aparte "Inschrijvingen"-tab). Dat is uit de
-> seed verwijderd: het leverde een database-fout op
-> (`column activities.registrations does not exist`) onder Directus 11.
-> In plaats daarvan filter je nu in de Registrations-collectie zelf.
+| Veld              | Inhoud                                                                |
+|-------------------|------------------------------------------------------------------------|
+| `type`            | `education` of `activity`                                              |
+| `source_slug`     | Slug van de cursus of activiteit (bv. `fiqh-vrouwen`)                  |
+| `source_title`    | Titel zoals die was op het moment van inschrijven                      |
+| `source_id`       | Interne ID van de cursus of activiteit                                 |
 
-**Filteren op één specifieke cursus:**
+> ℹ️ Eerdere versies probeerden ook **relationele velden** (`education_program`
+> en `activity`) toe te voegen voor een gekoppeld "Inschrijvingen"-tabblad
+> per cursus. Dat is uit de seed verwijderd, omdat het in Directus 11
+> leidde tot twee verschillende fouten:
+>
+> 1. `column activities.registrations does not exist` — kapot alias-veld
+> 2. `invalid input syntax for type uuid: "3"` — type-mismatch tussen UUID-relatie en integer-IDs
+>
+> Filteren gaat nu via de bovenstaande tekstvelden — robuust en eenvoudig.
+
+**Filteren op één specifieke cursus of activiteit:**
 
 1. Directus → **Registrations**
 2. Klik bovenaan op het filter-icoon
-3. Kies veld `education_program` → operator `Is equal to` → selecteer de cursus
+3. Kies veld `source_slug` → operator `Is equal to` → typ de slug
+   (bv. `fiqh-vrouwen` of `open-iftar-2025`)
 4. (Optioneel) sla op als preset via de drie puntjes rechtsboven →
    "Save preset" → naam: bv. "Fiqh-cursus inschrijvingen"
 
-**Filteren op één specifieke activiteit:**
-
-Hetzelfde proces, maar kies veld `activity` in plaats van `education_program`.
+> 💡 De slug zie je in de browser-URL van de cursus/activiteit:
+> `/onderwijs/fiqh-vrouwen` → slug = `fiqh-vrouwen`
 
 **Snel een hele kolom inschrijvingen vinden:**
 
-| Wil je zien…                                 | Filter zo                                               |
-|----------------------------------------------|---------------------------------------------------------|
-| Alle onderwijs-inschrijvingen                | `type = education`                                      |
-| Alle activiteit-inschrijvingen               | `type = activity`                                       |
-| Inschrijvingen voor één programma            | `education_program = <selecteer programma>`             |
-| Inschrijvingen voor één activiteit           | `activity = <selecteer activiteit>`                     |
-| Alleen vrouwen voor een cursus               | combineer `education_program = X` met `gender = female` |
-| Nieuwe (onbehandelde) inschrijvingen         | `status = new`                                          |
-| Bevestigde aanmeldingen                      | `status = confirmed`                                    |
+| Wil je zien…                                 | Filter zo                                                |
+|----------------------------------------------|----------------------------------------------------------|
+| Alle onderwijs-inschrijvingen                | `type = education`                                       |
+| Alle activiteit-inschrijvingen               | `type = activity`                                        |
+| Inschrijvingen voor één cursus/activiteit    | `source_slug = <slug>`                                   |
+| Alleen vrouwen voor een cursus               | combineer `source_slug = X` met `gender = female`        |
+| Alleen mannen voor een activiteit            | combineer `source_slug = X` met `gender = male`          |
+| Nieuwe (onbehandelde) inschrijvingen         | `status = new`                                           |
+| Bevestigde aanmeldingen                      | `status = confirmed`                                     |
 
 Je kunt meerdere filters combineren — bijvoorbeeld "alle vrouwen voor de
 Fiqh-cursus die nog op `new` staan". Sla die als preset op zodat je 'm
 later snel terugvindt.
 
-> 💡 **Inschrijvingen van vóór deze update** hebben de relaties
-> (`education_program` / `activity`) niet automatisch gevuld. Die blijven
-> wel zichtbaar in de algemene Registrations-lijst (filter op `type` of
-> `source_slug`), maar verschijnen niet in een filter op programma/activiteit.
-> Wil je oude inschrijvingen alsnog koppelen, open dan de inschrijving in
-> Directus en kies handmatig het programma of de activiteit.
+> 💡 **Slug-naam gewijzigd?** `source_slug` op bestaande inschrijvingen
+> wordt **niet** automatisch bijgewerkt — die blijft de oude waarde houden,
+> zodat het historisch correct blijft. Filter dan op `source_id` om alle
+> inschrijvingen onder de oude én nieuwe slug te zien.
 
 ---
 
@@ -546,20 +580,33 @@ Directus → **Donations**. Sortering staat op nieuwste eerst. Filter op
 
 ### Velden per donatie
 
-| Veld                       | Inhoud                                                  |
-|----------------------------|---------------------------------------------------------|
-| `type`                     | `one_time` (eenmalig) of `monthly` (maandelijks)        |
-| `status`                   | Zie tabel hieronder                                     |
-| `amount`                   | Bedrag in **eurocenten** — bv. 2500 = €25,00            |
-| `currency`                 | Altijd `eur`                                             |
-| `donor_name`               | Naam van de donor (optioneel ingevuld)                  |
-| `donor_email`              | Verplicht — gaat ook naar Stripe voor de bevestigings-mail |
-| `message`                  | Bericht/notitie van de donor (indien ingevuld)          |
-| `stripe_session_id`        | Stripe Checkout-id — om snel terug te vinden in Stripe  |
-| `stripe_payment_intent_id` | Voor eenmalige donaties                                 |
-| `stripe_subscription_id`   | Voor maandelijkse donaties                              |
-| `created_at` / `paid_at`   | Tijdstip aanmaak en betaling                            |
-| `raw_event`                | Laatste Stripe-payload — alleen voor diagnostiek        |
+| Veld                       | Inhoud                                                                  |
+|----------------------------|--------------------------------------------------------------------------|
+| `type`                     | `one_time` (eenmalig) of `monthly` (maandelijks)                         |
+| `status`                   | Zie tabel hieronder                                                      |
+| `amount_display`           | **Leesbare weergave** van het bedrag, bv. "€25,00"                       |
+| `amount`                   | Bedrag in **eurocenten** (bv. 2500 = €25,00) — 1-op-1 met Stripe         |
+| `currency`                 | Altijd `eur`                                                              |
+| `donor_name`               | Naam van de donor — **verplicht** bij elke nieuwe donatie                |
+| `donor_email`              | E-mail — **verplicht**, gebruikt voor Stripe-bevestiging                 |
+| `message`                  | Bericht/notitie van de donor (indien ingevuld)                           |
+| `stripe_session_id`        | Stripe Checkout-id — om snel terug te vinden in Stripe                   |
+| `stripe_payment_intent_id` | Voor eenmalige donaties                                                  |
+| `stripe_subscription_id`   | Voor maandelijkse donaties                                               |
+| `created_at` / `paid_at`   | Tijdstip aanmaak en betaling                                             |
+| `raw_event`                | Laatste Stripe-payload — alleen voor diagnostiek                         |
+
+> 💡 **Twee bedragvelden — waarom?**
+> - `amount` slaat het bedrag op in **eurocenten** als integer. Dat klopt
+>   exact met wat Stripe gebruikt en voorkomt afrondings­fouten. Niet
+>   bewerken — dit is de bron van waarheid.
+> - `amount_display` is de leesbare versie ("€25,00"), automatisch ingevuld
+>   door de website. Handig voor lijstweergave en e-mailtjes.
+
+> ℹ️ **Naam en e-mail zijn verplicht** voor nieuwe donaties. Het
+> donatieformulier accepteert geen lege of alleen-spaties naam, en de
+> server-route weigert het verzoek met een 400-fout. Hierdoor heeft elke
+> nieuwe donatie altijd een herleidbare donor.
 
 ### Status uitgelegd
 
@@ -614,6 +661,191 @@ Directus wordt automatisch bijgewerkt.
 - De webhook-route verifieert élke binnenkomende request met de Stripe
   signing secret — fake events worden geweigerd
 - Voor de eerste keer instellen van Stripe: zie **`docs/STRIPE_SETUP.md`**
+
+---
+
+## 14. Donatiedoelen (campagnes)
+
+Naast algemene donaties kun je specifieke doelen aanmaken — bv. *Onderhoud
+moskee*, *Ramadan iftar*, *Maandelijkse moskee steun*. Donateurs kiezen
+het doel op `/doneren` voordat ze betalen.
+
+### Een campagne aanmaken
+
+Directus → **Donation Campaigns** → klik **+** rechtsboven:
+
+| Veld                  | Wat het doet                                                              |
+|-----------------------|----------------------------------------------------------------------------|
+| `title`               | Naam van het doel (bv. "Ramadan iftar 2026")                              |
+| `slug`                | URL-segment, automatisch uit titel                                         |
+| `description`         | Rich text — uitleg waarom dit doel belangrijk is                          |
+| `image`               | Optionele afbeelding                                                       |
+| `goal_amount`         | Doelbedrag in **eurocenten** (bv. 500000 = €5.000). Optioneel             |
+| `goal_amount_display` | Leesbare weergave (bv. "€5.000"). Vrij in te vullen                       |
+| `allow_one_time`      | Sta eenmalige donaties toe voor dit doel                                  |
+| `allow_monthly`       | Sta maandelijkse donaties toe voor dit doel                               |
+| `suggested_amounts`   | JSON array met euro-bedragen, bv. `[5, 10, 25, 50, 100]`. Leeg = standaard|
+| `default_amount`      | Voorgeselecteerd bedrag in **euro's** (bv. 25). Optioneel                 |
+| `featured`            | Toon extra prominent (`★ uitgelicht` label)                                |
+| `sort`                | Lager getal = bovenaan. Stappen van 10 aanbevolen                          |
+| `status`              | Zet op **`published`** om live te zetten                                   |
+
+### Eenmalig vs. maandelijks toestaan
+
+- **`allow_one_time = true`, `allow_monthly = false`** → donor kan alleen
+  eenmalig doneren voor dit doel
+- **`allow_one_time = false`, `allow_monthly = true`** → alleen maandelijks
+  (handig voor "Maandelijkse moskee steun")
+- **Beide `true`** → donor kiest zelf
+- **Beide `false`** → de campagne is niet zichtbaar op `/doneren`
+  (Directus laat 'm wel staan, want hij is misschien tijdelijk uitgezet)
+
+### Suggested amounts uitleg
+
+Vul een JSON array in **euro's**, bv:
+
+```json
+[10, 25, 50, 100, 250]
+```
+
+Dit zijn de knoppen die de donor ziet. Vrij bedrag blijft altijd mogelijk
+naast de presets. Laat het veld leeg om de standaard set
+(€5/€10/€25/€50/€100) te gebruiken.
+
+### Donaties per campagne bekijken
+
+Directus → **Donations** → filter:
+1. Filter-icoon → veld `campaign` → operator `Is equal to` → kies de campagne
+2. Of filter op `campaign_slug = ramadan-iftar-2026`
+3. Sla op als preset voor hergebruik
+
+> 💡 **`campaign_title` blijft historisch correct.** Wijzig je later de titel
+> van een campagne, dan houden bestaande donaties de oude titel aan zodat
+> je rapportage klopt over tijd. Filter op `campaign` (relatie) om alle
+> donaties onder de huidige én oude titel te zien.
+
+### Status beheren
+
+- **`draft`** — nog niet zichtbaar op de website
+- **`published`** — actief, donateurs kunnen dit doel kiezen
+- **`archived`** — uit de zichtbare lijst; bestaande donaties blijven gekoppeld
+
+---
+
+## 15. Artikelen
+
+`/artikelen` is de overzichtspagina. Elk artikel heeft een eigen detailpagina
+op `/artikelen/<slug>`.
+
+### Een artikel schrijven
+
+Directus → **Articles** → klik **+**:
+
+| Veld              | Wat het doet                                                       |
+|-------------------|---------------------------------------------------------------------|
+| `title`           | Titel van het artikel                                               |
+| `slug`            | URL-segment, automatisch uit titel                                  |
+| `excerpt`         | Korte samenvatting (1-2 zinnen) voor overzicht en social previews   |
+| `body`            | Hoofdtekst — rich text met opmaak                                   |
+| `image`           | Hero-afbeelding (optioneel)                                         |
+| `author_name`     | Auteursnaam                                                          |
+| `category`        | Vrij tekstveld, bv. "Lezing", "Nieuws", "Reflectie"                 |
+| `tags`            | Komma-gescheiden, bv. `ramadan,gemeenschap,jongeren`                |
+| `published_at`    | Datum waarop het artikel als gepubliceerd telt (sortering)          |
+| `seo_title`       | Optioneel — overschrijft default SEO-titel                          |
+| `seo_description` | Optioneel — voor preview op Google en social media                  |
+| `featured`        | Uitgelichte artikelen verschijnen bovenaan op `/artikelen`          |
+| `sort`            | Voor handmatige volgorde wanneer `published_at` gelijk is           |
+
+### Status (draft/published/archived)
+
+- **`draft`** — niet publiek zichtbaar; alleen in Directus
+- **`published`** — verschijnt op `/artikelen` en heeft een eigen detailpagina
+- **`archived`** — niet publiek; gebruik dit om oude artikelen te bewaren
+  zonder ze te verwijderen
+
+### Afbeelding toevoegen
+
+Klik op het `image`-veld → **Choose Existing** of **Upload File** →
+selecteer/upload een afbeelding. Aanbevolen: ≥1200×630px voor scherpe
+weergave op desktop én social previews.
+
+### SEO invullen
+
+`seo_title` en `seo_description` zijn alleen nodig als je de defaults wilt
+overschrijven. Houd `seo_description` onder de 160 tekens — Google knipt
+langere teksten af.
+
+### Een artikel publiceren
+
+1. Vul minimaal `title`, `slug`, `body` en `published_at` in
+2. Zet `status` op **`published`**
+3. **Save**
+4. `/artikelen` toont 'm direct (in dev mode) of na cache-refresh (productie)
+
+---
+
+## 16. Contactpagina en contactberichten
+
+### Waar de contactpagina-tekst staat
+
+Directus → **Page Content** → zoek `slug = contact`. Daar bewerk je:
+- `title`, `subtitle`, `intro` — boven het formulier
+- `body` — onder het formulier (rich text, optioneel)
+- `seo_title` en `seo_description`
+- `status` (laat op `published` staan)
+
+### Waar de contactgegevens staan
+
+Directus → **Site Settings**:
+- `contact_email`
+- `phone`
+- `address` (meerregelig OK)
+- `whatsapp_number` — zie hieronder
+- `whatsapp_default_message` — zie hieronder
+
+Deze velden gebruikt zowel de footer als de contactpagina.
+
+### WhatsApp-knop
+
+Op `/contact` verschijnt een groene **"Stuur ons een WhatsApp"**-knop —
+maar **alleen** als `whatsapp_number` is ingevuld in Site Settings.
+
+| Veld                         | Wat het doet                                                              |
+|------------------------------|----------------------------------------------------------------------------|
+| `whatsapp_number`            | Internationaal formaat. `+31 6 12345678` óf `31612345678` werkt allebei — spaties, plus en streepjes worden automatisch verwijderd |
+| `whatsapp_default_message`   | Optionele tekst die voor­ingevuld wordt in het WhatsApp-gesprek           |
+
+Klik op de knop → opent in nieuw tabblad → `https://wa.me/31612345678?text=...`
+
+> 💡 Geen WhatsApp-API nodig. De knop is een gewone link.
+> Vul je `whatsapp_number` weer leeg, dan verdwijnt de knop op `/contact`.
+
+### Waar contactberichten binnenkomen
+
+Directus → **Contact Messages**. Sortering staat op nieuwste eerst.
+
+| Veld         | Inhoud                                                              |
+|--------------|----------------------------------------------------------------------|
+| `name`       | Naam van de afzender                                                 |
+| `email`      | E-mailadres — antwoord hier op vanuit je eigen mail-app              |
+| `phone`      | Telefoon (optioneel)                                                 |
+| `subject`    | Onderwerp                                                            |
+| `message`    | De daadwerkelijke vraag/opmerking                                    |
+| `status`     | `new` / `read` / `replied` / `archived`                              |
+| `created_at` | Tijdstip van binnenkomst                                             |
+
+### Status uitgelegd
+
+- **`new`** — nog niet gelezen
+- **`read`** — gelezen, antwoord nog niet verstuurd
+- **`replied`** — beantwoord
+- **`archived`** — afgehandeld, verbergen uit standaardweergave
+
+> ⚠️ **Spam-bescherming**: het formulier bevat een verborgen *honeypot*-veld
+> dat bots invullen maar mensen niet. Berichten waar dat veld ingevuld is,
+> worden geweigerd zonder dat ze in de Contact Messages-collectie terechtkomen.
+> Geen captcha nodig — bots worden grotendeels gefilterd.
 
 ---
 

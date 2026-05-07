@@ -48,10 +48,35 @@ export function truncate(text: string, length: number): string {
  */
 export function formatEurFromCents(cents: number): string {
   if (!Number.isFinite(cents)) return "";
-  // toLocaleString met nl-NL geeft "€ 25,00" met smalle non-breaking space.
-  // We willen "€25,00" — daarom handmatig opbouwen.
   const euros = Math.floor(cents / 100);
   const rest  = Math.abs(cents) % 100;
   const restStr = rest.toString().padStart(2, "0");
   return `€${euros},${restStr}`;
+}
+
+/**
+ * Normaliseer een telefoonnummer voor wa.me — alleen cijfers.
+ * Verwijdert +, spaties, streepjes en haakjes.
+ *
+ * "+31 6 12345678" → "31612345678"
+ */
+export function normalizeWhatsAppNumber(raw: string | null | undefined): string {
+  if (!raw) return "";
+  return String(raw).replace(/\D/g, "");
+}
+
+/**
+ * Bouw een wa.me URL. Geeft "" terug als nummer leeg/ongeldig is.
+ */
+export function buildWhatsAppUrl(
+  number: string | null | undefined,
+  defaultMessage?: string | null
+): string {
+  const normalized = normalizeWhatsAppNumber(number);
+  if (!normalized) return "";
+  const base = `https://wa.me/${normalized}`;
+  if (defaultMessage && defaultMessage.trim()) {
+    return `${base}?text=${encodeURIComponent(defaultMessage.trim())}`;
+  }
+  return base;
 }

@@ -9,6 +9,8 @@ export const RESERVED_SLUGS = [
   "doneren",
   "dawahcommissie",
   "onderwijs",
+  "artikelen",
+  "contact",
   "api",
   "favicon.ico",
   "robots.txt",
