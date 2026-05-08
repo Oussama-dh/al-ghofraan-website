@@ -1103,3 +1103,285 @@ Als iets niet werkt:
 - Staat de slug niet in de gereserveerde lijst (sectie 1)?
 
 Hulp nodig: neem contact op met de webbeheerder van de DawahCommissie.
+
+---
+
+## 21. Contactverzoeken en inschrijvingen opvolgen
+
+> **Belangrijk:** de website verstuurt **geen automatische e-mails**. Antwoorden gebeurt voorlopig via je eigen mailprogramma (Outlook, Gmail, Apple Mail, etc.). Directus gebruik je voor **status, notities en conceptreacties** — zo houdt iedereen overzicht over wat is opgevolgd.
+
+### 21.1 Contactberichten (`contact_messages`)
+
+Elk bericht via `/contact` belandt in de collectie **Contact Messages** in Directus. Naast de basisvelden (naam, e-mail, onderwerp, bericht) zijn er opvolgvelden beschikbaar:
+
+| Veld                | Wat doe je ermee?                                                                  |
+|---------------------|------------------------------------------------------------------------------------|
+| `status`            | Nieuw → Gelezen → Beantwoord → Gearchiveerd                                         |
+| `internal_notes`    | Interne notitie voor de DawahCommissie. Niet zichtbaar voor de afzender.           |
+| `last_contacted_at` | Wanneer er voor het laatst contact is geweest. Handmatig invullen na een reactie. |
+| `handled_by`        | Naam of initialen van wie het opvolgt (bv. "AH"). Voorkomt dubbele opvolging.    |
+| `reply_subject`     | Conceptonderwerp voor je antwoord — kopieer naar je mailclient.                    |
+| `reply_draft`       | Conceptantwoord. Bouw je tekst rustig op en kopieer hem als je tevreden bent.     |
+
+#### Aanbevolen werkwijze
+
+1. **Open** een nieuw bericht (status `new`).
+2. **Lees** het door en zet `status` op `read`.
+3. **Vul `handled_by`** in zodat collega's weten dat je ermee bezig bent.
+4. **Schrijf je antwoord** in `reply_draft` (eventueel `reply_subject` ook). Sla op.
+5. **Kopieer** de tekst naar je eigen e-mailprogramma → verstuur naar de afzender.
+6. **Vul `last_contacted_at`** in (datum/tijd) en zet `status` op `replied`.
+7. Eventuele context voor later (bv. "telefonisch nagebeld") in `internal_notes`.
+8. Klaar? Zet `status` op `archived` zodra de zaak afgerond is.
+
+> 💡 Tip: in Directus kun je via **Layout → Card View** of **Filter → Status = new** snel zien wat er nog open staat.
+
+### 21.2 Inschrijvingen (`registrations`)
+
+Inschrijvingen via `/onderwijs/[slug]` of `/agenda/[slug]` belanden in **Registrations**. Naast `name`, `email`, `phone`, `age` en `gender` heb je dezelfde opvolgvelden als bij contactberichten — plus de bestaande statusflow:
+
+| Status         | Betekenis                                       |
+|----------------|-------------------------------------------------|
+| `new`          | Net binnengekomen, nog niet bekeken             |
+| `contacted`    | Er is contact geweest, wacht op bevestiging     |
+| `confirmed`    | Definitief ingeschreven                          |
+| `waiting_list` | Op de wachtlijst                                |
+| `cancelled`    | Geannuleerd door inschrijver of beheerder       |
+
+De velden `internal_notes`, `last_contacted_at`, `handled_by`, `reply_subject` en `reply_draft` werken precies hetzelfde als bij contactberichten (zie 21.1).
+
+#### Speciaal voor onderwijs
+
+Bij onderwijs zijn er vaak **meerdere stappen**: eerste contact → intake-gesprek → bevestiging → start. Gebruik `internal_notes` als een mini-logboek:
+
+```
+12-05  AH gebeld, intake gepland 15-05 19:00
+15-05  AH intake gedaan, geschikt voor groep 3
+16-05  AH bevestiging gestuurd, status → confirmed
+```
+
+### 21.3 Wat niet (nog niet) automatisch is
+
+- ❌ Geen automatische bevestigingsmail naar de afzender bij ontvangst.
+- ❌ Geen automatische verzending van `reply_draft` — dat blijft een **conceptveld**.
+- ❌ Geen SMTP / mailprovider gekoppeld.
+- ❌ Geen Directus extension actief.
+
+Als hier in de toekomst behoefte aan ontstaat, kan dat in een aparte release toegevoegd worden. Voor nu blijft het bewust handmatig — minder onderhoud, geen risico op spam-mails bij Directus-bugs.
+
+---
+
+## 22. TV-display gebedstijden (`/gebedstijden/tv`)
+
+Voor het grote tv-scherm in de moskee is er een aparte fullscreen-pagina:
+
+```
+https://al-ghofraan.com/gebedstijden/tv
+```
+
+Deze toont:
+- de naam van de moskee + datum
+- een live klok
+- de gebedstijden van vandaag (uit dezelfde CSV als `/gebedstijden`)
+- het eerstvolgende gebed met countdown
+- roterend onderaan: mededelingen, ahadith en reminders
+
+> 💡 Open de pagina op de tv en zet de browser in **fullscreen-modus** (F11 op de meeste browsers). Geen apparaatkoppeling of API-key nodig.
+
+### 22.1 Werking in het kort
+
+- Tijdzone is altijd **Europe/Amsterdam** — onafhankelijk van de browser-instellingen.
+- Klok loopt elke seconde, countdown verschuift mee.
+- Bij dagwisseling (om middernacht NL-tijd) ververst de pagina automatisch zodat de nieuwe dag verschijnt.
+- Als safety-net herlaadt de pagina ook elke 30 minuten zelf.
+- Als er **geen CSV** is geüpload, toont de pagina een nette melding ("Gebedstijden zijn tijdelijk niet beschikbaar"). Er worden **nooit nep-tijden** getoond.
+- Als er geen mededelingen zijn, blijft de pagina werken — alleen gebedstijden zijn dan zichtbaar.
+
+### 22.2 Mededelingen toevoegen — `tv_announcements`
+
+Open in Directus de collectie **TV Announcements**. Voor elk item:
+
+| Veld            | Wat is het?                                                                          |
+|-----------------|--------------------------------------------------------------------------------------|
+| `status`        | `published` om te tonen op tv. `draft` = niet zichtbaar.                              |
+| `type`          | `announcement` (mededeling), `hadith`, `reminder`, `event`, `donation`               |
+| `title`         | Korte titel (verschijnt vet bovenaan)                                                |
+| `body`          | Hoofdtekst (1-3 zinnen) — leesbaar op afstand                                       |
+| `arabic_text`   | Optioneel — Arabische tekst (vooral voor hadith). Wordt in Arabisch lettertype getoond. |
+| `translation`   | Optioneel — Nederlandse vertaling. Komt onder de Arabische tekst.                    |
+| `source`        | Bron (bv. "Sahieh al-Boekhari") — verplicht bij hadith                              |
+| `reference`     | Hadith-nummer of -referentie (bv. "6018")                                            |
+| `grade`         | Hadith-status (bv. "Sahieh", "Hasan", "Mutawatir")                                   |
+| `display_from`  | Optioneel — toon vanaf datum/tijd. Leeg = direct.                                    |
+| `display_until` | Optioneel — verberg na datum/tijd. Leeg = onbeperkt.                                  |
+| `active`        | Snelle aan/uit-schakelaar. `false` = niet tonen, ook bij `published`.                |
+| `show_on_tv`    | Aparte vlag — laat staan op `true`.                                                  |
+| `sort`          | Lager getal verschijnt eerder in de rotatie.                                         |
+
+#### Wat zie ik op het scherm?
+
+- **Voor `hadith`**: titel, Arabische tekst (groot), vertaling, daaronder bron + referentie + grade in cursief.
+- **Voor de andere types**: titel + body. Eventueel `arabic_text` als je dat wilt tonen.
+- Items roteren elke **18 seconden**. Onderaan verschijnen kleine streepjes als rotatie-indicator.
+
+#### Voorbeeld — een hadith
+
+| Veld          | Waarde                                                                         |
+|---------------|--------------------------------------------------------------------------------|
+| `status`      | `published`                                                                    |
+| `type`        | `hadith`                                                                       |
+| `title`       | De waarde van een glimlach                                                     |
+| `arabic_text` | تَبَسُّمُكَ فِي وَجْهِ أَخِيكَ لَكَ صَدَقَةٌ                                         |
+| `translation` | "Een glimlach naar je broeder is een aalmoes."                                |
+| `source`      | Jami` at-Tirmidhi                                                             |
+| `reference`   | 1956                                                                           |
+| `grade`       | Sahieh                                                                         |
+| `active`      | `true`                                                                          |
+| `sort`        | 10                                                                             |
+
+#### Voorbeeld — een mededeling
+
+| Veld     | Waarde                                                              |
+|----------|---------------------------------------------------------------------|
+| `status` | `published`                                                         |
+| `type`   | `announcement`                                                      |
+| `title`  | Vrijdaggebed verplaatst                                             |
+| `body`   | Aanstaande vrijdag start de Khoetbah om 13:30 i.v.m. werkzaamheden. |
+| `active` | `true`                                                              |
+| `sort`   | 0                                                                   |
+
+### 22.3 Ahadith — handmatig invoeren, altijd verifiëren
+
+> ⚠️ **Belangrijk**: ahadith voer je **altijd handmatig** in. Er is bewust geen externe hadith-API gekoppeld omdat:
+>
+> - de bron en grade **gecontroleerd** moeten zijn voor je het op een tv-scherm zet
+> - automatische import zou kunnen leiden tot zwakke of vervalste overleveringen
+> - het past bij de stijl van de site: rustig, beheerd, niet vol met content
+
+Bron + referentie + grade altijd zelf invullen, bij voorkeur uit een betrouwbare verzameling (Sahieh al-Boekhari, Sahieh Moeslim, Sunan-werken, Riyad as-Salihien etc.). Bij twijfel: niet plaatsen.
+
+### 22.4 Tijdelijke mededelingen plannen
+
+Wil je een mededeling die **alleen volgende week** verschijnt? Vul `display_from` en `display_until` in:
+
+- `display_from = 2026-05-15 00:00`
+- `display_until = 2026-05-22 23:59`
+
+De pagina filtert items automatisch op het tijdvenster. Buiten dat venster wordt het item niet getoond, ook als `status=published` is.
+
+### 22.5 Wat NIET in tv_announcements hoort
+
+- ❌ Persoonlijke namen of telefoonnummers (komt op groot scherm in de gemeenschap)
+- ❌ Lange teksten — houd het bij 1-3 zinnen, leesbaar op afstand
+- ❌ Externe links of QR-codes (die kun je beter naar `/dawahcommissie` of `/contact` verwijzen)
+- ❌ Iconen, emoji's of opmaak in de tekst — de layout doet dit zelf
+
+### 22.6 Slideshow-snelheid en refresh-interval instellen
+
+In **Site Settings** kun je drie velden aanpassen om het tempo en de versheid van de TV-display te tunen:
+
+| Veld                       | Eenheid  | Default | Wat doet het?                                                                  |
+|----------------------------|----------|---------|--------------------------------------------------------------------------------|
+| `tv_prayer_slide_seconds`  | seconden | 25      | Hoe lang de gebedstijden-slide te zien is voordat de volgende mededeling komt   |
+| `tv_item_slide_seconds`    | seconden | 15      | Hoe lang elke mededeling/hadith/reminder te zien is                             |
+| `tv_refresh_minutes`       | minuten  | 5       | Hoe vaak de TV-pagina nieuwe data ophaalt vanaf de server (announcements/CSV)   |
+
+Veilige grenzen:
+
+- prayer/item slide-duur worden geclamp naar minimaal 5 / 3 seconden en maximaal 600 (10 min). Hierdoor kun je niet per ongeluk de TV onleesbaar snel zetten.
+- refresh-interval wordt geclamp naar minimaal 1 en maximaal 240 minuten.
+- Leeg laten of een ongeldige waarde → fallback naar default.
+
+Wijzigingen worden zichtbaar zodra de TV de pagina opnieuw laadt — wacht hier maximaal `tv_refresh_minutes` op, of laad de pagina handmatig opnieuw.
+
+> 💡 Tip: voor een rustige tv-ervaring werken `25` / `15` / `5` prima. Wil je een drukkere mededelingen-cyclus tijdens een evenement? Zet bv. `tv_item_slide_seconds = 10` zodat de carousel sneller doorrolt. Voor heel kort iets aankondigen kan `tv_refresh_minutes = 1` zodat het direct verschijnt.
+
+
+---
+
+## 23. Islamitische kalender (`hijri_date_overrides`)
+
+Op `/gebedstijden/overzicht` staat naast de gewone gregoriaanse datum nu ook de **Hidjri-datum** in een aparte kolom rechts. Bovenaan zie je de Hidjri-range van de geselecteerde maand (bv. *21 Dhul-Qi'dah 1447 — 21 Dhul-Hidjja 1447*).
+
+Op `/gebedstijden` zie je naast de "Vandaag — woensdag 08-05" header een klein chip met de Hidjri-datum van vandaag.
+
+### 23.1 Werking
+
+- Standaard wordt de Hidjri-datum berekend volgens **Umm al-Qura** (de Saoedische berekeningsmethode), via de native browser/Node API. Dit werkt zonder externe API of dependency.
+- De berekening is consistent met wat gangbaar is in NL-moskeeën.
+
+### 23.2 Wanneer overrides nodig zijn
+
+Soms wijkt een lokaal vastgestelde datum (bv. **start Ramadan na maanwaarneming**) af van Umm al-Qura. Dan kun je voor specifieke dagen een handmatige override invoeren in **Hijri Date Overrides**.
+
+| Veld              | Wat is het?                                                       |
+|-------------------|--------------------------------------------------------------------|
+| `gregorian_date`  | De gregoriaanse datum die je wilt overrulen (uniek — één per dag) |
+| `hijri_day`       | Hidjri-dag (1–30)                                                  |
+| `hijri_month`     | Hidjri-maand (1–12, dropdown met namen)                            |
+| `hijri_year`      | Hidjri-jaar (bv. 1447)                                             |
+| `note`            | Optionele toelichting (bv. "Start Ramadan na maanwaarneming")     |
+| `active`          | Snel uit te zetten zonder te verwijderen                           |
+
+### 23.3 Voorbeeld
+
+Stel: Umm al-Qura zegt dat 1 Ramadan 1447 valt op 18 februari 2026. Maar lokaal in NL is na maanwaarneming bepaald dat 1 Ramadan 1447 op **19 februari 2026** is. Dan voer je in:
+
+| Veld | Waarde |
+|------|--------|
+| `gregorian_date` | 2026-02-19 |
+| `hijri_day` | 1 |
+| `hijri_month` | 9 — Ramadan |
+| `hijri_year` | 1447 |
+| `note` | Start Ramadan na maanwaarneming Steenbergen |
+| `active` | true |
+
+Vanaf dat moment toont het maandoverzicht voor 19 februari "1 Ramadan 1447" in plaats van wat Umm al-Qura zou geven.
+
+### 23.4 Beperkingen
+
+- Overrides werken **per dag** — niet per maand of langere periode. Voor een nieuwe Ramadan-start moet je alleen de eerste dag overruleren; de daaropvolgende dagen worden weer via Umm al-Qura berekend (en kloppen dan automatisch want ze blijven meelopen).
+- Heb je liever een hele Ramadan handmatig vastleggen? Dan voeg je 30 (of 29) opeenvolgende overrides toe.
+
+---
+
+## 24. Onderwerpen contactformulier (`contact_subjects`)
+
+Het onderwerp-veld in het contactformulier op `/contact` is nu een **dropdown** in plaats van een vrij tekstveld. Beheer de keuzes via Directus → **Contact Subjects**.
+
+### 24.1 Standaardonderwerpen
+
+Bij eerste seed worden zes onderwerpen aangemaakt (alleen als ze nog niet bestaan — handmatige edits worden nooit overschreven):
+
+- Algemeen
+- Onderwijs
+- Donaties
+- Activiteiten
+- Gebedstijden
+- Technisch probleem
+
+### 24.2 Een nieuw onderwerp toevoegen
+
+| Veld         | Wat doe je ermee?                                                                |
+|--------------|----------------------------------------------------------------------------------|
+| `status`     | `published` om te tonen, `draft` om verborgen te houden                          |
+| `label`      | Wat de bezoeker ziet, bv. "Vrijdagpreek-suggestie"                               |
+| `value`      | Wat in `contact_messages.subject` wordt opgeslagen. Houd kort en uniek.           |
+| `description` | Optionele uitleg voor admin (niet zichtbaar voor bezoeker)                       |
+| `sort`       | Lager getal = eerder in de dropdown                                              |
+| `active`     | Snel uit te zetten zonder de status te wijzigen                                  |
+
+### 24.3 Werking en validatie
+
+- Op `/contact` verschijnen alleen onderwerpen met `status=published` én `active=true`, gesorteerd op `sort` oplopend
+- De API valideert het ingestuurde onderwerp tegen de lijst — onbekende waarden worden geweigerd met een nette foutmelding
+- In `contact_messages` wordt de **label** opgeslagen (de leesbare versie), niet de `value`. Zo zie je in de admin-mailbox direct wat de bezoeker bedoelde.
+
+### 24.4 Wat als de lijst leeg is?
+
+Mocht je per ongeluk alle onderwerpen op `draft` zetten of de collectie leegmaken, dan valt het formulier automatisch terug op een vrij tekstveld. **Geen lock-out** voor bezoekers. Maar de seed maakt altijd minstens 6 standaardonderwerpen aan, dus dit zou alleen in extreme gevallen gebeuren.
+
+
+---
+
+Hulp nodig: neem contact op met de webbeheerder van de DawahCommissie.

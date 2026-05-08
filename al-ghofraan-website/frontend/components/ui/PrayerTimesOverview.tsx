@@ -4,11 +4,23 @@
 import { useMemo, useState } from "react";
 import PrayerTimesTable      from "@/components/ui/PrayerTimesTable";
 import { parseRowDate, getMonthRows } from "@/lib/prayerTimes";
-import type { PrayerTimeRow } from "@/types/directus";
+import {
+  buildHijriOverrideMap,
+  getHijriDate,
+  formatHijriShortNl,
+  parseGregorianDate,
+} from "@/lib/hijri";
+import type { PrayerTimeRow, HijriDateOverride } from "@/types/directus";
 import { cn }                from "@/lib/utils";
 
 interface PrayerTimesOverviewProps {
   rows: PrayerTimeRow[];
+  /**
+   * Optionele Hijri-overrides uit Directus. Wordt naar een Map omgezet en
+   * gebruikt om per gregoriaanse datum de Hijri-equivalent te bepalen.
+   * Zonder overrides valt alles terug op Umm al-Qura via Intl.
+   */
+  hijriOverrides?: HijriDateOverride[];
 }
 
 const MAANDEN = [
@@ -16,7 +28,7 @@ const MAANDEN = [
   "Juli", "Augustus", "September", "Oktober", "November", "December",
 ];
 
-export default function PrayerTimesOverview({ rows }: PrayerTimesOverviewProps) {
+export default function PrayerTimesOverview({ rows, hijriOverrides }: PrayerTimesOverviewProps) {
   const availableYears = useMemo(() => {
     const set = new Set<number>();
     for (const row of rows) {
@@ -40,6 +52,46 @@ export default function PrayerTimesOverview({ rows }: PrayerTimesOverviewProps) 
     () => getMonthRows(rows, selectedYear, selectedMonth),
     [rows, selectedYear, selectedMonth]
   );
+
+  // Hijri-mapping per CSV-rij. Bij een lege overrides-prop is `overrideMap` leeg
+  // en valt alles terug op Intl.
+  const overrideMap = useMemo(
+    () => buildHijriOverrideMap(hijriOverrides ?? []),
+    [hijriOverrides],
+  );
+
+  const hijriByDatum = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const row of filteredRows) {
+      // `row.datum` kan diverse formaten hebben — we gebruiken parseGregorianDate
+      // en daarna parseRowDate als laatste poging zodat we altijd consistent zijn.
+      const date =
+        parseGregorianDate(row.datum) ||
+        (() => {
+          const p = parseRowDate(row.datum);
+          return p ? new Date(Date.UTC(p.year, p.month - 1, p.day)) : null;
+        })();
+      if (!date) continue;
+      const hijri = getHijriDate(date, overrideMap);
+      if (hijri) {
+        map[row.datum] = formatHijriShortNl(hijri);
+      }
+    }
+    return map;
+  }, [filteredRows, overrideMap]);
+
+  // Hijri-strip: eerste en laatste Hijri-datum van de zichtbare maand.
+  // "Maand X loopt grofweg van Y tot Z" — Hijri leidend.
+  const hijriRangeLabel = useMemo(() => {
+    if (filteredRows.length === 0) return null;
+    const firstKey = filteredRows[0].datum;
+    const lastKey  = filteredRows[filteredRows.length - 1].datum;
+    const first    = hijriByDatum[firstKey];
+    const last     = hijriByDatum[lastKey];
+    if (!first || !last) return null;
+    if (first === last) return first;
+    return `${first} — ${last}`;
+  }, [filteredRows, hijriByDatum]);
 
   const todayDatum = useMemo(() => {
     if (selectedYear !== now.getFullYear() || selectedMonth !== now.getMonth() + 1) {
@@ -107,13 +159,26 @@ export default function PrayerTimesOverview({ rows }: PrayerTimesOverviewProps) 
         )}
       </div>
 
-      {/* Tabel met aparte Dag-kolom */}
+      {/* Hijri-strip — leidend bij maandoverzichten zoals gevraagd */}
+      {hijriRangeLabel && (
+        <div className="rounded-2xl bg-slate-mosque/5 border border-slate-mosque/15 px-5 py-3 flex items-center justify-between gap-3">
+          <span className="font-body text-xs uppercase tracking-widest text-slate-mosque/80 font-semibold">
+            Hidjri
+          </span>
+          <span className="font-display text-base sm:text-lg text-slate-mosque text-right">
+            {hijriRangeLabel}
+          </span>
+        </div>
+      )}
+
+      {/* Tabel met aparte Dag-kolom + Hijri-kolom */}
       {filteredRows.length > 0 ? (
         <PrayerTimesTable
           rows={filteredRows}
           todayDatum={todayDatum}
           shortDateOnly
           showDayColumn
+          hijriByDatum={hijriByDatum}
         />
       ) : (
         <div className="bg-white border border-sand-200 rounded-2xl p-8 text-center">

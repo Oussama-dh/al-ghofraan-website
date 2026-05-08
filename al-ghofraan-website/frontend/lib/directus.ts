@@ -24,6 +24,8 @@ import type {
   Article,
   Video,
   TvAnnouncement,
+  HijriDateOverride,
+  ContactSubject,
 } from "@/types/directus";
 
 const DIRECTUS_INTERNAL_URL =
@@ -410,6 +412,54 @@ export async function getTvAnnouncements(): Promise<TvAnnouncement[]> {
       });
     },
     "getTvAnnouncements",
+    []
+  );
+}
+
+// ─── Hijri date overrides ────────────────────────────────────
+const HIJRI_OVERRIDE_FIELDS = [
+  "id", "gregorian_date", "hijri_day", "hijri_month", "hijri_year",
+  "note", "active", "created_at",
+];
+
+export async function getHijriDateOverrides(): Promise<HijriDateOverride[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("hijri_date_overrides", {
+          filter: { active: { _eq: true } } as never,
+          sort:   ["gregorian_date"],
+          limit:  -1,
+          fields: HIJRI_OVERRIDE_FIELDS,
+        })
+      );
+      return (result as unknown as HijriDateOverride[]) ?? [];
+    },
+    "getHijriDateOverrides",
+    []
+  );
+}
+
+// ─── Contact subjects ────────────────────────────────────────
+const CONTACT_SUBJECT_FIELDS = [
+  "id", "status", "label", "value", "description",
+  "sort", "active", "created_at",
+];
+
+export async function getContactSubjects(): Promise<ContactSubject[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("contact_subjects", {
+          filter: { status: { _eq: "published" }, active: { _eq: true } } as never,
+          sort:   ["sort", "label"],
+          limit:  -1,
+          fields: CONTACT_SUBJECT_FIELDS,
+        })
+      );
+      return (result as unknown as ContactSubject[]) ?? [];
+    },
+    "getContactSubjects",
     []
   );
 }

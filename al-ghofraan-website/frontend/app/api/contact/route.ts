@@ -6,7 +6,7 @@
 // maar een mens niet, want het is hidden).
 
 import { NextResponse } from "next/server";
-import { directusServer } from "@/lib/directus";
+import { directusServer, getContactSubjects } from "@/lib/directus";
 import { createItem } from "@directus/sdk";
 
 export const runtime = "nodejs";
@@ -99,13 +99,46 @@ export async function POST(request: Request) {
   }
   const body = parsed.data;
 
+  // ─── Subject server-side valideren tegen contact_subjects ──────
+  // Strategie:
+  //   - Lijst leeg of fetch faalt → vrije tekst toestaan (backwards compat
+  //     voor sites waar de seed nog niet is gedraaid).
+  //   - Lijst niet leeg → ingestuurd subject moet matchen op `value` óf `label`
+  //     (case-insensitive). Geen match = 400.
+  //   - Bij match → normaliseer naar `label` zodat de admin altijd nette
+  //     weergave krijgt in `contact_messages`.
+  let subjectToStore = body.subject;
+  try {
+    const subjects = await getContactSubjects();
+    if (subjects.length > 0) {
+      const incoming = body.subject.trim().toLowerCase();
+      const match = subjects.find(
+        (s) =>
+          s.value.toLowerCase() === incoming ||
+          s.label.toLowerCase() === incoming,
+      );
+      if (!match) {
+        return NextResponse.json(
+          { error: "Kies een geldig onderwerp uit de lijst." },
+          { status: 400 },
+        );
+      }
+      subjectToStore = match.label;
+    }
+  } catch (err) {
+    // Validatie-lookup faalt = niet-blokkerend; we slaan dan op met de ruwe
+    // tekst. Honeypot + length-check hebben we al gedaan, dus zelfs zonder
+    // validatie is er geen aanvalsvector.
+    console.warn("[contact] subject-validatie overgeslagen:", err);
+  }
+
   try {
     await directusServer.request(
       createItem("contact_messages", {
         name:    body.name,
         email:   body.email,
         phone:   body.phone ?? null,
-        subject: body.subject,
+        subject: subjectToStore,
         message: body.message,
         status:  "new",
       } as never)

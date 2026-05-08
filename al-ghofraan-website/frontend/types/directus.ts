@@ -439,6 +439,39 @@ export interface TvAnnouncement {
   created_at?: string | null;
 }
 
+// ─── contact_subjects ────────────────────────────────────────
+/**
+ * Onderwerpen voor het contactformulier-dropdown. Beheerder maakt
+ * deze zelf aan in Directus.
+ */
+export interface ContactSubject {
+  id: number;
+  status: "draft" | "published" | "archived";
+  label: string;
+  value: string;            // wat in contact_messages.subject wordt opgeslagen
+  description?: string | null;
+  sort?: number | null;
+  active: boolean;
+  created_at?: string | null;
+}
+
+// ─── hijri_date_overrides ────────────────────────────────────
+/**
+ * Handmatige override op de Umm al-Qura Hijri-kalender.
+ * Eén override per gregoriaanse datum (uniek).
+ */
+export interface HijriDateOverride {
+  id: number;
+  /** YYYY-MM-DD — Directus kan deze als ISO string teruggeven, frontend slicet altijd op 10 chars. */
+  gregorian_date: string;
+  hijri_day: number;
+  hijri_month: number; // 1..12
+  hijri_year: number;
+  note?: string | null;
+  active: boolean;
+  created_at?: string | null;
+}
+
 // ─── SDK Schema ──────────────────────────────────────────────
 export interface DirectusSchema {
   activities: Activity[];
@@ -458,4 +491,6 @@ export interface DirectusSchema {
   videos: Video[];
   contact_messages: ContactMessage[];
   tv_announcements: TvAnnouncement[];
+  hijri_date_overrides: HijriDateOverride[];
+  contact_subjects: ContactSubject[];
 }

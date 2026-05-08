@@ -6,7 +6,7 @@ import SectionTitle from "@/components/ui/SectionTitle";
 import Button from "@/components/ui/Button";
 import PrayerTimesOverview from "@/components/ui/PrayerTimesOverview";
 import { ChevronLeft } from "lucide-react";
-import { getActivePrayerTimeFile, getInternalAssetUrl, getSiteSettings, getPageSectionsWithItems } from "@/lib/directus";
+import { getActivePrayerTimeFile, getInternalAssetUrl, getSiteSettings, getPageSectionsWithItems, getHijriDateOverrides } from "@/lib/directus";
 import { parsePrayerTimesCSV } from "@/lib/prayerTimes";
 import type { PrayerTimeRow } from "@/types/directus";
 
@@ -25,6 +25,9 @@ export default async function GebedstijdenOverzichtPage() {
   let allRows: PrayerTimeRow[] = [];
   let fileInfo: { title: string; year: number; uploaded_at: string } | null = null;
   let error: string | null = null;
+
+  // Hijri-overrides parallel ophalen — falen mag, vallen we terug op pure Intl-berekening
+  const hijriOverrides = await getHijriDateOverrides();
 
   try {
     const prayerFile = await getActivePrayerTimeFile();
@@ -103,7 +106,7 @@ export default async function GebedstijdenOverzichtPage() {
           )}
 
           {allRows.length > 0 ? (
-            <PrayerTimesOverview rows={allRows} />
+            <PrayerTimesOverview rows={allRows} hijriOverrides={hijriOverrides} />
           ) : (
             !error && (
               <div className="bg-white border border-sand-200 rounded-2xl p-8 text-center">
