@@ -32,25 +32,52 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     getSiteSettings(),
   ]);
   if (!article) return { title: "Artikel niet gevonden" };
-  return {
-    title: article.seo_title || article.title,
-    description:
-      article.seo_description ||
-      article.excerpt ||
-      settings?.default_seo_description ||
-      undefined,
-  };
+
+  // Defensief: alleen strings teruggeven aan Next.js Metadata.
+  const title =
+    (typeof article.seo_title === "string" && article.seo_title) ||
+    (typeof article.title     === "string" && article.title)     ||
+    "Artikel";
+  const description =
+    (typeof article.seo_description === "string" && article.seo_description) ||
+    (typeof article.excerpt          === "string" && article.excerpt)          ||
+    (typeof settings?.default_seo_description === "string" && settings.default_seo_description) ||
+    undefined;
+
+  return { title, description };
 }
 
 export default async function ArtikelDetailPage({ params }: Props) {
   const article = await getArticleBySlug(params.slug);
   if (!article) notFound();
 
-  const imageId  = typeof article.image === "string" ? article.image : article.image?.id;
+  // ─── Defensieve velden-extractie ──────────────────────────────────
+  // Een 500 op deze pagina is meestal een gevolg van een veld dat in
+  // Directus een ander type heeft dan TS verwacht (bv. `tags` als integer
+  // omdat een admin "2024" intypte, of `image` als object zonder id).
+  // Daarom hieronder elke veldtoegang door een try/catch + type-guard.
+  const imageId =
+    typeof article.image === "string"
+      ? article.image
+      : (article.image && typeof article.image === "object" && "id" in article.image
+          ? article.image.id
+          : null);
   const imageUrl = imageId ? getAssetUrl(imageId) : "";
-  const tags     = article.tags
-    ? article.tags.split(",").map((t) => t.trim()).filter(Boolean)
-    : [];
+
+  // Tags veilig naar string[] — werkt of `tags` nu string is, null, of iets anders.
+  const tags: string[] =
+    typeof article.tags === "string" && article.tags.length > 0
+      ? article.tags.split(",").map((t) => t.trim()).filter(Boolean)
+      : [];
+
+  // Categorie altijd als string of null
+  const categoryLabel =
+    typeof article.category === "string" && article.category.trim().length > 0
+      ? article.category.trim()
+      : null;
+
+  // Body: alleen renderen als het een string is. Geen objecten/null/numbers.
+  const bodyHtml = typeof article.body === "string" ? article.body : "";
 
   return (
     <>
@@ -72,22 +99,22 @@ export default async function ArtikelDetailPage({ params }: Props) {
             ← Terug naar artikelen
           </Button>
           <div className="max-w-2xl">
-            {article.category && (
+            {categoryLabel && (
               <span className="inline-block bg-taupe text-white text-xs font-body px-3 py-1 rounded-full mb-4">
-                {article.category}
+                {categoryLabel}
               </span>
             )}
             <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl text-white mb-4 leading-tight">
               {article.title}
             </h1>
             <div className="flex flex-wrap gap-4 text-sand/80 text-sm font-body">
-              {article.author_name && (
+              {typeof article.author_name === "string" && article.author_name && (
                 <span className="flex items-center gap-2">
                   <Icon name="user" className="w-4 h-4" />
                   {article.author_name}
                 </span>
               )}
-              {article.published_at && (
+              {typeof article.published_at === "string" && article.published_at && (
                 <span className="flex items-center gap-2">
                   <Icon name="calendar" className="w-4 h-4" />
                   {formatDate(article.published_at, "d MMMM yyyy")}
@@ -112,16 +139,16 @@ export default async function ArtikelDetailPage({ params }: Props) {
             </div>
           )}
 
-          {article.excerpt && (
+          {typeof article.excerpt === "string" && article.excerpt && (
             <p className="font-body text-lg text-taupe-dark leading-relaxed mb-8 italic border-l-4 border-slate-mosque/30 pl-4">
               {article.excerpt}
             </p>
           )}
 
-          {article.body && (
+          {bodyHtml && (
             <div
               className="prose prose-lg max-w-none font-body text-ink leading-relaxed prose-headings:font-display prose-headings:text-ink prose-a:text-slate-mosque"
-              dangerouslySetInnerHTML={{ __html: article.body }}
+              dangerouslySetInnerHTML={{ __html: bodyHtml }}
             />
           )}
 

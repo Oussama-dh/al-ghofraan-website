@@ -21,6 +21,7 @@ import {
   getNextPrayerKey,
   formatPrayerFileTitle,
   getAmsterdamDateParts,
+  getDayName,
 } from "@/lib/prayerTimes";
 import type { PrayerTimeRow }     from "@/types/directus";
 
@@ -86,11 +87,14 @@ export default async function GebedstijdenPage() {
           const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
 
           const isDev = process.env.NODE_ENV !== "production";
-          const resp = await fetch(assetUrl, {
-            headers,
-            cache: isDev ? "no-store" : "default",
-            next:  isDev ? undefined  : { revalidate: 3600 },
-          });
+          // Next.js verbiedt het combineren van `cache` en `next.revalidate`.
+          // Dev: geen cache. Prod: alleen revalidate (geen `cache`-veld).
+          const resp = await fetch(
+            assetUrl,
+            isDev
+              ? { headers, cache: "no-store" }
+              : { headers, next: { revalidate: 3600 } },
+          );
           if (resp.ok) {
             const csv = await resp.text();
             allRows   = parsePrayerTimesCSV(csv);
@@ -124,10 +128,18 @@ export default async function GebedstijdenPage() {
   const rowForHighlight = todayRow || FALLBACK_ROW;
   const nextPrayerKey   = getNextPrayerKey(rowForHighlight);
 
-  // Vandaag-header label (dd-mm)
-const todayParts = getAmsterdamDateParts();
-const dd = String(todayParts.day).padStart(2, "0");
-const mm = String(todayParts.month).padStart(2, "0");
+  // Vandaag-header label (weekdag dd-mm)
+  const todayParts = getAmsterdamDateParts();
+  const dd = String(todayParts.day).padStart(2, "0");
+  const mm = String(todayParts.month).padStart(2, "0");
+  // Weekdag op basis van gebedstijden-rij (datum-string in CSV) als die bestaat,
+  // anders zelf opbouwen vanuit Amsterdamse parts.
+  const todayWeekday = todayRow
+    ? getDayName(todayRow.datum)
+    : (() => {
+        const d = new Date(todayParts.year, todayParts.month - 1, todayParts.day);
+        return ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"][d.getDay()];
+      })();
 
   // Highlight in tabel matcht op datum-string van vandaag-rij
   const todayDatum = todayRow?.datum;
@@ -173,7 +185,7 @@ const mm = String(todayParts.month).padStart(2, "0");
           <div className="mb-12">
             <h2 className="font-display text-2xl text-ink mb-6 flex items-center gap-3">
               <span className="w-2 h-8 bg-slate-mosque rounded-full inline-block" />
-              Vandaag — {dd}-{mm}
+              <span className="capitalize">Vandaag — {todayWeekday} {dd}-{mm}</span>
             </h2>
 
             {todayRow ? (
@@ -219,6 +231,7 @@ const mm = String(todayParts.month).padStart(2, "0");
                 rows={displayRows}
                 todayDatum={todayDatum}
                 shortDateOnly
+                showDayColumn
               />
             </div>
           )}

@@ -24,6 +24,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter }                    from "next/navigation";
+import { Sunrise, Sun, CloudSun, Sunset, Moon, MoonStar } from "lucide-react";
+import type { LucideIcon }              from "lucide-react";
 import { cn }                           from "@/lib/utils";
 import {
   getAmsterdamDateParts,
@@ -42,13 +44,20 @@ import type {
 // Fallback-defaults staan in de page.tsx (clampSeconds/clampMinutes).
 const SAFETY_REFRESH_MS_FALLBACK = 5 * 60_000;
 
-const GEBEDEN: ReadonlyArray<{ key: PrayerKey; label: string; arabic: string }> = [
-  { key: "fajr",     label: "Fajr",     arabic: "الفجر"   },
-  { key: "shoeroeq", label: "Shoeroeq", arabic: "الشروق"  },
-  { key: "dhoehr",   label: "Dhoehr",   arabic: "الظهر"   },
-  { key: "asr",      label: "Asr",      arabic: "العصر"   },
-  { key: "maghrib",  label: "Maghrib",  arabic: "المغرب"  },
-  { key: "ishaa",    label: "Ishaa",    arabic: "العشاء"  },
+// Zelfde icoon-mapping en volgorde als components/ui/PrayerTimesTable.tsx
+// (TodayPrayerCard) — visuele consistentie met /gebedstijden.
+const GEBEDEN: ReadonlyArray<{
+  key:    PrayerKey;
+  label:  string;
+  arabic: string;
+  Icon:   LucideIcon;
+}> = [
+  { key: "fajr",     label: "Fajr",     arabic: "الفجر",   Icon: MoonStar },
+  { key: "shoeroeq", label: "Shoeroeq", arabic: "الشروق",  Icon: Sunrise  },
+  { key: "dhoehr",   label: "Dhoehr",   arabic: "الظهر",   Icon: Sun      },
+  { key: "asr",      label: "Asr",      arabic: "العصر",   Icon: CloudSun },
+  { key: "maghrib",  label: "Maghrib",  arabic: "المغرب",  Icon: Sunset   },
+  { key: "ishaa",    label: "Ishaa",    arabic: "العشاء",  Icon: Moon     },
 ];
 
 const NL_WEEKDAYS = [
@@ -329,7 +338,7 @@ function BottomBar({
   slideIdx,
 }: {
   mounted:           boolean;
-  nextPrayer:        { key: PrayerKey; label: string; arabic: string } | null;
+  nextPrayer:        { key: PrayerKey; label: string; arabic: string; Icon: LucideIcon } | null;
   nextPrayerTime:    string | null;
   minutesUntilNext:  number | null;
   slides:            Slide[];
@@ -399,9 +408,12 @@ function BottomBar({
 }
 
 // ─── Prayer-slide (midden) ────────────────────────────────────
-// Grote, leesbare gebedsvakjes voor 16:9 TV.
-// Vakjes hebben min-height zodat ze visueel substantieel zijn ook bij
-// kort beeld; alle 6 staan altijd op één rij op grote schermen.
+// Vakjes volgen exact dezelfde visuele opbouw als TodayPrayerCard op
+// /gebedstijden — icoon, Arabische naam, latijns label, tijd, met
+// "Volgende"-tag op het highlighted vakje. Verschil: alles flink groter
+// voor 16:9 TV, en het kleurenschema is geïnverteerd voor de donkere TV-
+// achtergrond (highlight = wit blok met donkere tekst, ipv andersom op
+// /gebedstijden waar achtergrond licht is).
 function PrayerSlide({
   todayRow,
   nextPrayerKey,
@@ -421,31 +433,44 @@ function PrayerSlide({
 
   return (
     <div className="w-full max-w-[1800px] grid grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6 lg:gap-8">
-      {GEBEDEN.map((g) => {
-        const isNext = nextPrayerKey === g.key;
+      {GEBEDEN.map((gebed) => {
+        const isNext = nextPrayerKey === gebed.key;
         return (
           <div
-            key={g.key}
+            key={gebed.key}
             className={cn(
-              "rounded-3xl flex flex-col items-center justify-center transition-colors",
+              "rounded-3xl flex flex-col items-center justify-between transition-colors",
               "p-5 md:p-8 lg:p-10",
-              "min-h-[180px] md:min-h-[260px] lg:min-h-[340px] xl:min-h-[400px]",
+              "min-h-[200px] md:min-h-[280px] lg:min-h-[360px] xl:min-h-[420px]",
               isNext
                 ? "bg-white text-slate-mosque ring-4 ring-white/40 shadow-2xl shadow-black/30"
                 : "bg-white/10 border-2 border-white/20 text-white",
             )}
           >
-            {/* Arabische naam — flink prominent */}
+            {/* Icoon — bovenaan, klein subtiel zoals op /gebedstijden */}
             <div
               className={cn(
-                "font-arabic mb-2 lg:mb-3 leading-none",
-                "text-3xl md:text-5xl lg:text-6xl xl:text-7xl",
+                "flex justify-center",
+                isNext ? "text-slate-mosque/80" : "text-sand/80",
+              )}
+            >
+              <gebed.Icon
+                className="w-9 h-9 md:w-12 md:h-12 lg:w-14 lg:h-14 xl:w-16 xl:h-16"
+                strokeWidth={1.75}
+              />
+            </div>
+
+            {/* Arabische naam */}
+            <div
+              className={cn(
+                "font-arabic leading-none",
+                "text-2xl md:text-4xl lg:text-5xl xl:text-6xl",
                 isNext ? "text-slate-mosque/80" : "text-sand/85",
               )}
               lang="ar"
               dir="rtl"
             >
-              {g.arabic}
+              {gebed.arabic}
             </div>
 
             {/* Latijns label */}
@@ -456,19 +481,26 @@ function PrayerSlide({
                 isNext ? "text-slate-mosque/70" : "text-sand/80",
               )}
             >
-              {g.label}
+              {gebed.label}
             </div>
 
-            {/* Tijd — grootste element van het vakje */}
+            {/* Tijd — grootste element */}
             <div
               className={cn(
-                "font-display tabular-nums leading-none mt-3 lg:mt-5",
+                "font-display tabular-nums leading-none",
                 "text-4xl md:text-6xl lg:text-7xl xl:text-8xl",
                 isNext ? "text-slate-mosque" : "text-white",
               )}
             >
-              {todayRow[g.key]}
+              {todayRow[gebed.key as keyof PrayerTimeRow] || "—"}
             </div>
+
+            {/* Volgende-tag (alleen op highlighted vakje) */}
+            {isNext && (
+              <div className="font-body uppercase tracking-widest text-slate-mosque/70 text-xs md:text-sm lg:text-base font-medium">
+                Volgende
+              </div>
+            )}
           </div>
         );
       })}
