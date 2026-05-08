@@ -1,185 +1,361 @@
 // components/registration/RegistrationForm.tsx
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
-import type { Gender, RegistrationType, TargetGender } from "@/types/directus";
+import type {
+  Gender,
+  RegistrationType,
+  TargetGender,
+} from "@/types/directus";
 
+// ─── Props ─────────────────────────────────────────────────
 interface RegistrationFormProps {
-  /** Type bron — bepaalt naar welke collectie geschreven wordt */
-  type:        RegistrationType;
-  /** Slug van de bron (activity of education_program) */
-  sourceSlug:  string;
-  /** Titel van de bron — wordt meegegeven voor weergave in admin */
+  /** "activity" → bestaande single-flow. "education" → parent + multi-student. */
+  type: RegistrationType;
+  /** Slug van de bron (activity of education_program). */
+  sourceSlug: string;
+  /** Titel van de bron — wordt meegegeven voor weergave in admin. */
   sourceTitle: string;
-  /**
-   * Doelgroep van de bron op geslacht:
-   *  - "male"   → alleen mannen mogen inschrijven
-   *  - "female" → alleen vrouwen mogen inschrijven
-   *  - "mixed"  (of leeg) → mannen en vrouwen
-   */
+  /** Doelgroep op geslacht — male/female/mixed. */
   targetGender?: TargetGender | null;
-  /** Optionele eigen titel boven het formulier */
-  heading?:    string;
-  /** Optionele inleidende tekst */
-  intro?:      string;
-  className?:  string;
+  /** Optionele eigen titel boven het formulier. */
+  heading?: string;
+  /** Optionele inleidende tekst. */
+  intro?: string;
+
+  /**
+   * Optionele beheerbare teksten uit Directus (education_programs / activities).
+   * Lege strings worden behandeld als "niet gezet" — fallback naar defaults.
+   */
+  contentTexts?: {
+    intro_title?: string | null;
+    intro_text?: string | null;
+    button_text?: string | null;
+    success_message?: string | null;
+    extra_note?: string | null;
+  } | null;
+
+  /**
+   * Voorwaarden-link & label uit site_settings (alleen relevant voor
+   * education-mode, maar mag ook bij activity worden meegegeven).
+   * Wanneer leeg → checkbox krijgt default tekst zonder link.
+   */
+  termsUrl?: string | null;
+  termsLabel?: string | null;
+
+  /**
+   * Onderwijs-flow toggles (delivery 4) — alleen relevant voor `type === "education"`.
+   * Worden door de detailpagina afgeleid uit education_programs en kunnen
+   * `undefined` zijn voor backwards compat met oude callers (defaults: true/true).
+   *
+   * - requireTermsAcceptance:
+   *     true  → toont voorwaarden-checkbox, server-side ook verplicht
+   *     false → checkbox verdwijnt en wordt niet meegestuurd
+   * - allowMultipleStudents:
+   *     true  → "+ Voeg nog een student toe"-knop zichtbaar, max 20
+   *     false → knop verborgen, students-array beperkt tot 1
+   */
+  requireTermsAcceptance?: boolean;
+  allowMultipleStudents?: boolean;
+
+  className?: string;
+  /** ID van de form-section voor anchor-links (#inschrijven). */
+  anchorId?: string;
 }
 
-interface FormState {
-  name:    string;
-  email:   string;
-  phone:   string;
-  age:     string;
-  gender:  "" | Gender;
-  notes:   string;
-  consent: boolean;
+// ─── State types ───────────────────────────────────────────
+interface ParentState {
+  name: string;
+  email: string;
+  phone: string;
 }
 
-const initialState: FormState = {
-  name:    "",
-  email:   "",
-  phone:   "",
-  age:     "",
-  gender:  "",
-  notes:   "",
-  consent: false,
+interface StudentState {
+  /** Stabiele key voor React-list — niet naar API verstuurd. */
+  _key: string;
+  name: string;
+  age: string;
+  gender: "" | Gender;
+  notes: string;
+}
+
+const DEFAULT_PARENT: ParentState = {
+  name: "",
+  email: "",
+  phone: "",
 };
 
-/**
- * Bepaal welke gender-opties getoond worden + initial value op basis van targetGender.
- *  - male      → alleen "Man",   pre-selected
- *  - female    → alleen "Vrouw", pre-selected
- *  - mixed/leeg → beide opties, leeg
- */
+function newStudent(initialGender: "" | Gender): StudentState {
+  return {
+    _key: `s-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: "",
+    age: "",
+    gender: initialGender,
+    notes: "",
+  };
+}
+
+// ─── Gender resolutie (zelfde logica als oude versie) ─────
 function resolveGenderConfig(target: TargetGender | null | undefined): {
-  options:      Array<{ value: Gender; label: string }>;
+  options: Array<{ value: Gender; label: string }>;
   initialValue: "" | Gender;
-  notice:       string | null;
-  locked:       boolean;
+  notice: string | null;
+  locked: boolean;
 } {
   if (target === "male") {
     return {
-      options:      [{ value: "male", label: "Man" }],
+      options: [{ value: "male", label: "Man" }],
       initialValue: "male",
-      notice:       "Deze inschrijving is alleen voor mannen.",
-      locked:       true,
+      notice: "Deze inschrijving is alleen voor mannen.",
+      locked: true,
     };
   }
   if (target === "female") {
     return {
-      options:      [{ value: "female", label: "Vrouw" }],
+      options: [{ value: "female", label: "Vrouw" }],
       initialValue: "female",
-      notice:       "Deze inschrijving is alleen voor vrouwen.",
-      locked:       true,
+      notice: "Deze inschrijving is alleen voor vrouwen.",
+      locked: true,
     };
   }
   return {
     options: [
-      { value: "male",   label: "Man"   },
+      { value: "male", label: "Man" },
       { value: "female", label: "Vrouw" },
     ],
     initialValue: "",
-    notice:       null,
-    locked:       false,
+    notice: null,
+    locked: false,
   };
 }
 
+// ─── Telefoon-helpers ──────────────────────────────────────
+/** Strip alles wat geen cijfer is. */
+function normalizePhone(input: string): string {
+  return input.replace(/\D/g, "");
+}
+
+/** True als het genormaliseerde nummer exact 10 cijfers is. */
+function isValidPhone10(input: string): boolean {
+  return normalizePhone(input).length === 10;
+}
+
+// ─── Component ─────────────────────────────────────────────
 export default function RegistrationForm({
   type,
   sourceSlug,
   sourceTitle,
   targetGender,
-  heading = "Inschrijven",
+  heading,
   intro,
+  contentTexts,
+  termsUrl,
+  termsLabel,
+  requireTermsAcceptance = true,
+  allowMultipleStudents  = true,
   className,
+  anchorId = "inschrijven",
 }: RegistrationFormProps) {
+  const isEducation = type === "education";
   const genderConfig = resolveGenderConfig(targetGender);
 
-  const [form,    setForm]    = useState<FormState>({
-    ...initialState,
-    gender: genderConfig.initialValue,
-  });
-  const [status,  setStatus]  = useState<"idle" | "submitting" | "success" | "error">("idle");
+  // Toggles zijn alleen zinvol voor education-mode. Voor activity blijft
+  // alles bij het oude (geen voorwaarden-checkbox, geen multi-student).
+  const showTerms        = isEducation && requireTermsAcceptance;
+  const showAddStudent   = isEducation && allowMultipleStudents;
+
+  // ─── Beheerbare teksten met fallback ─────────────────────
+  const text = useMemo(() => {
+    const t = contentTexts ?? {};
+    return {
+      introTitle: (t.intro_title || "").trim() || heading || "Inschrijven",
+      introText: (t.intro_text || "").trim() || intro || null,
+      buttonText: (t.button_text || "").trim() || (isEducation ? "Inschrijving versturen" : "Inschrijving versturen"),
+      successText: (t.success_message || "").trim() ||
+        (isEducation
+          ? "Bedankt voor uw inschrijving! We nemen zo snel mogelijk contact met u op."
+          : "Bedankt voor uw inschrijving! We nemen zo snel mogelijk contact met u op."),
+      extraNote: (t.extra_note || "").trim() || null,
+    };
+  }, [contentTexts, heading, intro, isEducation]);
+
+  // ─── Form state ──────────────────────────────────────────
+  const [parent, setParent] = useState<ParentState>(DEFAULT_PARENT);
+  const [students, setStudents] = useState<StudentState[]>([
+    newStudent(genderConfig.initialValue),
+  ]);
+  const [consent, setConsent] = useState<boolean>(false);
+  const [terms, setTerms] = useState<boolean>(false);
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [message, setMessage] = useState<string>("");
 
-  function update<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+  function updateParent<K extends keyof ParentState>(key: K, value: ParentState[K]) {
+    setParent((p) => ({ ...p, [key]: value }));
+  }
+  function updateStudent(idx: number, key: keyof StudentState, value: string) {
+    setStudents((arr) => arr.map((s, i) => (i === idx ? { ...s, [key]: value } : s)));
+  }
+  function addStudent() {
+    setStudents((arr) => [...arr, newStudent(genderConfig.initialValue)]);
+  }
+  function removeStudent(idx: number) {
+    setStudents((arr) => (arr.length <= 1 ? arr : arr.filter((_, i) => i !== idx)));
   }
 
+  // ─── Submit ──────────────────────────────────────────────
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (status === "submitting") return;
 
-    // Lichte client-side validatie — echte validatie zit in de API
-    if (!form.name.trim() || !form.email.trim()) {
-      setStatus("error");
-      setMessage("Vul alstublieft uw naam en e-mailadres in.");
-      return;
-    }
-    if (!form.gender) {
-      setStatus("error");
-      setMessage("Geslacht is verplicht.");
-      return;
-    }
-    if (!form.consent) {
-      setStatus("error");
-      setMessage("U moet akkoord gaan met de verwerking van uw gegevens.");
-      return;
+    setMessage("");
+    setStatus("idle");
+
+    if (isEducation) {
+      // Parent-validatie
+      if (!parent.name.trim()) {
+        return failWith("Vul de naam van de ouder/contactpersoon in.");
+      }
+      if (!parent.email.trim()) {
+        return failWith("Vul het e-mailadres van de ouder/contactpersoon in.");
+      }
+      if (!parent.phone.trim()) {
+        return failWith("Vul een telefoonnummer in.");
+      }
+      if (!isValidPhone10(parent.phone)) {
+        return failWith("Telefoonnummer moet uit precies 10 cijfers bestaan.");
+      }
+      // Studenten-validatie
+      if (students.length < 1) {
+        return failWith("Voeg ten minste één kind/student toe.");
+      }
+
+      for (let i = 0; i < students.length; i += 1) {
+        const s = students[i];
+
+        if (!s || !s.name.trim()) {
+          return failWith(`Vul de naam van student ${i + 1} in.`);
+        }
+
+        if (!s.gender) {
+          return failWith(`Geef het geslacht op voor student ${i + 1}.`);
+        }
+      }
+
+      if (!consent) {
+        return failWith("U moet akkoord gaan met de privacyverklaring.");
+      }
+
+      if (showTerms && !terms) {
+        return failWith("U moet akkoord gaan met de voorwaarden.");
+      }
+    } else {
+      // Activity-modus: single student-flow (gedrag van vóór delivery 3)
+      const s = students[0];
+      if (!s.name.trim()) {
+        return failWith("Vul alstublieft uw naam in.");
+      }
+      if (!parent.email.trim()) {
+        return failWith("Vul alstublieft uw e-mailadres in.");
+      }
+      if (!s.gender) {
+        return failWith("Geslacht is verplicht.");
+      }
+      // Telefoon optioneel bij activiteiten — maar als gevuld dan 10 cijfers
+      if (parent.phone.trim() && !isValidPhone10(parent.phone)) {
+        return failWith("Telefoonnummer moet uit precies 10 cijfers bestaan (of laat leeg).");
+      }
+      if (!consent) {
+        return failWith("U moet akkoord gaan met de verwerking van uw gegevens.");
+      }
     }
 
     setStatus("submitting");
-    setMessage("");
 
     try {
-      const resp = await fetch("/api/inschrijven", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
+      // Defensief: wanneer meerdere studenten niet zijn toegestaan,
+      // sturen we max 1 student mee. De API valideert dit ook server-side.
+      const studentsToSend = allowMultipleStudents ? students : students.slice(0, 1);
+
+      const payload = isEducation
+        ? {
           type,
           source_slug: sourceSlug,
-          name:    form.name.trim(),
-          email:   form.email.trim(),
-          gender:  form.gender,
-          phone:   form.phone.trim() || undefined,
-          age:     form.age ? Number(form.age) : undefined,
-          notes:   form.notes.trim() || undefined,
-          consent: form.consent,
-        }),
+          parent: {
+            name: parent.name.trim(),
+            email: parent.email.trim(),
+            phone: normalizePhone(parent.phone),
+          },
+          students: studentsToSend.map((s) => ({
+            name: s.name.trim(),
+            age: s.age ? Number(s.age) : undefined,
+            gender: s.gender,
+            notes: s.notes.trim() || undefined,
+          })),
+          consent,
+          // Alleen meesturen wanneer de checkbox aanwezig was. De API
+          // controleert of het programma voorwaarden vereist en valideert
+          // dit veld zelfstandig — frontend kan niet liegen over consent.
+          terms_accepted: showTerms ? terms : undefined,
+        }
+        : {
+          // Backwards-compatible payload voor activiteit-flow
+          type,
+          source_slug: sourceSlug,
+          name: students[0].name.trim(),
+          email: parent.email.trim(),
+          phone: parent.phone.trim() ? normalizePhone(parent.phone) : undefined,
+          age: students[0].age ? Number(students[0].age) : undefined,
+          gender: students[0].gender,
+          notes: students[0].notes.trim() || undefined,
+          consent,
+        };
+
+      const resp = await fetch("/api/inschrijven", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       const data = await resp.json().catch(() => ({} as Record<string, unknown>));
 
       if (!resp.ok) {
-        setStatus("error");
-        setMessage(
+        return failWith(
           (data as { error?: string }).error ||
           "Er ging iets mis. Probeer het later opnieuw."
         );
-        return;
       }
 
       setStatus("success");
-      setMessage("Bedankt voor uw inschrijving! We nemen zo snel mogelijk contact met u op.");
-      setForm({ ...initialState, gender: genderConfig.initialValue });
+      setMessage(text.successText);
+      // Reset
+      setParent(DEFAULT_PARENT);
+      setStudents([newStudent(genderConfig.initialValue)]);
+      setConsent(false);
+      setTerms(false);
     } catch {
-      setStatus("error");
-      setMessage("Er ging iets mis met de verbinding. Probeer het later opnieuw.");
+      failWith("Er ging iets mis met de verbinding. Probeer het later opnieuw.");
     }
   }
 
-  // Succes-state: vervang formulier door bevestiging
+  function failWith(msg: string) {
+    setStatus("error");
+    setMessage(msg);
+  }
+
+  // ─── Succes-state ────────────────────────────────────────
   if (status === "success") {
     return (
       <div
+        id={anchorId}
         className={cn(
           "p-6 bg-slate-mosque/10 border border-slate-mosque/20 rounded-2xl text-center",
-          className
+          className,
         )}
       >
         <h3 className="font-display text-xl text-ink mb-2">Inschrijving ontvangen</h3>
-        <p className="font-body text-taupe-dark text-sm">{message}</p>
+        <p className="font-body text-taupe-dark text-sm whitespace-pre-line">{message}</p>
       </div>
     );
   }
@@ -193,25 +369,27 @@ export default function RegistrationForm({
 
   const labelClass = "block font-body text-sm font-medium text-ink mb-1.5";
 
+  // ─── Render ──────────────────────────────────────────────
   return (
     <form
+      id={anchorId}
       onSubmit={handleSubmit}
       className={cn(
-        "p-6 sm:p-8 bg-white border border-sand-200 rounded-2xl shadow-sm",
-        className
+        "p-6 sm:p-8 bg-white border border-sand-200 rounded-2xl shadow-sm scroll-mt-24",
+        className,
       )}
       noValidate
     >
-      <h3 className="font-display text-xl sm:text-2xl text-ink mb-1">{heading}</h3>
-      <p className="font-body text-sm text-taupe-dark mb-4">
-        {intro || (
+      <h3 className="font-display text-xl sm:text-2xl text-ink mb-1">{text.introTitle}</h3>
+      <p className="font-body text-sm text-taupe-dark mb-4 whitespace-pre-line">
+        {text.introText || (
           <>
             U schrijft zich in voor: <strong>{sourceTitle}</strong>
           </>
         )}
       </p>
 
-      {/* Doelgroep-banner — alleen voor male/female only */}
+      {/* Doelgroep-banner */}
       {genderConfig.notice && (
         <div
           className="mb-6 p-3 rounded-lg bg-taupe/10 border border-taupe/20 font-body text-sm text-ink"
@@ -221,126 +399,284 @@ export default function RegistrationForm({
         </div>
       )}
 
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div className="sm:col-span-2">
-          <label htmlFor="reg-name" className={labelClass}>
-            Naam <span className="text-red-600" aria-hidden>*</span>
-          </label>
+      {/* ─── EDUCATION-MODUS: parent-sectie + students-array ─── */}
+      {isEducation ? (
+        <>
+          {/* Parent-sectie */}
+          <fieldset className="mb-6">
+            <legend className="font-body text-sm font-semibold text-ink mb-3 uppercase tracking-wider">
+              Ouder / contactpersoon
+            </legend>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label htmlFor="parent-name" className={labelClass}>
+                  Naam <span className="text-red-600" aria-hidden>*</span>
+                </label>
+                <input
+                  id="parent-name" type="text" required autoComplete="name"
+                  className={inputClass}
+                  value={parent.name}
+                  onChange={(e) => updateParent("name", e.target.value)}
+                />
+              </div>
+              <div>
+                <label htmlFor="parent-email" className={labelClass}>
+                  E-mailadres <span className="text-red-600" aria-hidden>*</span>
+                </label>
+                <input
+                  id="parent-email" type="email" required autoComplete="email"
+                  className={inputClass}
+                  value={parent.email}
+                  onChange={(e) => updateParent("email", e.target.value)}
+                />
+              </div>
+              <div>
+                <label htmlFor="parent-phone" className={labelClass}>
+                  Telefoon <span className="text-red-600" aria-hidden>*</span>
+                </label>
+                <input
+                  id="parent-phone" type="tel" required autoComplete="tel"
+                  inputMode="numeric"
+                  placeholder="0612345678"
+                  className={inputClass}
+                  value={parent.phone}
+                  onChange={(e) => updateParent("phone", e.target.value)}
+                />
+                <p className="font-body text-xs text-taupe-dark/70 mt-1">
+                  10 cijfers. Spaties en streepjes zijn toegestaan.
+                </p>
+              </div>
+            </div>
+          </fieldset>
+
+          {/* Studenten-array */}
+          <fieldset className="mb-6">
+            <legend className="font-body text-sm font-semibold text-ink mb-3 uppercase tracking-wider">
+              Kind(eren) / student(en)
+            </legend>
+            <div className="space-y-4">
+              {students.map((s, idx) => (
+                <div
+                  key={s._key}
+                  className="rounded-lg border border-sand-200 bg-sand-50/50 p-4"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-body text-sm font-medium text-ink">
+                      Student {idx + 1}
+                    </span>
+                    {students.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeStudent(idx)}
+                        className="font-body text-xs text-taupe-dark hover:text-red-700 underline"
+                      >
+                        Verwijderen
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div className="sm:col-span-2">
+                      <label className={labelClass}>
+                        Naam <span className="text-red-600" aria-hidden>*</span>
+                      </label>
+                      <input
+                        type="text" required
+                        className={inputClass}
+                        value={s.name}
+                        onChange={(e) => updateStudent(idx, "name", e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>
+                        Geslacht <span className="text-red-600" aria-hidden>*</span>
+                      </label>
+                      <select
+                        required disabled={genderConfig.locked}
+                        className={inputClass}
+                        value={s.gender}
+                        onChange={(e) => updateStudent(idx, "gender", e.target.value)}
+                      >
+                        {!genderConfig.locked && <option value="">— Maak een keuze —</option>}
+                        {genderConfig.options.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelClass}>
+                        Leeftijd
+                      </label>
+                      <input
+                        type="number" min={1} max={120} inputMode="numeric"
+                        className={inputClass}
+                        value={s.age}
+                        onChange={(e) => updateStudent(idx, "age", e.target.value)}
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className={labelClass}>
+                        Opmerkingen
+                      </label>
+                      <textarea
+                        rows={2}
+                        className={cn(inputClass, "resize-y")}
+                        placeholder="Allergieën, niveau, etc. (optioneel)"
+                        value={s.notes}
+                        onChange={(e) => updateStudent(idx, "notes", e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {showAddStudent && (
+              <button
+                type="button"
+                onClick={addStudent}
+                className="mt-3 font-body text-sm text-slate-mosque hover:text-slate-dark underline underline-offset-2"
+              >
+                + Voeg nog een student toe
+              </button>
+            )}
+          </fieldset>
+        </>
+      ) : (
+        /* ─── ACTIVITY-MODUS: single student-flow ─── */
+        <div className="grid sm:grid-cols-2 gap-4 mb-6">
+          <div className="sm:col-span-2">
+            <label className={labelClass}>
+              Naam <span className="text-red-600" aria-hidden>*</span>
+            </label>
+            <input
+              type="text" required autoComplete="name"
+              className={inputClass}
+              value={students[0].name}
+              onChange={(e) => updateStudent(0, "name", e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>
+              E-mailadres <span className="text-red-600" aria-hidden>*</span>
+            </label>
+            <input
+              type="email" required autoComplete="email"
+              className={inputClass}
+              value={parent.email}
+              onChange={(e) => updateParent("email", e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>
+              Telefoon
+            </label>
+            <input
+              type="tel" autoComplete="tel" inputMode="numeric"
+              placeholder="0612345678"
+              className={inputClass}
+              value={parent.phone}
+              onChange={(e) => updateParent("phone", e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>
+              Geslacht <span className="text-red-600" aria-hidden>*</span>
+            </label>
+            <select
+              required disabled={genderConfig.locked}
+              className={inputClass}
+              value={students[0].gender}
+              onChange={(e) => updateStudent(0, "gender", e.target.value)}
+            >
+              {!genderConfig.locked && <option value="">— Maak een keuze —</option>}
+              {genderConfig.options.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Leeftijd</label>
+            <input
+              type="number" min={1} max={120} inputMode="numeric"
+              className={inputClass}
+              value={students[0].age}
+              onChange={(e) => updateStudent(0, "age", e.target.value)}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className={labelClass}>Opmerkingen</label>
+            <textarea
+              rows={4}
+              className={cn(inputClass, "resize-y")}
+              placeholder="Vragen, dieetwensen, etc. (optioneel)"
+              value={students[0].notes}
+              onChange={(e) => updateStudent(0, "notes", e.target.value)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ─── Akkoorden ─────────────────────────────────────── */}
+      <div className="space-y-3 mb-2">
+        <label className="flex items-start gap-3 cursor-pointer">
           <input
-            id="reg-name"
-            type="text"
-            required
-            autoComplete="name"
-            className={inputClass}
-            value={form.name}
-            onChange={(e) => update("name", e.target.value)}
+            type="checkbox" required
+            className="mt-1 w-4 h-4 rounded border-sand-200 text-slate-mosque focus:ring-slate-mosque"
+            checked={consent}
+            onChange={(e) => setConsent(e.target.checked)}
           />
-        </div>
+          <span className="font-body text-sm text-taupe-dark leading-relaxed">
+            Ik ga akkoord met de{" "}
+            <a
+              href="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-mosque underline hover:text-slate-dark"
+            >
+              privacyverklaring
+            </a>
+            .<span className="text-red-600" aria-hidden> *</span>
+          </span>
+        </label>
 
-        <div>
-          <label htmlFor="reg-email" className={labelClass}>
-            E-mailadres <span className="text-red-600" aria-hidden>*</span>
-          </label>
-          <input
-            id="reg-email"
-            type="email"
-            required
-            autoComplete="email"
-            className={inputClass}
-            value={form.email}
-            onChange={(e) => update("email", e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label htmlFor="reg-phone" className={labelClass}>
-            Telefoon
-          </label>
-          <input
-            id="reg-phone"
-            type="tel"
-            autoComplete="tel"
-            className={inputClass}
-            value={form.phone}
-            onChange={(e) => update("phone", e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label htmlFor="reg-gender" className={labelClass}>
-            Geslacht <span className="text-red-600" aria-hidden>*</span>
-          </label>
-          <select
-            id="reg-gender"
-            required
-            disabled={genderConfig.locked}
-            className={inputClass}
-            value={form.gender}
-            onChange={(e) => update("gender", e.target.value as FormState["gender"])}
-          >
-            {!genderConfig.locked && <option value="">— Maak een keuze —</option>}
-            {genderConfig.options.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="reg-age" className={labelClass}>
-            Leeftijd
-          </label>
-          <input
-            id="reg-age"
-            type="number"
-            min={1}
-            max={120}
-            inputMode="numeric"
-            className={inputClass}
-            value={form.age}
-            onChange={(e) => update("age", e.target.value)}
-          />
-        </div>
-
-        <div className="sm:col-span-2">
-          <label htmlFor="reg-notes" className={labelClass}>
-            Opmerkingen
-          </label>
-          <textarea
-            id="reg-notes"
-            rows={4}
-            className={cn(inputClass, "resize-y")}
-            placeholder="Vragen, dieetwensen, etc. (optioneel)"
-            value={form.notes}
-            onChange={(e) => update("notes", e.target.value)}
-          />
-        </div>
-
-        <div className="sm:col-span-2">
+        {/* Voorwaarden-checkbox alleen tonen wanneer het programma ze vereist
+            (showTerms = isEducation && requireTermsAcceptance). */}
+        {showTerms && (
           <label className="flex items-start gap-3 cursor-pointer">
             <input
-              type="checkbox"
-              required
+              type="checkbox" required
               className="mt-1 w-4 h-4 rounded border-sand-200 text-slate-mosque focus:ring-slate-mosque"
-              checked={form.consent}
-              onChange={(e) => update("consent", e.target.checked)}
+              checked={terms}
+              onChange={(e) => setTerms(e.target.checked)}
             />
             <span className="font-body text-sm text-taupe-dark leading-relaxed">
-              Ik ga akkoord met de{" "}
-              <a
-                href="/privacy"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-slate-mosque underline hover:text-slate-dark"
-              >
-                privacyverklaring
-              </a>
-              .<span className="text-red-600" aria-hidden> *</span>
+              {(termsLabel || "").trim() ||
+                "Ik heb de voorwaarden van de organisatie gelezen en ga hiermee akkoord."}
+              {termsUrl && (
+                <>
+                  {" "}
+                  <a
+                    href={termsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-mosque underline hover:text-slate-dark"
+                  >
+                    (lees voorwaarden)
+                  </a>
+                </>
+              )}
+              <span className="text-red-600" aria-hidden> *</span>
             </span>
           </label>
-        </div>
+        )}
       </div>
+
+      {text.extraNote && (
+        <p className="mt-4 font-body text-xs text-taupe-dark/80 leading-relaxed">
+          {text.extraNote}
+        </p>
+      )}
 
       {status === "error" && message && (
         <div
@@ -352,12 +688,8 @@ export default function RegistrationForm({
       )}
 
       <div className="mt-6 flex flex-col sm:flex-row gap-3 sm:items-center">
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={status === "submitting"}
-        >
-          {status === "submitting" ? "Bezig met versturen…" : "Inschrijving versturen"}
+        <Button type="submit" variant="primary" disabled={status === "submitting"}>
+          {status === "submitting" ? "Bezig met versturen…" : text.buttonText}
         </Button>
         <p className="font-body text-xs text-taupe-dark/80">
           Velden met <span className="text-red-600">*</span> zijn verplicht.

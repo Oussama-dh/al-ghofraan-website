@@ -82,8 +82,29 @@ async function createDonationFromSession(
 
     const campaignIdMeta = (session.metadata?.campaign_id as string) || "";
     const campaignId     = campaignIdMeta ? Number(campaignIdMeta) : null;
-    const campaignSlug   = (session.metadata?.campaign_slug  as string) || "";
+    let campaignSlug     = (session.metadata?.campaign_slug  as string) || "";
     const campaignTitle  = (session.metadata?.campaign_title as string) || "Algemene donatie";
+
+    // ─── Payment Link sessions ─────────────────────────────────
+    // Voor Stripe Payment Link sessions hebben wij geen metadata gezet
+    // (dat moet in Stripe Dashboard zelf). Wel sturen we `client_reference_id`
+    // mee in de URL — dat is gelijk aan de campagne-slug. Hieronder vullen
+    // we daarmee `campaign_slug` aan wanneer metadata leeg is, zodat de admin
+    // alsnog kan filteren in Directus.
+    if (!campaignSlug && typeof session.client_reference_id === "string") {
+      const ref = session.client_reference_id.trim();
+      if (ref) campaignSlug = ref;
+    }
+    // Detect Payment Link session voor logging (handig voor debugging)
+    const paymentLinkId = typeof session.payment_link === "string"
+      ? session.payment_link
+      : session.payment_link?.id ?? null;
+    if (paymentLinkId) {
+      console.log(
+        `[stripe-webhook] Payment Link betaling ontvangen: ${paymentLinkId} ` +
+        `(campaign_slug=${campaignSlug || "(leeg)"})`
+      );
+    }
 
     const created = await directusServer.request(
       createItem("donations", {

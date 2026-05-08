@@ -4,6 +4,7 @@
 import { useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+import type { ContactSubject } from "@/types/directus";
 
 interface FormState {
   name:    string;
@@ -26,10 +27,21 @@ const initialState: FormState = {
   website: "",
 };
 
-export default function ContactForm({ className }: { className?: string }) {
+interface ContactFormProps {
+  className?: string;
+  /** Onderwerpen uit Directus. Lege/ontbrekende lijst → fallback naar tekstveld. */
+  subjects?: ContactSubject[];
+}
+
+export default function ContactForm({ className, subjects = [] }: ContactFormProps) {
   const [form,    setForm]    = useState<FormState>(initialState);
   const [status,  setStatus]  = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [message, setMessage] = useState<string>("");
+
+  // Beslissing: dropdown of vrije tekst?
+  // - Lijst leeg of ontbreekt → val terug op tekstveld (geen lock-out)
+  // - Anders → dropdown met "Maak een keuze" als placeholder
+  const useDropdown = subjects.length > 0;
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -158,10 +170,27 @@ export default function ContactForm({ className }: { className?: string }) {
           <label htmlFor="contact-subject" className={labelClass}>
             Onderwerp <span className="text-red-600" aria-hidden>*</span>
           </label>
-          <input
-            id="contact-subject" type="text" required className={inputClass}
-            value={form.subject} onChange={(e) => update("subject", e.target.value)}
-          />
+          {useDropdown ? (
+            <select
+              id="contact-subject"
+              required
+              className={inputClass}
+              value={form.subject}
+              onChange={(e) => update("subject", e.target.value)}
+            >
+              <option value="">Maak een keuze…</option>
+              {subjects.map((s) => (
+                <option key={s.id} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              id="contact-subject" type="text" required className={inputClass}
+              value={form.subject} onChange={(e) => update("subject", e.target.value)}
+            />
+          )}
         </div>
 
         <div className="sm:col-span-2">

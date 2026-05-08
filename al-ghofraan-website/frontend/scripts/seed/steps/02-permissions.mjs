@@ -16,6 +16,10 @@ const COLLECTIONS = [
   { collection: "articles",           filter: { status:    { _eq: "published" } } },
   { collection: "videos",             filter: { status:    { _eq: "published" } } },
   { collection: "tv_announcements",   filter: { status:    { _eq: "published" } } },
+  { collection: "hijri_date_overrides", filter: { active:  { _eq: true       } } },
+  { collection: "contact_subjects",   filter: { status:    { _eq: "published" } } },
+  { collection: "article_categories", filter: { status:    { _eq: "published" } } },
+  { collection: "video_categories",   filter: { status:    { _eq: "published" } } },
   // BEWUST GEEN public-permissies voor `registrations`, `donations` en
   // `contact_messages`: die routes schrijven server-side via DIRECTUS_TOKEN.
   { collection: "directus_files",     filter: null },

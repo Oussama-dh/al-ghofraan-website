@@ -8,6 +8,7 @@ import ContactForm       from "@/components/contact/ContactForm";
 import {
   getPageContent,
   getSiteSettings,
+  getContactSubjects,
 } from "@/lib/directus";
 import { buildWhatsAppUrl } from "@/lib/utils";
 
@@ -29,9 +30,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ContactPage() {
-  const [page, settings] = await Promise.all([
+  const [page, settings, subjects] = await Promise.all([
     getPageContent("contact"),
     getSiteSettings(),
+    getContactSubjects(),
   ]);
 
   const title       = page?.title    || "Contact";
@@ -140,7 +142,7 @@ export default async function ContactPage() {
 
             {/* Rechter kolom — formulier */}
             <div className="lg:col-span-2">
-              <ContactForm />
+              <ContactForm subjects={subjects} />
             </div>
           </div>
 

@@ -15,6 +15,12 @@ interface PrayerTimesTableProps {
   shortDateOnly?: boolean;
   /** Toon een aparte Dag-kolom met Nederlandse weekdag (lowercase) */
   showDayColumn?: boolean;
+  /**
+   * Mapping van CSV-datum (`row.datum`) naar geformatteerde Hijri-string
+   * (bv. "21 Dhul-Qi'dah 1447"). Als aanwezig en niet-leeg → er verschijnt
+   * rechts een Hijri-kolom. Rijen zonder mapping krijgen "—".
+   */
+  hijriByDatum?:  Record<string, string>;
 }
 
 const GEBEDEN: ReadonlyArray<{
@@ -109,7 +115,9 @@ export default function PrayerTimesTable({
   className,
   shortDateOnly = false,
   showDayColumn = false,
+  hijriByDatum,
 }: PrayerTimesTableProps) {
+  const showHijriColumn = !!hijriByDatum && Object.keys(hijriByDatum).length > 0;
   return (
     <div className={cn("overflow-x-auto rounded-2xl border border-sand-200 bg-white shadow-sm", className)}>
       <table className="w-full text-sm font-body">
@@ -127,12 +135,16 @@ export default function PrayerTimesTable({
                 </div>
               </th>
             ))}
+            {showHijriColumn && (
+              <th className="px-4 py-3 text-right font-medium whitespace-nowrap">Hidjri</th>
+            )}
           </tr>
         </thead>
         <tbody>
           {rows.map((row, idx) => {
             const isToday = todayDatum && row.datum === todayDatum;
             const dayName = showDayColumn ? getDayName(row.datum) : "";
+            const hijri   = showHijriColumn ? (hijriByDatum![row.datum] ?? "") : "";
             return (
               <tr
                 key={`${row.datum}-${idx}`}
@@ -161,6 +173,11 @@ export default function PrayerTimesTable({
                     {row[g.key as keyof PrayerTimeRow] || "—"}
                   </td>
                 ))}
+                {showHijriColumn && (
+                  <td className="px-4 py-2.5 whitespace-nowrap text-right text-taupe-dark text-xs sm:text-sm">
+                    {hijri || "—"}
+                  </td>
+                )}
               </tr>
             );
           })}

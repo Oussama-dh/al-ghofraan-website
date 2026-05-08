@@ -254,3 +254,58 @@ de PaymentIntent en (bij maandelijks) de Subscription. De webhook schrijft
 dezelfde info naar Directus → `donations.campaign`, `campaign_slug`,
 `campaign_title` zodat je achteraf kunt rapporteren per campagne, ook als
 de campagne later wordt gewijzigd of gearchiveerd.
+
+---
+
+## 12. Stripe Payment Links per campagne (optioneel)
+
+Sinds delivery 2b kun je per donatiecampagne een **Stripe Payment Link** koppelen. Dat is een vaste betaal-URL die je in het Stripe Dashboard maakt en die direct naar Stripe Checkout stuurt. Voordeel: in Stripe Dashboard kun je per Payment Link in één oogopslag zien hoeveel er via die specifieke campagne is binnengekomen — handig voor reconciliatie.
+
+### 12.1 Wanneer wel/niet gebruiken
+
+**Wel gebruiken** als:
+- Je voor een specifieke campagne een eigen overzicht in Stripe wilt houden (bv. "Ramadan-actie 2026")
+- Je tijdelijk een externe campagne wilt promoten via een vaste URL die je elders kunt delen
+
+**Niet gebruiken** als:
+- Je gewoon de standaard donatie-flow wilt — die werkt prima en geeft de meeste data in Directus
+- Je per donatie persoonlijke metadata in onze database wilt vastleggen (bv. naam vóór betaling) — dat lukt alleen via de eigen checkout-flow
+
+### 12.2 Een Payment Link maken
+
+1. Ga naar Stripe Dashboard → **Products** → maak een product aan voor je campagne (bv. "Donatie Ramadan-actie 2026")
+2. Voor **eenmalige donaties**: maak een Price aan met "Customer chooses price" en min/max-bedragen die jij wilt
+3. Voor **maandelijkse donaties**: maak een Price aan met "Recurring" + "Customer chooses price"
+4. Bij dat product → **Payment Links** → "+ New" → kies de Price → klik op "Create link"
+5. Kopieer de URL (begint met `https://buy.stripe.com/...`)
+6. Stripe geeft je ook een ID (`plink_xxx`) — die kun je optioneel ook noteren
+
+### 12.3 Koppelen in Directus
+
+Open de campagne in Directus → **Donation Campaigns** → vul in:
+
+| Veld                       | Waarde                                                                |
+|----------------------------|-----------------------------------------------------------------------|
+| `use_stripe_payment_link`  | aangevinkt                                                             |
+| `stripe_payment_link_url`  | de Payment Link URL die je net kopieerde                               |
+| `stripe_payment_link_id`   | optioneel — `plink_xxx` ID voor jouw eigen overzicht                   |
+
+Sla op. Vanaf nu stuurt het donatieformulier op `/doneren` voor deze campagne direct door naar Stripe — bedrag, naam en e-mail worden op de Stripe-pagina ingevuld.
+
+### 12.4 Reconciliatie via `client_reference_id`
+
+Onze frontend voegt automatisch `?client_reference_id=<campagne-slug>` toe aan de Payment Link URL. Hierdoor zie je in Stripe Dashboard bij elke Checkout Session het veld `client_reference_id` met de campagne-slug — zo weet je voor welke website-campagne een betaling was, ook als één Payment Link voor meerdere campagnes (her)gebruikt wordt.
+
+### 12.5 Wat met de webhook en Directus?
+
+De Stripe webhook werkt **óók** voor Payment Link betalingen — Stripe stuurt voor alle Checkout Sessions hetzelfde event. De webhook detecteert dat het een Payment Link sessie was via `session.payment_link` (de `plink_xxx` ID) en gebruikt `session.client_reference_id` om het juiste `campaign_slug` op te lossen.
+
+**Beperking**: bij Payment Link betalingen ontbreken naam/email-metadata die wij normaal vóór de betaling al weten (omdat ze via onze form-state komen). De webhook valt dan terug op `session.customer_details.name` en `session.customer_details.email` — dus de gegevens die de bezoeker op de Stripe-pagina invult. Dit is meestal afdoende voor reconciliatie, maar minder rijk dan de eigen flow.
+
+### 12.6 Beveiligings-check
+
+De DonationForm staat **alleen URLs toe die beginnen met `https://buy.stripe.com/` of `https://checkout.stripe.com/`** — andere domeinen worden genegeerd. Dit voorkomt dat een per ongeluk verkeerd ingevoerde URL bezoekers naar phishing-sites kan sturen. Mocht je een andere Stripe-subdomein nodig hebben, contacteer de webbeheerder.
+
+### 12.7 Terugzetten naar eigen checkout
+
+Vink simpelweg `use_stripe_payment_link` uit in Directus. Vanaf dat moment gebruikt de campagne weer de standaard website-checkout. URL-velden mag je laten staan voor later.

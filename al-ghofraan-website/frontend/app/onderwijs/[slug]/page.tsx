@@ -6,9 +6,11 @@ import Container         from "@/components/ui/Container";
 import Button            from "@/components/ui/Button";
 import { Icon }          from "@/lib/icons";
 import RegistrationForm  from "@/components/registration/RegistrationForm";
+import RegistrationFormReveal from "@/components/registration/RegistrationFormReveal";
 import {
   getEducationProgramBySlug,
   getAssetUrl,
+  getSiteSettings,
 } from "@/lib/directus";
 import { formatDate }    from "@/lib/utils";
 
@@ -30,13 +32,54 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function EducationProgramDetailPage({ params }: Props) {
-  const program = await getEducationProgramBySlug(params.slug);
+  const [program, settings] = await Promise.all([
+    getEducationProgramBySlug(params.slug),
+    getSiteSettings(),
+  ]);
 
   if (!program) notFound();
 
   const imageId =
     typeof program.image === "string" ? program.image : program.image?.id;
   const imageUrl = imageId ? getAssetUrl(imageId) : "";
+
+  // ─── Flow-toggles met veilige defaults ──────────────────
+  // Bij vermissing uit Directus (oud record, leeg veld) gebruiken
+  // we dezelfde defaults als de DB-defaults uit seed-stap 11c:
+  //   show_registration_form_immediately = false
+  //   require_terms_acceptance           = true
+  //   allow_multiple_students            = true
+  const showImmediately      = program.show_registration_form_immediately === true;
+  const requireTerms         = program.require_terms_acceptance !== false;
+  const allowMultipleStudents = program.allow_multiple_students !== false;
+
+  // Knoptekst: prefereer beheerbare tekst → fallback "Inschrijven"
+  const inschrijfButtonText =
+    (program.registration_button_text || "").trim() || "Inschrijven";
+
+  // Het inschrijfformulier — wordt gebruikt in beide takken (direct of na
+  // reveal). We renderen het hier één keer als JSX-tree zodat de
+  // RegistrationFormReveal-wrapper hem als children kan ontvangen.
+  const formNode = program.registration_enabled ? (
+    <RegistrationForm
+      type="education"
+      sourceSlug={program.slug}
+      sourceTitle={program.title}
+      targetGender={program.target_gender ?? null}
+      anchorId="inschrijven"
+      contentTexts={{
+        intro_title:     program.registration_intro_title,
+        intro_text:      program.registration_intro_text,
+        button_text:     program.registration_button_text,
+        success_message: program.registration_success_message,
+        extra_note:      program.registration_extra_note,
+      }}
+      termsUrl={settings?.registration_terms_url ?? null}
+      termsLabel={settings?.registration_terms_label ?? null}
+      requireTermsAcceptance={requireTerms}
+      allowMultipleStudents={allowMultipleStudents}
+    />
+  ) : null;
 
   return (
     <>
@@ -128,30 +171,52 @@ export default async function EducationProgramDetailPage({ params }: Props) {
 
           {program.description && (
             <div
-              className="prose prose-lg max-w-none font-body text-ink leading-relaxed prose-headings:font-display prose-headings:text-ink prose-a:text-slate-mosque"
+              className="prose prose-lg max-w-none font-body text-ink leading-relaxed prose-headings:font-display prose-headings:text-ink prose-a:text-slate-mosque mb-10"
               dangerouslySetInnerHTML={{ __html: program.description }}
             />
           )}
 
-          {/* Inschrijfformulier of gesloten-melding */}
-          <div className="mt-10">
-            {program.registration_enabled ? (
-              <RegistrationForm
-                type="education"
-                sourceSlug={program.slug}
-                sourceTitle={program.title}
-                targetGender={program.target_gender ?? null}
-              />
+          {/* ─── Inschrijven-flow ──────────────────────────── */}
+          {program.registration_enabled ? (
+            showImmediately ? (
+              // Direct zichtbaar: anchor-CTA + formulier eronder
+              <>
+                <div className="my-10 p-6 bg-white border border-sand-200 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h3 className="font-display text-xl text-ink">
+                      Klaar om in te schrijven?
+                    </h3>
+                    <p className="font-body text-sm text-taupe-dark mt-1">
+                      Vul het formulier hieronder in.
+                      {allowMultipleStudents && " U kunt meerdere kinderen tegelijk inschrijven."}
+                    </p>
+                  </div>
+                  <Button href="#inschrijven" variant="primary" className="shrink-0">
+                    {inschrijfButtonText}
+                  </Button>
+                </div>
+                <div className="mt-10">{formNode}</div>
+              </>
             ) : (
-              <div className="p-6 bg-sand-100 border border-sand-200 rounded-2xl text-center">
-                <h3 className="font-display text-xl text-ink mb-2">Inschrijven gesloten</h3>
-                <p className="font-body text-taupe-dark text-sm">
-                  Inschrijven is momenteel gesloten. Houd deze pagina in de gaten of
-                  neem contact met ons op voor meer informatie.
-                </p>
+              // Reveal-mode: alleen knop, formulier verschijnt na klik
+              <div className="mt-10">
+                <RegistrationFormReveal
+                  buttonLabel={inschrijfButtonText}
+                  anchorId="inschrijven"
+                >
+                  {formNode}
+                </RegistrationFormReveal>
               </div>
-            )}
-          </div>
+            )
+          ) : (
+            <div className="mt-10 p-6 bg-sand-100 border border-sand-200 rounded-2xl text-center">
+              <h3 className="font-display text-xl text-ink mb-2">Inschrijven gesloten</h3>
+              <p className="font-body text-taupe-dark text-sm">
+                Inschrijven is momenteel gesloten. Houd deze pagina in de gaten of
+                neem contact met ons op voor meer informatie.
+              </p>
+            </div>
+          )}
 
           <div className="mt-10 pt-6 border-t border-sand-200">
             <Button href="/onderwijs" variant="outline">

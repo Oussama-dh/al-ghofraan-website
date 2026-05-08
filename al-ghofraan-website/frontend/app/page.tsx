@@ -16,9 +16,11 @@ import {
   getIconSettings,
   getSiteSettings,
   getPageSectionsWithItems,
+  getHomepageVideos,
   resolveIconKey,
   ICON_KEYS,
 } from "@/lib/directus";
+import { buildYouTubeEmbedUrl } from "@/lib/utils";
 import type { PageSection, PageSectionItem } from "@/types/directus";
 
 export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
@@ -68,11 +70,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [page, activities, iconMap, sections] = await Promise.all([
+  const [page, activities, iconMap, sections, homepageVideos] = await Promise.all([
     getPageContent("home"),
     getUpcomingActivities(6),
     getIconSettings(),
     getPageSectionsWithItems("home"),
+    getHomepageVideos(3),
   ]);
 
   const dateIcon        = resolveIconKey(iconMap, ICON_KEYS.activityDate);
@@ -159,6 +162,63 @@ export default async function HomePage() {
           </Container>
         </section>
       )}
+
+      {/* Homepage video's — alleen tonen als beheerder show_on_homepage heeft aangevinkt.
+          Geen sectie zichtbaar bij lege selectie zodat homepage er niet "incompleet" uitziet. */}
+      {(() => {
+        const validVideos = homepageVideos
+          .map((v) => ({ video: v, embedUrl: buildYouTubeEmbedUrl(v.youtube_url) }))
+          .filter((entry) => entry.embedUrl !== null);
+
+        if (validVideos.length === 0) return null;
+
+        return (
+          <section className="bg-sand-50 py-16 lg:py-20">
+            <Container>
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+                <SectionTitle
+                  title="Video's"
+                  subtitle="Lezingen, opnames en momentopnames van onze activiteiten"
+                  align="left"
+                />
+                <Button href="/videos" variant="outline" size="sm" className="shrink-0">
+                  Alle video's
+                </Button>
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {validVideos.map(({ video, embedUrl }) => (
+                  <article
+                    key={video.id}
+                    className="flex flex-col bg-white rounded-2xl overflow-hidden border border-sand-200 shadow-sm"
+                  >
+                    <div className="relative aspect-video bg-ink">
+                      <iframe
+                        src={embedUrl!}
+                        title={video.title}
+                        loading="lazy"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        referrerPolicy="strict-origin-when-cross-origin"
+                        className="absolute inset-0 w-full h-full"
+                      />
+                    </div>
+                    <div className="flex flex-col flex-1 p-5">
+                      <h3 className="font-display text-lg text-ink">
+                        {video.title}
+                      </h3>
+                      {video.description && (
+                        <p className="font-body text-taupe-dark text-sm leading-relaxed mt-2 flex-1 line-clamp-2">
+                          {video.description}
+                        </p>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </Container>
+          </section>
+        );
+      })()}
 
       {/* Gebedstijden-banner */}
       <section className="bg-sand py-12">
