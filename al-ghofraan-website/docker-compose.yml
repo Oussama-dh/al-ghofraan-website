@@ -57,8 +57,8 @@ services:
     image: node:20-alpine
     container_name: alghofraan_frontend
     working_dir: /app
-    command: sh -c "npm install --include=dev && npm run build && npm run start -- -H 0.0.0.0 -p 3000" # Voor productie
-    # command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0" Dit is voor development
+    # command: sh -c "npm install --include=dev && npm run build && npm run start -- -H 0.0.0.0 -p 3000" # Voor productie
+    command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0" #Dit is voor development
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -67,8 +67,8 @@ services:
       - /app/node_modules
       - /app/.next
     environment:
-      NODE_ENV: ${NODE_ENV:-production} #Productie
-      # NODE_ENV: ${NODE_ENV:-development} deze regel is voor development, gebruik de bovenstaande regel voor productie
+      # NODE_ENV: ${NODE_ENV:-production} #Productie
+      NODE_ENV: ${NODE_ENV:-development} #deze regel is voor development, gebruik de bovenstaande regel voor productie
       NEXT_PUBLIC_DIRECTUS_URL: ${NEXT_PUBLIC_DIRECTUS_URL:-http://localhost:8055}
       DIRECTUS_URL: ${DIRECTUS_URL:-http://directus:8055}
       DIRECTUS_TOKEN: ${DIRECTUS_TOKEN:-}

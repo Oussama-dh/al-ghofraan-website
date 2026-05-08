@@ -23,6 +23,7 @@ import type {
   DonationCampaign,
   Article,
   Video,
+  TvAnnouncement,
 } from "@/types/directus";
 
 const DIRECTUS_INTERNAL_URL =
@@ -353,6 +354,62 @@ export async function getVideos(): Promise<Video[]> {
       return result as unknown as Video[];
     },
     "getVideos",
+    []
+  );
+}
+
+// ─── TV announcements ────────────────────────────────────────
+//
+// Items voor /gebedstijden/tv. Filter-aanpak:
+//   1. Op DB-niveau alleen `status=published` (matcht public-read policy).
+//   2. Daarna in code op `active`, `show_on_tv` en het display-tijdvenster.
+//      Tijdvenster-filtering doen we in JS i.p.v. Directus-filter zodat we
+//      niet verstrikt raken in tijdzone-edge cases — `display_from/until`
+//      worden simpelweg vergeleken met `Date.now()`.
+const TV_ANNOUNCEMENT_FIELDS = [
+  "id", "status", "type", "title", "body",
+  "arabic_text", "translation",
+  "source", "reference", "grade",
+  "display_from", "display_until",
+  "active", "show_on_tv",
+  "sort", "created_at",
+];
+
+export async function getTvAnnouncements(): Promise<TvAnnouncement[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("tv_announcements", {
+          filter: { status: { _eq: "published" } } as never,
+          // Lager `sort` eerst, dan recentere items eerst.
+          sort:   ["sort", "-created_at"],
+          limit:  -1,
+          fields: TV_ANNOUNCEMENT_FIELDS,
+        })
+      );
+
+      const items = (result as unknown as TvAnnouncement[]) || [];
+      const now = Date.now();
+
+      return items.filter((item) => {
+        if (!item.active || !item.show_on_tv) return false;
+
+        // display_from leeg of in het verleden? OK.
+        if (item.display_from) {
+          const from = Date.parse(item.display_from);
+          if (Number.isFinite(from) && from > now) return false;
+        }
+
+        // display_until leeg of in de toekomst? OK.
+        if (item.display_until) {
+          const until = Date.parse(item.display_until);
+          if (Number.isFinite(until) && until < now) return false;
+        }
+
+        return true;
+      });
+    },
+    "getTvAnnouncements",
     []
   );
 }

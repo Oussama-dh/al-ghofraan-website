@@ -73,6 +73,12 @@ export interface SiteSettings {
   whatsapp_number?: string | null;
   /** Voorgevulde tekst voor de WhatsApp-knop op /contact */
   whatsapp_default_message?: string | null;
+  /** Duur van de gebedstijden-slide op /gebedstijden/tv (in seconden). Default 25. */
+  tv_prayer_slide_seconds?: number | null;
+  /** Duur van een mededeling/hadith op /gebedstijden/tv (in seconden). Default 15. */
+  tv_item_slide_seconds?: number | null;
+  /** Refresh-interval voor server-data op /gebedstijden/tv (in minuten). Default 5. */
+  tv_refresh_minutes?: number | null;
   social_links?: {
     facebook?: string;
     instagram?: string;
@@ -232,6 +238,16 @@ export interface Registration {
   gender?: string | null;
   notes?: string | null;
   status: RegistrationStatus;
+  /** Interne notitie voor opvolging — niet zichtbaar voor de inschrijver. */
+  internal_notes?: string | null;
+  /** Wanneer er voor het laatst contact is geweest. Handmatig ingevuld door admin. */
+  last_contacted_at?: string | null;
+  /** Naam of initialen van wie deze opvolgt. */
+  handled_by?: string | null;
+  /** Conceptonderwerp voor het antwoord (kopieerbaar naar eigen mailclient). */
+  reply_subject?: string | null;
+  /** Conceptantwoord — wordt nooit automatisch verstuurd. */
+  reply_draft?: string | null;
   created_at?: string | null;
 }
 
@@ -378,6 +394,48 @@ export interface ContactMessage {
   subject: string;
   message: string;
   status: ContactMessageStatus;
+  /** Interne notitie voor opvolging — niet zichtbaar voor de afzender. */
+  internal_notes?: string | null;
+  /** Wanneer er voor het laatst contact is geweest. Handmatig ingevuld door admin. */
+  last_contacted_at?: string | null;
+  /** Naam of initialen van wie deze opvolgt. */
+  handled_by?: string | null;
+  /** Conceptonderwerp voor het antwoord (kopieerbaar naar eigen mailclient). */
+  reply_subject?: string | null;
+  /** Conceptantwoord — wordt nooit automatisch verstuurd. */
+  reply_draft?: string | null;
+  created_at?: string | null;
+}
+
+// ─── tv_announcements ────────────────────────────────────────
+/**
+ * Items die roteren op /gebedstijden/tv onder de gebedstijden.
+ * Volledig handmatig beheerd door de admin in Directus — er is geen
+ * automatische import en geen externe hadith-API.
+ */
+export type TvAnnouncementType =
+  | "announcement"
+  | "hadith"
+  | "reminder"
+  | "event"
+  | "donation";
+
+export interface TvAnnouncement {
+  id: number;
+  status: "draft" | "published" | "archived";
+  type: TvAnnouncementType;
+  title: string;
+  body?: string | null;
+  arabic_text?: string | null;
+  translation?: string | null;
+  source?: string | null;
+  reference?: string | null;
+  grade?: string | null;
+  display_from?: string | null;
+  display_until?: string | null;
+  active: boolean;
+  show_on_tv: boolean;
+  sort?: number | null;
   created_at?: string | null;
 }
 
@@ -399,4 +457,5 @@ export interface DirectusSchema {
   articles: Article[];
   videos: Video[];
   contact_messages: ContactMessage[];
+  tv_announcements: TvAnnouncement[];
 }

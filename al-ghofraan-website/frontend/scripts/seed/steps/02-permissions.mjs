@@ -15,6 +15,7 @@ const COLLECTIONS = [
   { collection: "donation_campaigns", filter: { status:    { _eq: "published" } } },
   { collection: "articles",           filter: { status:    { _eq: "published" } } },
   { collection: "videos",             filter: { status:    { _eq: "published" } } },
+  { collection: "tv_announcements",   filter: { status:    { _eq: "published" } } },
   // BEWUST GEEN public-permissies voor `registrations`, `donations` en
   // `contact_messages`: die routes schrijven server-side via DIRECTUS_TOKEN.
   { collection: "directus_files",     filter: null },
