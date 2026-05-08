@@ -11,6 +11,7 @@ export const RESERVED_SLUGS = [
   "onderwijs",
   "artikelen",
   "contact",
+  "videos",
   "api",
   "favicon.ico",
   "robots.txt",

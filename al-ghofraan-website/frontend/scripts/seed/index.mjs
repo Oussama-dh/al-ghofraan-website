@@ -19,9 +19,12 @@ import { setupContact }             from "./steps/17-contact.mjs";
 import { setupPrivacy }             from "./steps/18-privacy.mjs";
 import { setupVideos }              from "./steps/19-videos.mjs";
 import { setupPageHeaders }         from "./steps/20-page-headers.mjs";
+import { setupTvAnnouncements }     from "./steps/21-tv-announcements.mjs";
+import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
 import { setupFooterFields }        from "./steps/01i-footer-fields.mjs";
 import { setupFileImageFields }     from "./steps/01j-file-image-fields.mjs";
+import { setupTvSettings }          from "./steps/01k-tv-settings.mjs";
 import { setupPermissions }         from "./steps/02-permissions.mjs";
 import { seedNavigation }           from "./steps/03-navigation.mjs";
 import { seedSiteSettings }         from "./steps/04-site-settings.mjs";
@@ -63,9 +66,12 @@ try {
   await setupPrivacy(client);               // 18. privacyverklaring (page_content) + footer nav-item
   await setupVideos(client);                // 19. videos (publiek leesbaar als published)
   await setupPageHeaders(client);           // 20. arabic_title veld + soft-create page_content voor vaste routes
+  await setupTvAnnouncements(client);       // 21. tv_announcements (publiek leesbaar als published)
+  await setupFollowupFields(client);        // 12b. opvolgvelden op contact_messages + registrations (na 12 en 17)
   await setupTargetGender(client);          // 1h. target_gender velden + gender keuzes bijwerken
   await setupFooterFields(client);          // 1i. footer + branding velden in site_settings
   await setupFileImageFields(client);       // 1j. heel alle file/image velden naar correcte interface
+  await setupTvSettings(client);            // 1k. TV display-instellingen (tv_prayer_slide_seconds etc.)
   await setupPermissions(client);           // 2.  permissies (NA alle collecties!)
   await seedNavigation(client);          // 3.  menu
   await seedSiteSettings(client);        // 4.  site-instellingen
