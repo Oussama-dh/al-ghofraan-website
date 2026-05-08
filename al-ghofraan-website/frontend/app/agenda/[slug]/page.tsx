@@ -115,6 +115,13 @@ export default async function ActivityDetailPage({ params }: Props) {
                 sourceSlug={activity.slug}
                 sourceTitle={activity.title}
                 targetGender={activity.target_gender ?? null}
+                contentTexts={{
+                  intro_title:     activity.registration_intro_title,
+                  intro_text:      activity.registration_intro_text,
+                  button_text:     activity.registration_button_text,
+                  success_message: activity.registration_success_message,
+                  extra_note:      activity.registration_extra_note,
+                }}
               />
             </div>
           )}

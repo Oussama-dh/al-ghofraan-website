@@ -48,6 +48,36 @@ export default function DonationForm({ campaigns = [], className }: DonationForm
     [allOptions, campaignId]
   );
 
+  // ─── Stripe Payment Link modus ────────────────────────────────
+  // Wanneer een campagne is geconfigureerd met `use_stripe_payment_link = true`
+  // en een geldige URL heeft, slaan we de eigen checkout-flow over en sturen we
+  // de bezoeker direct naar Stripe Payment Link. Naam/email/bedrag worden dan
+  // op de Stripe-pagina opgegeven; wij geven alleen `client_reference_id` mee
+  // zodat de admin in Stripe kan zien dat het via deze campagne kwam.
+  const paymentLinkUrl = useMemo<string | null>(() => {
+    if (!selectedCampaign.use_stripe_payment_link) return null;
+    const url = (selectedCampaign.stripe_payment_link_url || "").trim();
+    if (!url) return null;
+    // Veiligheidscheck: alleen Stripe-domein toelaten om open redirect te voorkomen
+    if (!/^https:\/\/(buy\.stripe\.com|checkout\.stripe\.com)\//.test(url)) return null;
+    return url;
+  }, [selectedCampaign]);
+
+  // Bouw de uiteindelijke redirect-URL met client_reference_id
+  // (slug of "id-{campaignId}") als reconciliation-handvat in Stripe
+  const paymentLinkRedirect = useMemo<string | null>(() => {
+    if (!paymentLinkUrl) return null;
+    const ref = (selectedCampaign.slug || `id-${selectedCampaign.id}`).trim();
+    try {
+      const u = new URL(paymentLinkUrl);
+      // client_reference_id heeft een max-lengte in Stripe (200 chars), slug is altijd kort genoeg
+      u.searchParams.set("client_reference_id", ref.slice(0, 200));
+      return u.toString();
+    } catch {
+      return paymentLinkUrl;
+    }
+  }, [paymentLinkUrl, selectedCampaign]);
+
   // Welke type-opties zijn beschikbaar voor deze campagne?
   const typeOptions = useMemo(() => {
     const opts: DonationType[] = [];
@@ -234,6 +264,40 @@ export default function DonationForm({ campaigns = [], className }: DonationForm
         </fieldset>
       )}
 
+      {/* ─── Stripe Payment Link modus ─────────────────────────────
+           Wanneer de geselecteerde campagne een Payment Link gebruikt, slaan we
+           alle interne velden (type/bedrag/naam/email/message) over en sturen
+           we de bezoeker direct door naar Stripe. Naam/email/bedrag worden
+           daar opgegeven. Wij geven `client_reference_id` mee zodat in Stripe
+           Reports gefilterd kan worden op campagne-slug. */}
+      {paymentLinkRedirect ? (
+        <>
+          <div className="mb-6 rounded-lg bg-slate-mosque/5 border border-slate-mosque/15 p-4">
+            <p className="font-body text-sm text-taupe-dark leading-relaxed">
+              Voor deze campagne gebruiken wij een directe Stripe-betaalpagina.
+              U vult bedrag en gegevens daar in. Klik op de knop hieronder om door te gaan.
+            </p>
+          </div>
+          {status === "error" && errorMessage && (
+            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-800 font-body text-sm" role="alert">
+              {errorMessage}
+            </div>
+          )}
+          <a
+            href={paymentLinkRedirect}
+            // Geen target=_blank — Stripe Payment Link werkt net als onze
+            // eigen checkout: bezoeker keert na betaling terug via de URL die
+            // de admin in Stripe Dashboard heeft ingesteld als success_url.
+            className="inline-flex items-center justify-center w-full py-3 px-4 rounded-lg bg-slate-mosque text-white font-body font-medium text-base hover:bg-slate-dark transition-colors"
+          >
+            Doorgaan naar Stripe
+          </a>
+          <p className="mt-3 font-body text-xs text-taupe-dark/80 text-center">
+            U wordt veilig doorgestuurd naar Stripe.
+          </p>
+        </>
+      ) : (
+        <>
       {/* Type-toggle — alleen tonen als beide opties beschikbaar zijn */}
       {showTypeToggle && (
         <fieldset className="mb-6">
@@ -389,6 +453,8 @@ export default function DonationForm({ campaigns = [], className }: DonationForm
           privacyverklaring
         </a>.
       </p>
+        </>
+      )}
     </form>
   );
 }

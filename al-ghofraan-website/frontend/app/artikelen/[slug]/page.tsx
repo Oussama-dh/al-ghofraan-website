@@ -10,6 +10,7 @@ import {
   getAllArticleSlugs,
   getAssetUrl,
   getSiteSettings,
+  getEffectiveCategoryName,
 } from "@/lib/directus";
 import { formatDate }    from "@/lib/utils";
 
@@ -70,11 +71,8 @@ export default async function ArtikelDetailPage({ params }: Props) {
       ? article.tags.split(",").map((t) => t.trim()).filter(Boolean)
       : [];
 
-  // Categorie altijd als string of null
-  const categoryLabel =
-    typeof article.category === "string" && article.category.trim().length > 0
-      ? article.category.trim()
-      : null;
+  // Categorie: prefereer category_ref.name; valt terug op de oude string.
+  const categoryLabel = getEffectiveCategoryName(article);
 
   // Body: alleen renderen als het een string is. Geen objecten/null/numbers.
   const bodyHtml = typeof article.body === "string" ? article.body : "";

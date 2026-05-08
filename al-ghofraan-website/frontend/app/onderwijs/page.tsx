@@ -1,25 +1,34 @@
 // app/onderwijs/page.tsx
+//
+// Overzicht-pagina voor onderwijsprogramma's. Bezoeker ziet hier een
+// keuze van alle gepubliceerde programma's en klikt door naar
+// /onderwijs/<slug> voor de detailpagina.
+//
+// Belangrijk: deze pagina opent NIET automatisch een programma. Ze
+// toont alleen een lijst van cards. De /onderwijs/[slug] route handelt
+// de detail + inschrijfflow af.
 
 import type { Metadata } from "next";
 import Link              from "next/link";
+import { ArrowRight, GraduationCap, Star } from "lucide-react";
 import Container         from "@/components/ui/Container";
 import SectionTitle      from "@/components/ui/SectionTitle";
-import { Icon }          from "@/lib/icons";
 import {
   getEducationPrograms,
   getPageContent,
   getSiteSettings,
   getAssetUrl,
 } from "@/lib/directus";
-import { formatDate }    from "@/lib/utils";
+import { formatDate, cn } from "@/lib/utils";
+import type { EducationProgram } from "@/types/directus";
 
 export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
-export const revalidate = 600;
+export const revalidate = 300;
 
 const FALLBACK = {
   title:    "Onderwijs",
   arabic:   "التعليم",
-  subtitle: "Lessen, cursussen en studiekringen voor de gemeenschap",
+  subtitle: "Cursussen en programma's voor jong en oud",
 };
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -28,17 +37,17 @@ export async function generateMetadata(): Promise<Metadata> {
     getSiteSettings(),
   ]);
   return {
-    title:       page?.seo_title || page?.title || FALLBACK.title,
+    title: page?.seo_title || page?.title || FALLBACK.title,
     description:
       page?.seo_description ||
       settings?.default_seo_description ||
-      "Lessen, cursussen en studiekringen aangeboden door de DawahCommissie.",
+      "Bekijk alle cursussen, lessen en studiekringen van de DawahCommissie.",
   };
 }
 
-export default async function OnderwijsPage() {
+export default async function OnderwijsOverviewPage() {
   const [programs, page] = await Promise.all([
-    getEducationPrograms(),
+    getEducationPrograms() as Promise<EducationProgram[]>,
     getPageContent("onderwijs"),
   ]);
 
@@ -63,94 +72,93 @@ export default async function OnderwijsPage() {
 
       <section className="bg-sand-50 py-12 lg:py-16">
         <Container>
-          {programs.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="text-5xl mb-4">📚</div>
-              <h3 className="font-display text-2xl text-ink mb-2">
-                Momenteel geen aanbod
-              </h3>
-              <p className="font-body text-taupe-dark">
-                Houd onze pagina in de gaten voor nieuwe lessen en cursussen.
-              </p>
+          {programs.length > 0 ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {programs.map((program) => (
+                <ProgramCard key={program.id} program={program} />
+              ))}
             </div>
           ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {programs.map((program) => {
-                const imageId =
-                  typeof program.image === "string"
-                    ? program.image
-                    : program.image?.id;
-                const imageUrl = imageId ? getAssetUrl(imageId) : null;
-
-                return (
-                  <Link
-                    key={program.id}
-                    href={`/onderwijs/${program.slug}`}
-                    className="group flex flex-col bg-white rounded-2xl overflow-hidden border border-sand-200 hover:border-taupe/50 shadow-sm hover:shadow-md transition-all duration-300"
-                  >
-                    <div className="relative h-48 bg-sand overflow-hidden">
-                      {imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={imageUrl}
-                          alt={program.title}
-                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 pattern-overlay flex items-center justify-center">
-                          <Icon name="graduation-cap" className="w-12 h-12 text-taupe/40" strokeWidth={1.5} />
-                        </div>
-                      )}
-                      {program.registration_enabled && (
-                        <span className="absolute top-3 right-3 bg-slate-mosque text-white text-xs font-body font-medium px-3 py-1 rounded-full shadow-sm">
-                          Inschrijving open
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col flex-1 p-5">
-                      {program.target_group && (
-                        <span className="font-body text-xs uppercase tracking-wider text-taupe mb-1">
-                          {program.target_group}
-                        </span>
-                      )}
-                      <h3 className="font-display text-xl text-ink group-hover:text-slate-mosque transition-colors">
-                        {program.title}
-                      </h3>
-
-                      {program.description && (
-                        <p className="font-body text-taupe-dark text-sm leading-relaxed mt-2 flex-1 line-clamp-3">
-                          {program.description.replace(/<[^>]+>/g, "")}
-                        </p>
-                      )}
-
-                      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-taupe text-sm font-body">
-                        {program.teacher && (
-                          <span className="flex items-center gap-1.5">
-                            <Icon name="user" className="w-4 h-4" />
-                            {program.teacher}
-                          </span>
-                        )}
-                        {program.start_date && (
-                          <span className="flex items-center gap-1.5">
-                            <Icon name="calendar" className="w-4 h-4" />
-                            {formatDate(program.start_date, "d MMM yyyy")}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="mt-4 flex items-center text-slate-mosque text-sm font-medium font-body group-hover:gap-2 transition-all">
-                        <span>Meer informatie</span>
-                        <Icon name="arrow-right" className="ml-1 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+            <div className="text-center py-20">
+              <GraduationCap className="w-12 h-12 text-taupe/40 mx-auto mb-4" strokeWidth={1.5} />
+              <h3 className="font-display text-2xl text-ink mb-2">
+                Momenteel geen lopende programma&apos;s
+              </h3>
+              <p className="font-body text-taupe-dark">
+                Houd onze pagina in de gaten voor nieuwe cursussen en lessen.
+              </p>
             </div>
           )}
         </Container>
       </section>
     </>
+  );
+}
+
+// ─── Card-component (lokaal — onderwijs heeft eigen velden) ─────
+function ProgramCard({ program }: { program: EducationProgram }) {
+  const imageId =
+    typeof program.image === "string" ? program.image : program.image?.id;
+  const imageUrl = imageId ? getAssetUrl(imageId) : null;
+
+  const startDate = program.start_date
+    ? formatDate(program.start_date, "d MMM yyyy")
+    : null;
+
+  return (
+    <Link
+      href={`/onderwijs/${program.slug}`}
+      className={cn(
+        "group flex flex-col bg-white rounded-2xl overflow-hidden",
+        "border border-sand-200 hover:border-taupe/50",
+        "shadow-sm hover:shadow-md transition-all duration-300",
+      )}
+    >
+      <div className="relative bg-sand overflow-hidden h-48">
+        {imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={imageUrl}
+            alt={program.title}
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="absolute inset-0 pattern-overlay bg-sand flex items-center justify-center">
+            <Star className="w-12 h-12 text-taupe/40" strokeWidth={1.5} />
+          </div>
+        )}
+
+        {program.target_group && (
+          <div className="absolute top-3 left-3 bg-slate-mosque/95 text-white text-xs font-body font-medium px-3 py-1 rounded-full shadow-md">
+            {program.target_group}
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col flex-1 p-5">
+        {(program.teacher || startDate) && (
+          <div className="flex items-center gap-2 text-taupe text-sm font-body mb-2 flex-wrap">
+            {program.teacher && <span className="truncate">{program.teacher}</span>}
+            {program.teacher && startDate && <span aria-hidden>·</span>}
+            {startDate && <span>vanaf {startDate}</span>}
+          </div>
+        )}
+
+        <h3 className="font-display text-xl text-ink group-hover:text-slate-mosque transition-colors">
+          {program.title}
+        </h3>
+
+        {program.description && (
+          <p className="font-body text-taupe-dark text-sm leading-relaxed mt-2 flex-1 line-clamp-3">
+            {program.description.replace(/<[^>]+>/g, "")}
+          </p>
+        )}
+
+        <div className="mt-4 flex items-center text-slate-mosque text-sm font-medium font-body group-hover:gap-2 transition-all">
+          <span>Bekijk programma</span>
+          <ArrowRight className="ml-1 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+        </div>
+      </div>
+    </Link>
   );
 }

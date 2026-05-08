@@ -1384,4 +1384,199 @@ Mocht je per ongeluk alle onderwerpen op `draft` zetten of de collectie leegmake
 
 ---
 
+## 25. Artikel-categorieën (`article_categories`)
+
+In plaats van een vrij tekstveld op elk artikel kun je nu categorieën centraal beheren via Directus → **Article Categories**. Op `/artikelen` verschijnen alleen categorieën die daadwerkelijk een gepubliceerd artikel hebben.
+
+### 25.1 Een categorie maken
+
+| Veld         | Wat doe je ermee?                                                       |
+|--------------|-------------------------------------------------------------------------|
+| `status`     | `published` om te tonen, `draft` om verborgen te houden                 |
+| `name`       | Wat de bezoeker ziet, bv. "Lezing"                                      |
+| `slug`       | Wordt gebruikt in `/artikelen?category=...` URL                          |
+| `description` | Optionele uitleg voor admin                                             |
+| `sort`       | Lager getal = eerder in de filterlijst                                  |
+| `active`     | Snel uit te zetten                                                       |
+
+### 25.2 Een artikel koppelen
+
+In Directus → **Articles** → bij elk artikel zie je het veld `category_ref`. Selecteer een categorie uit de dropdown. Bestaande artikelen die nog de oude `category` (vrij tekstveld) gebruiken blijven werken — die string wordt automatisch als categorienaam getoond. Wil je een oud artikel bijwerken? Vul `category_ref` in en het werkt direct via het nieuwe systeem.
+
+### 25.3 Standaardcategorieën
+
+Bij eerste seed worden vier categorieën aangemaakt (alleen als ze nog niet bestaan): Nieuws, Lezing, Reflectie, Activiteit. Bewerk vrij of voeg eigen categorieën toe.
+
+### 25.4 Wat is er met de oude `category` string?
+
+Het oude veld `articles.category` (vrij tekstveld) is bewust **niet** verwijderd. Het wordt nog gebruikt als fallback voor records die nog geen `category_ref` hebben. Dit voorkomt dat oude content breekt. Op termijn kun je oude artikelen handmatig migreren naar de nieuwe collectie.
+
+---
+
+## 26. Video-categorieën + homepage-video's (`video_categories`)
+
+### 26.1 Categorieën beheren
+
+Zelfde patroon als artikel-categorieën — Directus → **Video Categories**. Standaard worden drie categorieën aangemaakt: Vrijdagpreken, Lezingen, Activiteiten. Op `/videos` verschijnt een filter-balk, en op mobiel kunnen bezoekers nu **horizontaal swipen** door de video's via CSS scroll-snap.
+
+Aan een video koppel je een categorie via het `category_ref` veld in Directus → **Videos**.
+
+### 26.2 Video's op de homepage
+
+Wil je een video uitlichten op `/`? Open de video in Directus en vink **`show_on_homepage`** aan. Optioneel kun je `homepage_sort` invullen (lager = eerder).
+
+- Maximaal 3 video's worden getoond (de eerste 3 op `homepage_sort` oplopend)
+- De homepage-sectie verschijnt alleen als er minimaal één homepage-video is — anders blijft de homepage zoals voorheen
+- Onder de video's staat een knop "Alle video's" naar `/videos`
+
+### 26.3 Mobile swipe
+
+Op smartphones (`<sm` breakpoint) wordt het video-grid een horizontale carousel met scroll-snap. Bezoekers vegen door de video's. Op tablet en desktop blijft het een normale grid (2 of 3 kolommen). **Geen extra library** — alleen CSS.
+
+---
+
+## 27. Stripe Payment Links per campagne
+
+Voor zichtbaarheid in Stripe Dashboard kun je per donatiecampagne een directe Payment Link configureren. Bezoekers worden dan voor die campagne direct doorgestuurd naar Stripe (in plaats van eerst onze eigen formulier-flow). De technische details staan in `docs/STRIPE_SETUP.md` sectie 12 — hier alleen wat je in Directus doet.
+
+### 27.1 In Directus
+
+Open een campagne → **Donation Campaigns** → vul in:
+
+| Veld                       | Waarde                                              |
+|----------------------------|-----------------------------------------------------|
+| `use_stripe_payment_link`  | aangevinkt                                           |
+| `stripe_payment_link_url`  | de URL uit Stripe Dashboard (begint met `https://buy.stripe.com/`) |
+| `stripe_payment_link_id`   | optioneel — Stripe-ID `plink_xxx`                    |
+
+Vanaf dat moment toont het donatieformulier op `/doneren` voor deze campagne een knop "Doorgaan naar Stripe" in plaats van de standaard velden.
+
+### 27.2 Belangrijk om te weten
+
+- **Naam, e-mail, bedrag** worden op de Stripe-pagina ingevuld, niet op onze site
+- **Reconciliatie**: wij sturen automatisch `?client_reference_id=<campagne-slug>` mee — daarmee kun je in Stripe Dashboard filteren
+- **Webhook werkt nog steeds**: betalingen komen alsnog in Directus → `donations` terecht
+- **Beperking**: omdat wij naam/email niet vooraf weten, valt de webhook terug op `customer_details` van Stripe. Iets minder rijk dan onze eigen flow, maar wel volledig functioneel
+- **Veiligheid**: alleen URLs van `buy.stripe.com` of `checkout.stripe.com` worden geaccepteerd
+
+### 27.3 Terugzetten
+
+Vink `use_stripe_payment_link` uit. Direct werkt de standaard flow weer. URL-veld mag je laten staan voor later.
+
+
+---
+
+## 28. Onderwijs-inschrijvingen — meerdere kinderen, studentnummers, voorwaarden
+
+### 28.1 Hoe de flow werkt voor de bezoeker
+
+Bij `/onderwijs/[programma-slug]` ziet de bezoeker eerst alle informatie over het programma — titel, beschrijving, docent, doelgroep, planning, locatie. Daarna komt een blok met "Klaar om in te schrijven?" en een knop **Inschrijven** die naar het formulier scrollt.
+
+In het formulier vult de **ouder/contactpersoon** zijn gegevens in (naam, e-mail, telefoon — exact 10 cijfers verplicht), en daaronder voegt hij **één of meerdere kinderen/studenten** toe. Per kind: naam, geslacht, leeftijd (optioneel), opmerkingen (optioneel).
+
+Twee verplichte vinkjes onderaan:
+1. **Privacyverklaring** — bestaande checkbox
+2. **Voorwaarden van de organisatie** — nieuwe checkbox
+
+### 28.2 Studentnummers (auto-gegenereerd)
+
+Elk kind krijgt automatisch een uniek **studentnummer** met formaat:
+
+```
+JJ-MM-DD-XXXX
+```
+
+Bijvoorbeeld: `26-05-08-0001`. Het laatste deel telt op per dag — de tweede inschrijving van vandaag krijgt `0002`, de derde `0003`, etc. Als een ouder drie kinderen tegelijk inschrijft krijgen ze opeenvolgende nummers (bv. `0007`, `0008`, `0009`).
+
+Het studentnummer staat in Directus → **Registrations** → veld `student_number`. Read-only — wordt automatisch gegenereerd.
+
+> **Race condition**: bij twee gelijktijdige inschrijvingen op dezelfde seconde kan in theorie hetzelfde nummer worden uitgegeven. Voor de huidige schaal (kleine moskee) is dit acceptabel. Mocht het ooit voorkomen: bewerk het nummer handmatig in Directus.
+
+### 28.3 Records van één indiening bij elkaar houden
+
+Alle kinderen die in dezelfde indiening worden aangemeld krijgen dezelfde **`registration_group_id`** (een UUID). In Directus → **Registrations** kun je hierop filteren om alle kinderen van één gezin/inzending bij elkaar te zien.
+
+### 28.4 Filteren: onderwijs vs activiteit
+
+In de Registrations collectie staan zowel onderwijsinschrijvingen als activiteit-inschrijvingen. Filter:
+
+- **Onderwijs**: `type = education` (heeft ook `student_number` ingevuld + `parent_*` velden)
+- **Activiteiten**: `type = activity` (heeft géén student_number; `parent_*` velden leeg)
+
+Tip: maak in Directus een **gefilterde view** zodat je in het navigatie-paneel direct "Onderwijs-inschrijvingen" en "Activiteit-inschrijvingen" als aparte ingangen hebt.
+
+### 28.5 Beheerbare inschrijfteksten per programma/activiteit
+
+Open een programma (Directus → **Education Programs**) of activiteit (Directus → **Activities**). Onderaan vind je vijf optionele velden voor het inschrijfformulier:
+
+| Veld                            | Waar verschijnt het?                                  |
+|---------------------------------|-------------------------------------------------------|
+| `registration_intro_title`      | Kop boven het formulier (default: "Inschrijven")     |
+| `registration_intro_text`       | Inleidende tekst onder de kop                         |
+| `registration_button_text`      | Tekst op de submit-knop (default: "Inschrijving versturen") |
+| `registration_success_message`  | Bevestigingstekst na succesvolle inschrijving        |
+| `registration_extra_note`       | Extra notitie onderaan het formulier                  |
+
+Laat een veld leeg om de standaardtekst te gebruiken. Bestaande programma's blijven werken zonder dat je deze velden invult.
+
+### 28.6 Voorwaardenlink instellen
+
+Open Directus → **Site Settings** en vul in:
+
+| Veld                          | Waarde                                                                |
+|-------------------------------|-----------------------------------------------------------------------|
+| `registration_terms_url`      | URL naar voorwaardenpagina (intern als `/voorwaarden` of extern)      |
+| `registration_terms_label`    | Eigen tekst voor de checkbox (optioneel — anders default-tekst)       |
+
+De checkbox verschijnt alleen bij onderwijs-inschrijvingen. Als `registration_terms_url` leeg is, toont de checkbox alleen tekst zonder link.
+
+### 28.7 Gedrag bij activiteit-inschrijvingen
+
+De activiteit-flow is bewust **vrijwel ongewijzigd**:
+- Geen parent/child-blok — single-student-formulier zoals voorheen
+- Telefoon optioneel (maar als gevuld dan 10 cijfers)
+- Geen voorwaarden-checkbox (alleen privacy)
+- Beheerbare teksten werken óók (registration_intro_title etc. op activities)
+
+Bestaande activiteit-inschrijvingen die vóór deze release zijn ingediend blijven gewoon zichtbaar in Directus.
+
+### 28.8 Wat als er iets misgaat tijdens multi-student opslaan?
+
+Stel: een ouder schrijft 3 kinderen in en bij kind 2 faalt iets. De API:
+1. Logt welke kinderen al zijn aangemaakt (met group_id)
+2. Geeft een nette foutmelding: "Niet alle inschrijvingen konden worden opgeslagen. Neem contact op met de moskee om uw inschrijving te controleren."
+3. Geen automatische rollback — de admin kan in Directus zien welke kinderen al zijn aangemaakt (filter op `registration_group_id`) en handmatig de ontbrekende toevoegen
+
+Voor de huidige schaal (paar inschrijvingen per dag) is dit een acceptabele afweging tegenover een complexe transactie-flow.
+
+
+---
+
+## 29. Gebedstijden-overzicht: islamitische maand leidend
+
+`/gebedstijden/overzicht` werkt nu **Hijri-eerst**. De bezoeker kiest een Hidjri-maand en Hidjri-jaar, en krijgt:
+- Een header-strip met de maandnaam (NL + Arabisch) en de gregoriaanse datum-range
+- Een tabel waar elke rij een Hidjri-dag is (`1`, `2`, …, `30`), met daarnaast de gregoriaanse datum + weekdag + 6 gebedstijden
+
+### 29.1 Hoe het rekent
+
+Voor elke gregoriaanse datum in de geüploade CSV bepaalt de site automatisch de bijbehorende Hidjri-datum via Umm al-Qura (native browser API, geen externe call). Daarna selecteert de tabel alleen de dagen die in de gekozen Hidjri-maand vallen.
+
+Een Hidjri-maand is altijd 29 of 30 dagen. Beide werken automatisch — de tabel is gewoon een dag korter of langer.
+
+### 29.2 Beschikbare maanden
+
+In de selector verschijnen alleen Hidjri-maanden die **daadwerkelijk dekking hebben in de geüploade CSV**. Heb je bijvoorbeeld een CSV voor heel 2026, dan verschijnen de Hidjri-maanden van rond Joemaada al-Akhirah 1447 t/m Joemaada al-Oela 1448.
+
+### 29.3 Overrides werken mee
+
+Als je een handmatige Hidjri-override hebt toegevoegd (zie sectie 23), dan wordt die ene dag automatisch in de juiste Hidjri-maand getoond — en kan dus dag 1 van Ramadan een dag verschuiven. Het sterretje (`*`) achter de Hidjri-dag in de tabel geeft aan dat het om een handmatige correctie gaat.
+
+### 29.4 Wat verandert er voor `/gebedstijden` (vandaag-card)?
+
+Niets. De huidige "Vandaag — woensdag 08-05" kop blijft werken zoals voorheen, met de Hidjri-chip ernaast. Alleen `/gebedstijden/overzicht` is Hijri-leidend.
+
+
+---
+
 Hulp nodig: neem contact op met de webbeheerder van de DawahCommissie.

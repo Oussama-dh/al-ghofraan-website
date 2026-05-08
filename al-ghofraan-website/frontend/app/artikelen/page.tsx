@@ -10,6 +10,8 @@ import {
   getPageContent,
   getSiteSettings,
   getAssetUrl,
+  getEffectiveCategoryName,
+  getEffectiveCategorySlug,
 } from "@/lib/directus";
 import { formatDate, cn } from "@/lib/utils";
 
@@ -47,25 +49,30 @@ export default async function ArtikelenPage({ searchParams }: ArtikelenPageProps
   ]);
 
   // Bouw categorie-lijst dynamisch uit aanwezige published artikelen.
-  // Categorie zonder gepubliceerd artikel verdwijnt automatisch uit het filter.
-  const categories = Array.from(
-    new Set(
-      articles
-        .map((a) => (a.category ?? "").trim())
-        .filter(Boolean)
-    )
-  ).sort((a, b) => a.localeCompare(b, "nl"));
+  // We gebruiken de "effectieve" naam: liever category_ref.name (gestructureerd
+  // via Directus collectie), anders fallback op de oude `category`-string.
+  // Categorie zonder gepubliceerd artikel verschijnt automatisch niet in het filter.
+  //
+  // Map: slug → name. Slug wordt gebruikt in de URL (?category=foo); name in UI.
+  const categoryMap = new Map<string, string>();
+  for (const a of articles) {
+    const name = getEffectiveCategoryName(a);
+    const slug = getEffectiveCategorySlug(a);
+    if (name && slug && !categoryMap.has(slug)) {
+      categoryMap.set(slug, name);
+    }
+  }
+  const categories = Array.from(categoryMap.entries())
+    .map(([slug, name]) => ({ slug, name }))
+    .sort((a, b) => a.name.localeCompare(b.name, "nl"));
 
-  // Active filter — case-insensitive match. Bestaat de gevraagde categorie
-  // niet (meer), dan tonen we gewoon alle artikelen — robuust en simpel.
-  const requested = (searchParams?.category ?? "").trim();
+  // Active filter — case-insensitive slug-match. Onbekende slug → alle artikelen.
+  const requested = (searchParams?.category ?? "").trim().toLowerCase();
   const activeCategory =
-    requested && categories.some((c) => c.toLowerCase() === requested.toLowerCase())
-      ? categories.find((c) => c.toLowerCase() === requested.toLowerCase())!
-      : null;
+    requested ? categories.find((c) => c.slug.toLowerCase() === requested) ?? null : null;
 
   const visible = activeCategory
-    ? articles.filter((a) => (a.category ?? "").toLowerCase() === activeCategory.toLowerCase())
+    ? articles.filter((a) => getEffectiveCategorySlug(a) === activeCategory.slug)
     : articles;
 
   return (
@@ -97,11 +104,11 @@ export default async function ArtikelenPage({ searchParams }: ArtikelenPageProps
               </FilterPill>
               {categories.map((cat) => (
                 <FilterPill
-                  key={cat}
-                  href={`/artikelen?category=${encodeURIComponent(cat.toLowerCase())}`}
-                  active={activeCategory?.toLowerCase() === cat.toLowerCase()}
+                  key={cat.slug}
+                  href={`/artikelen?category=${encodeURIComponent(cat.slug)}`}
+                  active={activeCategory?.slug === cat.slug}
                 >
-                  {cat}
+                  {cat.name}
                 </FilterPill>
               ))}
             </div>
@@ -151,11 +158,14 @@ export default async function ArtikelenPage({ searchParams }: ArtikelenPageProps
                     </div>
 
                     <div className="flex flex-col flex-1 p-5">
-                      {article.category && (
-                        <span className="font-body text-xs uppercase tracking-wider text-taupe mb-1">
-                          {article.category}
-                        </span>
-                      )}
+                      {(() => {
+                        const catName = getEffectiveCategoryName(article);
+                        return catName ? (
+                          <span className="font-body text-xs uppercase tracking-wider text-taupe mb-1">
+                            {catName}
+                          </span>
+                        ) : null;
+                      })()}
                       <h3 className="font-display text-xl text-ink group-hover:text-slate-mosque transition-colors">
                         {article.title}
                       </h3>

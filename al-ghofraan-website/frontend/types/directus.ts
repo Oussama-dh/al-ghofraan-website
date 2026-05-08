@@ -31,6 +31,12 @@ export interface Activity {
   featured: boolean;
   registration_enabled: boolean;
   target_gender?: TargetGender | null;
+  /** Beheerbare inschrijfteksten — fallback wordt in frontend gegeven. */
+  registration_intro_title?: string | null;
+  registration_intro_text?: string | null;
+  registration_button_text?: string | null;
+  registration_success_message?: string | null;
+  registration_extra_note?: string | null;
 }
 
 // ─── prayer_time_files ───────────────────────────────────────
@@ -79,6 +85,10 @@ export interface SiteSettings {
   tv_item_slide_seconds?: number | null;
   /** Refresh-interval voor server-data op /gebedstijden/tv (in minuten). Default 5. */
   tv_refresh_minutes?: number | null;
+  /** Optionele URL naar voorwaardenpagina (gebruikt door RegistrationForm). */
+  registration_terms_url?: string | null;
+  /** Optionele eigen tekst voor de voorwaarden-checkbox. */
+  registration_terms_label?: string | null;
   social_links?: {
     facebook?: string;
     instagram?: string;
@@ -204,6 +214,26 @@ export interface EducationProgram {
   max_participants?: number | null;
   sort?: number | null;
   target_gender?: TargetGender | null;
+  /** Beheerbare inschrijfteksten — fallback wordt in frontend gegeven. */
+  registration_intro_title?: string | null;
+  registration_intro_text?: string | null;
+  registration_button_text?: string | null;
+  registration_success_message?: string | null;
+  registration_extra_note?: string | null;
+  /**
+   * Onderwijs-flow toggles (delivery 4):
+   *   - show_registration_form_immediately: false → eerst info + knop, klik
+   *     onthult formulier; true → formulier direct zichtbaar.
+   *   - require_terms_acceptance: voorwaarden-checkbox tonen + verplicht.
+   *   - allow_multiple_students: meerdere kinderen in één inschrijving toestaan.
+   *
+   * Op DB-niveau hebben deze velden defaults (false/true/true) en zijn ze
+   * non-nullable, maar vóór de migratie of bij oude clients kunnen ze
+   * `undefined`/`null` zijn — de frontend en API behandelen dat veilig.
+   */
+  show_registration_form_immediately?: boolean | null;
+  require_terms_acceptance?: boolean | null;
+  allow_multiple_students?: boolean | null;
 }
 
 // ─── registrations ───────────────────────────────────────────
@@ -248,6 +278,15 @@ export interface Registration {
   reply_subject?: string | null;
   /** Conceptantwoord — wordt nooit automatisch verstuurd. */
   reply_draft?: string | null;
+  // ─── Onderwijs-specifieke velden (delivery 3) ─────────────
+  /** Auto-gegenereerd JJ-MM-DD-XXXX bij onderwijsregistraties. */
+  student_number?: string | null;
+  /** Ouder/contactpersoon — alleen onderwijs. */
+  parent_name?: string | null;
+  parent_email?: string | null;
+  parent_phone?: string | null;
+  /** UUID per inzending — kinderen van één indiening delen deze id. */
+  registration_group_id?: string | null;
   created_at?: string | null;
 }
 
@@ -309,6 +348,14 @@ export interface DonationCampaign {
   featured: boolean;
   sort?: number | null;
   created_at?: string | null;
+  /**
+   * Stripe Payment Link integratie (optioneel).
+   * Wanneer aangevinkt + URL gevuld → DonationForm-knop voor deze campagne
+   * stuurt direct door naar de Stripe Payment Link i.p.v. eigen checkout.
+   */
+  use_stripe_payment_link?: boolean | null;
+  stripe_payment_link_url?: string | null;
+  stripe_payment_link_id?: string | null;
 }
 
 // ─── donations ───────────────────────────────────────────────
@@ -349,6 +396,22 @@ export interface Donation {
 }
 
 // ─── articles ────────────────────────────────────────────────
+// ─── article_categories ──────────────────────────────────────
+/**
+ * Categorieën voor artikelen. Beheerder maakt deze zelf aan.
+ * Wordt via M2O gekoppeld aan `articles.category_ref`.
+ */
+export interface ArticleCategory {
+  id: number;
+  status: "draft" | "published" | "archived";
+  name: string;
+  slug: string;
+  description?: string | null;
+  sort?: number | null;
+  active: boolean;
+  created_at?: string | null;
+}
+
 export interface Article {
   id: number;
   status: "draft" | "published" | "archived";
@@ -359,6 +422,12 @@ export interface Article {
   image?: string | DirectusFile | null;
   author_name?: string | null;
   category?: string | null;
+  /**
+   * Optionele M2O naar article_categories. Als gevuld, gebruikt frontend
+   * `category_ref.name` voor weergave en filter — anders fallback naar
+   * de oude `category` string.
+   */
+  category_ref?: number | ArticleCategory | null;
   /** CSV string ("ramadan,gemeenschap"). Eenvoudig en toegankelijk. */
   tags?: string | null;
   published_at?: string | null;
@@ -371,6 +440,22 @@ export interface Article {
 }
 
 // ─── videos ──────────────────────────────────────────────────
+// ─── video_categories ────────────────────────────────────────
+/**
+ * Categorieën voor video's. Beheerder maakt deze zelf aan.
+ * Wordt via M2O gekoppeld aan `videos.category_ref`.
+ */
+export interface VideoCategory {
+  id: number;
+  status: "draft" | "published" | "archived";
+  name: string;
+  slug: string;
+  description?: string | null;
+  sort?: number | null;
+  active: boolean;
+  created_at?: string | null;
+}
+
 export interface Video {
   id: number;
   status: "draft" | "published" | "archived";
@@ -381,6 +466,12 @@ export interface Video {
   featured: boolean;
   published_at?: string | null;
   created_at?: string | null;
+  /** Optionele M2O naar video_categories */
+  category_ref?: number | VideoCategory | null;
+  /** Tonen op homepage? Default false. Max 3 worden getoond. */
+  show_on_homepage?: boolean | null;
+  /** Volgorde op homepage. Lager = eerder. */
+  homepage_sort?: number | null;
 }
 
 // ─── contact_messages ────────────────────────────────────────
@@ -493,4 +584,6 @@ export interface DirectusSchema {
   tv_announcements: TvAnnouncement[];
   hijri_date_overrides: HijriDateOverride[];
   contact_subjects: ContactSubject[];
+  article_categories: ArticleCategory[];
+  video_categories: VideoCategory[];
 }

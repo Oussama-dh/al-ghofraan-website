@@ -22,7 +22,9 @@ import type {
   EducationProgram,
   DonationCampaign,
   Article,
+  ArticleCategory,
   Video,
+  VideoCategory,
   TvAnnouncement,
   HijriDateOverride,
   ContactSubject,
@@ -106,6 +108,9 @@ export async function getActivities(options?: {
             "id", "status", "title", "slug", "description",
             "start_date", "end_date", "location", "image",
             "featured", "registration_enabled", "target_gender",
+            "registration_intro_title", "registration_intro_text",
+            "registration_button_text", "registration_success_message",
+            "registration_extra_note",
           ],
         })
       );
@@ -132,6 +137,9 @@ export async function getUpcomingActivities(limit = 6): Promise<Activity[]> {
             "id", "status", "title", "slug", "description",
             "start_date", "end_date", "location", "image",
             "featured", "registration_enabled", "target_gender",
+            "registration_intro_title", "registration_intro_text",
+            "registration_button_text", "registration_success_message",
+            "registration_extra_note",
           ],
         })
       );
@@ -164,6 +172,14 @@ const EDUCATION_FIELDS = [
   "teacher", "target_group", "schedule", "location",
   "start_date", "end_date", "image",
   "registration_enabled", "max_participants", "sort", "target_gender",
+  // Beheerbare inschrijfteksten (delivery 3)
+  "registration_intro_title", "registration_intro_text",
+  "registration_button_text", "registration_success_message",
+  "registration_extra_note",
+  // Onderwijs-flow toggles (delivery 4)
+  "show_registration_form_immediately",
+  "require_terms_acceptance",
+  "allow_multiple_students",
 ];
 
 export async function getEducationPrograms(): Promise<EducationProgram[]> {
@@ -227,6 +243,8 @@ const CAMPAIGN_FIELDS = [
   "allow_one_time", "allow_monthly",
   "suggested_amounts", "default_amount",
   "featured", "sort",
+  // Stripe Payment Link integratie (delivery 2b — Fase 1)
+  "use_stripe_payment_link", "stripe_payment_link_url", "stripe_payment_link_id",
 ];
 
 export async function getDonationCampaigns(): Promise<DonationCampaign[]> {
@@ -276,6 +294,10 @@ const ARTICLE_LIST_FIELDS = [
   "id", "status", "title", "slug", "excerpt", "image",
   "author_name", "category", "tags", "published_at",
   "featured", "sort",
+  // M2O — vraag de gerelateerde categorie-velden mee.
+  // `category_ref.id` blijft beschikbaar voor link-bouw.
+  "category_ref.id", "category_ref.name", "category_ref.slug",
+  "category_ref.status", "category_ref.active",
 ];
 const ARTICLE_FULL_FIELDS = [
   ...ARTICLE_LIST_FIELDS,
@@ -290,7 +312,7 @@ export async function getArticles(): Promise<Article[]> {
           filter: { status: { _eq: "published" } } as never,
           sort:   ["-featured", "-published_at"],
           limit:  -1,
-          fields: ARTICLE_LIST_FIELDS,
+          fields: ARTICLE_LIST_FIELDS as never,
         })
       );
       return result as unknown as Article[];
@@ -307,7 +329,7 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
         readItems("articles", {
           filter: { slug: { _eq: slug }, status: { _eq: "published" } } as never,
           limit:  1,
-          fields: ARTICLE_FULL_FIELDS,
+          fields: ARTICLE_FULL_FIELDS as never,
         })
       );
       return ((result as unknown as Article[])[0]) ?? null;
@@ -334,10 +356,73 @@ export async function getAllArticleSlugs(): Promise<string[]> {
   );
 }
 
+// ─── Article categories ──────────────────────────────────────
+const ARTICLE_CATEGORY_FIELDS = [
+  "id", "status", "name", "slug", "description",
+  "sort", "active", "created_at",
+];
+
+export async function getArticleCategories(): Promise<ArticleCategory[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("article_categories", {
+          filter: { status: { _eq: "published" }, active: { _eq: true } } as never,
+          sort:   ["sort", "name"],
+          limit:  -1,
+          fields: ARTICLE_CATEGORY_FIELDS,
+        })
+      );
+      return (result as unknown as ArticleCategory[]) ?? [];
+    },
+    "getArticleCategories",
+    []
+  );
+}
+
+/**
+ * Bepaal de "effectieve" categorienaam voor een artikel:
+ *   - eerst category_ref.name (als M2O is gepopuleerd)
+ *   - anders de oude vrije category-string
+ *   - anders null
+ */
+export function getEffectiveCategoryName(article: Article): string | null {
+  const ref = article.category_ref;
+  if (ref && typeof ref === "object" && ref !== null && "name" in ref) {
+    const name = (ref as ArticleCategory).name;
+    if (typeof name === "string" && name.trim()) return name.trim();
+  }
+  if (typeof article.category === "string" && article.category.trim()) {
+    return article.category.trim();
+  }
+  return null;
+}
+
+/**
+ * Effectieve slug voor filter-URL:
+ *   - eerst category_ref.slug (gestructureerd)
+ *   - anders fallback: lowercase van de string-categorie (oude gedrag)
+ */
+export function getEffectiveCategorySlug(article: Article): string | null {
+  const ref = article.category_ref;
+  if (ref && typeof ref === "object" && ref !== null && "slug" in ref) {
+    const slug = (ref as ArticleCategory).slug;
+    if (typeof slug === "string" && slug.trim()) return slug.trim();
+  }
+  if (typeof article.category === "string" && article.category.trim()) {
+    return article.category.trim().toLowerCase();
+  }
+  return null;
+}
+
 // ─── Videos ──────────────────────────────────────────────────
 const VIDEO_FIELDS = [
   "id", "status", "title", "description", "youtube_url",
   "sort", "featured", "published_at", "created_at",
+  "show_on_homepage", "homepage_sort",
+  // M2O
+  "category_ref.id", "category_ref.name", "category_ref.slug",
+  "category_ref.status", "category_ref.active",
 ];
 
 export async function getVideos(): Promise<Video[]> {
@@ -350,7 +435,7 @@ export async function getVideos(): Promise<Video[]> {
           // Directus negeert null-values bij sort op deze manier voorspelbaar.
           sort:   ["-featured", "sort", "-published_at"],
           limit:  -1,
-          fields: VIDEO_FIELDS,
+          fields: VIDEO_FIELDS as never,
         })
       );
       return result as unknown as Video[];
@@ -358,6 +443,79 @@ export async function getVideos(): Promise<Video[]> {
     "getVideos",
     []
   );
+}
+
+// ─── Video categories ────────────────────────────────────────
+const VIDEO_CATEGORY_FIELDS = [
+  "id", "status", "name", "slug", "description",
+  "sort", "active", "created_at",
+];
+
+export async function getVideoCategories(): Promise<VideoCategory[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("video_categories", {
+          filter: { status: { _eq: "published" }, active: { _eq: true } } as never,
+          sort:   ["sort", "name"],
+          limit:  -1,
+          fields: VIDEO_CATEGORY_FIELDS,
+        })
+      );
+      return (result as unknown as VideoCategory[]) ?? [];
+    },
+    "getVideoCategories",
+    []
+  );
+}
+
+/**
+ * Homepage-video's: alleen show_on_homepage=true, gesorteerd op
+ * homepage_sort oplopend (nulls last). Standaard limiet 3.
+ */
+export async function getHomepageVideos(limit = 3): Promise<Video[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("videos", {
+          filter: {
+            status: { _eq: "published" },
+            show_on_homepage: { _eq: true },
+          } as never,
+          sort:   ["homepage_sort", "-published_at"],
+          limit,
+          fields: VIDEO_FIELDS as never,
+        })
+      );
+      return result as unknown as Video[];
+    },
+    "getHomepageVideos",
+    []
+  );
+}
+
+/**
+ * Effectieve categorienaam voor video.
+ * Eerst category_ref.name (M2O), anders null.
+ * Note: video heeft geen oude string-fallback zoals articles —
+ * vóór deze release hadden video's geen category-veld.
+ */
+export function getEffectiveVideoCategoryName(video: Video): string | null {
+  const ref = video.category_ref;
+  if (ref && typeof ref === "object" && ref !== null && "name" in ref) {
+    const name = (ref as VideoCategory).name;
+    if (typeof name === "string" && name.trim()) return name.trim();
+  }
+  return null;
+}
+
+export function getEffectiveVideoCategorySlug(video: Video): string | null {
+  const ref = video.category_ref;
+  if (ref && typeof ref === "object" && ref !== null && "slug" in ref) {
+    const slug = (ref as VideoCategory).slug;
+    if (typeof slug === "string" && slug.trim()) return slug.trim();
+  }
+  return null;
 }
 
 // ─── TV announcements ────────────────────────────────────────
