@@ -24,6 +24,9 @@ import { setupTvAnnouncements }     from "./steps/21-tv-announcements.mjs";
 import { setupContactSubjects }     from "./steps/22-contact-subjects.mjs";
 import { setupArticleCategories }   from "./steps/23-article-categories.mjs";
 import { setupVideoCategories }     from "./steps/24-video-categories.mjs";
+import { setupRolesAndPolicies }    from "./steps/25-roles-policies.mjs";
+import { setupAdminListLayouts }    from "./steps/26-admin-list-layouts.mjs";
+import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
 import { setupFooterFields }        from "./steps/01i-footer-fields.mjs";
@@ -88,9 +91,11 @@ try {
   await setupTvSettings(client);            // 1k. TV display-instellingen (tv_prayer_slide_seconds etc.)
   await setupHijriOverrides(client);        // 1l. hijri_date_overrides collectie
   await setupPermissions(client);           // 2.  permissies (NA alle collecties!)
+  await setupRolesAndPolicies(client);      // 25. afdelingsrollen + policies (NA permissies — bouwt eigen policies bovenop public)
   await seedNavigation(client);          // 3.  menu
   await seedSiteSettings(client);        // 4.  site-instellingen
   await setupRegistrationTermsFields(client); // 4b. voorwaarden-velden op site_settings
+  await setupEmailFields(client);        // 4c. e-mailnotificatie-velden op site_settings (default OFF, geen verzendkanaal)
   await seedPageContent(client);         // 5.  pagina's
   await seedFaq(client);                 // 6.  faq
   await seedActivities(client);          // 7.  activiteiten
@@ -99,6 +104,7 @@ try {
   await seedIconSettings(client);        // 8.  icon-settings
   await seedPageSections(client);        // 9.  voorbeeld-secties
   await seedExamplePages(client);        // 10. voorbeeld dynamische pagina
+  await setupAdminListLayouts(client);   // 26. admin-lijst layouts (laatste — vereist dat alle velden bestaan)
 
   console.log("");
   console.log("╔══════════════════════════════════════════════════════╗");

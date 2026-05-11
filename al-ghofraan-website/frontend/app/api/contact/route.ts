@@ -6,8 +6,9 @@
 // maar een mens niet, want het is hidden).
 
 import { NextResponse } from "next/server";
-import { directusServer, getContactSubjects } from "@/lib/directus";
+import { directusServer, getContactSubjects, getSiteSettings } from "@/lib/directus";
 import { createItem } from "@directus/sdk";
+import { notifyContact } from "@/lib/server/notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -143,6 +144,24 @@ export async function POST(request: Request) {
         status:  "new",
       } as never)
     );
+
+    // ─── Admin-notificatie (fail-soft, no-op zolang feature uit) ─
+    // De helper verstuurt in deze delivery geen echte mail; hij logt
+    // alleen in dev. Try/catch eromheen om hoe-dan-ook te zorgen dat
+    // een eventuele toekomstige verzendfout NOOIT de respons blokkeert
+    // — het bericht is al netjes opgeslagen.
+    try {
+      const settings = await getSiteSettings();
+      await notifyContact(settings, {
+        name:    body.name,
+        email:   body.email,
+        phone:   body.phone ?? null,
+        subject: subjectToStore,
+        message: body.message,
+      });
+    } catch (notifyErr) {
+      console.warn("[contact] admin-notificatie overgeslagen:", notifyErr);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

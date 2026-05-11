@@ -42,9 +42,13 @@
 
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { directusServer } from "@/lib/directus";
+import { directusServer, getSiteSettings } from "@/lib/directus";
 import { readItems, createItem } from "@directus/sdk";
 import { generateStudentNumbers } from "@/lib/studentNumber";
+import {
+  notifyActivityRegistration,
+  notifyEducationRegistration,
+} from "@/lib/server/notifications";
 import type {
   Activity,
   EducationProgram,
@@ -456,6 +460,25 @@ export async function POST(request: Request) {
           status:            "new",
         } as never),
       );
+
+      // ─── Admin-notificatie (fail-soft, no-op zolang feature uit) ─
+      try {
+        const settings = await getSiteSettings();
+        await notifyActivityRegistration(settings, {
+          activityTitle: src.sourceTitle,
+          activitySlug:  body.source_slug,
+          name:          body.name,
+          email:         body.email,
+          phone:         body.phone ?? null,
+          gender:        body.gender,
+          age:           body.age ?? null,
+          notes:         body.notes ?? null,
+          status:        "new",
+        });
+      } catch (notifyErr) {
+        console.warn("[inschrijven] activity-notificatie overgeslagen:", notifyErr);
+      }
+
       return NextResponse.json({ ok: true });
     } catch (err) {
       console.error("[inschrijven] activity opslaan mislukt:", err);
@@ -552,6 +575,28 @@ export async function POST(request: Request) {
       );
       const id = (result as { id?: string | number })?.id;
       if (id !== undefined) created.push(String(id));
+    }
+
+    // ─── Admin-notificatie (fail-soft, no-op zolang feature uit) ─
+    // Pas hier — alle records zijn succesvol geschreven, anders zaten
+    // we in de catch hieronder.
+    try {
+      const settings = await getSiteSettings();
+      await notifyEducationRegistration(settings, {
+        programTitle: src.sourceTitle,
+        programSlug:  body.source_slug,
+        parent:       body.parent,
+        students:     body.students.map((s, i) => ({
+          name:          s.name,
+          gender:        s.gender,
+          age:           s.age ?? null,
+          notes:         s.notes ?? null,
+          studentNumber: studentNumbers[i],
+        })),
+        groupId,
+      });
+    } catch (notifyErr) {
+      console.warn("[inschrijven] education-notificatie overgeslagen:", notifyErr);
     }
 
     return NextResponse.json({

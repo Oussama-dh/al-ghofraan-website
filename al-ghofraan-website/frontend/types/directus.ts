@@ -89,6 +89,19 @@ export interface SiteSettings {
   registration_terms_url?: string | null;
   /** Optionele eigen tekst voor de voorwaarden-checkbox. */
   registration_terms_label?: string | null;
+  /**
+   * E-mailnotificatie-configuratie (delivery 8). Standaard uit. In
+   * deze delivery is er nog GEEN verzendkanaal aangesloten; de
+   * helper bereidt alleen het bericht voor en logt in dev. Een
+   * latere delivery sluit een echte provider aan.
+   */
+  email_notifications_enabled?: boolean | null;
+  email_from_name?: string | null;
+  email_from_address?: string | null;
+  notification_email_contact?: string | null;
+  notification_email_education?: string | null;
+  notification_email_activities?: string | null;
+  notification_email_donations?: string | null;
   social_links?: {
     facebook?: string;
     instagram?: string;
