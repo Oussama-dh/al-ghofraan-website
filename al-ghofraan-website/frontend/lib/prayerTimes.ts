@@ -171,6 +171,45 @@ export function getTodaysPrayerTimes(
   );
 }
 
+/**
+ * Bereken de Amsterdamse ISO-datum (YYYY-MM-DD) van morgen.
+ * Gaat netjes door maand- en jaargrenzen via `Date`-arithmetic.
+ */
+export function getTomorrowIsoInAmsterdam(now: Date = new Date()): string {
+  const p = getAmsterdamDateParts(now);
+  // Construct in UTC om DST-rotzooi te vermijden; we hebben enkel een
+  // datum nodig, geen tijdcomponent.
+  const d = new Date(Date.UTC(p.year, p.month - 1, p.day));
+  d.setUTCDate(d.getUTCDate() + 1);
+  const yy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
+/**
+ * Haal de tijden van morgen op (Amsterdamse datum). Returnt null wanneer
+ * de CSV geen rij voor morgen bevat — dan kan de caller een passende
+ * fallback kiezen.
+ */
+export function getTomorrowsPrayerTimes(
+  rows: PrayerTimeRow[],
+  now: Date = new Date()
+): PrayerTimeRow | null {
+  const tomorrowIso = getTomorrowIsoInAmsterdam(now);
+
+  return (
+    rows.find((row) => {
+      const parsed = parseRowDate(row.datum);
+      if (!parsed) return false;
+      const mm = String(parsed.month).padStart(2, "0");
+      const dd = String(parsed.day).padStart(2, "0");
+      const rowIso = `${parsed.year}-${mm}-${dd}`;
+      return rowIso === tomorrowIso;
+    }) || null
+  );
+}
+
 // Haal de tijden van een specifieke maand op (default: huidige maand/jaar)
 export function getMonthRows(
   rows: PrayerTimeRow[],
@@ -278,6 +317,131 @@ const nowMinutes = getAmsterdamMinutes(now);
   }
 
   return null; // Alle gebeden van vandaag zijn voorbij
+}
+
+// Nederlandse labels in dezelfde volgorde als PRAYER_KEYS_IN_ORDER.
+// Bewust ook hier zodat helpers (`getNextPrayerInfo`) zonder de
+// UI-component een label kunnen produceren.
+export const PRAYER_LABELS_NL: Record<PrayerKey, string> = {
+  fajr:     "Fajr",
+  shoeroeq: "Shoeroeq",
+  dhoehr:   "Dhoehr",
+  asr:      "Asr",
+  maghrib:  "Maghrib",
+  ishaa:    "Ishaa",
+};
+
+/**
+ * Informatie over het eerstvolgende gebed.
+ *
+ * - Wanneer er vandaag nog een gebed aankomt: dat gebed (isTomorrow=false).
+ * - Wanneer alle gebeden van vandaag voorbij zijn: Fajr van morgen
+ *   (isTomorrow=true) zolang er een rij voor morgen is.
+ * - Wanneer er ook geen rij voor morgen is (bv. CSV stopt aan jaareinde):
+ *   fallback naar Fajr van vandaag met isTomorrow=false, zodat de UI
+ *   altijd een gemarkeerd gebed heeft. minutesUntil is dan negatief en
+ *   wordt door de UI als 0 (of als "morgen ~") gepresenteerd.
+ * - Wanneer noch vandaag noch morgen bruikbare data heeft: null.
+ *
+ * Eindelijk: `minutesUntil` is het verschil in minuten tussen `now` en
+ * het target. Voor "morgen Fajr" zit er een day-roll-over in; we tellen
+ * dan `(24*60 - nowMinutes) + fajrMinutes`.
+ */
+export interface NextPrayerInfo {
+  key:          PrayerKey;
+  label:        string;
+  /** Tijd uit de CSV-rij, bv. "04:12". */
+  time:         string;
+  /** Of dit gebed op de dag *na* `now` valt. */
+  isTomorrow:   boolean;
+  /** De CSV-rij waar het gebed uit komt (vandaag of morgen). */
+  sourceRow:    PrayerTimeRow;
+  /** Minuten van `now` tot het target. Nooit negatief. */
+  minutesUntil: number;
+}
+
+export function getNextPrayerInfo(
+  rows: PrayerTimeRow[],
+  now: Date = new Date(),
+): NextPrayerInfo | null {
+  const todayRow    = getTodaysPrayerTimes(rows, now);
+  const tomorrowRow = getTomorrowsPrayerTimes(rows, now);
+
+  // 1. Zit er vandaag nog een gebed in het verschiet?
+  if (todayRow) {
+    const nowMinutes = getAmsterdamMinutes(now);
+    for (const key of PRAYER_KEYS_IN_ORDER) {
+      const m = timeToMinutes(todayRow[key] as string);
+      if (m === null) continue;
+      if (m > nowMinutes) {
+        return {
+          key,
+          label:        PRAYER_LABELS_NL[key],
+          time:         todayRow[key] as string,
+          isTomorrow:   false,
+          sourceRow:    todayRow,
+          minutesUntil: m - nowMinutes,
+        };
+      }
+    }
+  }
+
+  // 2. Alle gebeden van vandaag voorbij → Fajr morgen, mits beschikbaar.
+  if (tomorrowRow) {
+    const fajr = timeToMinutes(tomorrowRow.fajr as string);
+    if (fajr !== null) {
+      const nowMinutes = getAmsterdamMinutes(now);
+      // Tot middernacht: 24*60 - nowMinutes, dan + fajr-minuten van morgen.
+      const minutesUntil = (24 * 60 - nowMinutes) + fajr;
+      return {
+        key:          "fajr",
+        label:        PRAYER_LABELS_NL.fajr,
+        time:         tomorrowRow.fajr as string,
+        isTomorrow:   true,
+        sourceRow:    tomorrowRow,
+        minutesUntil,
+      };
+    }
+  }
+
+  // 3. Geen morgen beschikbaar — nette fallback: Fajr van vandaag
+  //    markeren zodat de UI nooit een lege staat heeft. We zetten
+  //    minutesUntil op 0 (al gepasseerd, maar de UI hoeft geen
+  //    countdown te tonen — alleen highlight + bv. "tot morgen").
+  if (todayRow) {
+    const fajr = timeToMinutes(todayRow.fajr as string);
+    if (fajr !== null) {
+      return {
+        key:          "fajr",
+        label:        PRAYER_LABELS_NL.fajr,
+        time:         todayRow.fajr as string,
+        isTomorrow:   false,
+        sourceRow:    todayRow,
+        minutesUntil: 0,
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Formatteer een minuten-aantal als "over X minuten" / "over X uur Y minuten".
+ * 0 minuten → "begint nu". Negatieve waarden worden als 0 behandeld.
+ */
+export function formatMinutesUntil(minutes: number): string {
+  if (!Number.isFinite(minutes) || minutes <= 0) return "begint nu";
+  if (minutes < 60) {
+    const label = minutes === 1 ? "minuut" : "minuten";
+    return `over ${minutes} ${label}`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const mins  = minutes % 60;
+  const hLab  = "uur"; // 1 uur / 2 uur — geen meervoud in NL
+  const mLab  = mins === 1 ? "minuut" : "minuten";
+  return mins > 0
+    ? `over ${hours} ${hLab} en ${mins} ${mLab}`
+    : `over ${hours} ${hLab}`;
 }
 
 // ─────────────────────────────────────────────────────────────
