@@ -29,6 +29,7 @@ import {
 import {
   parsePrayerTimesCSV,
   getTodaysPrayerTimes,
+  getTomorrowsPrayerTimes,
   formatPrayerFileTitle,
 } from "@/lib/prayerTimes";
 import type { PrayerTimeRow } from "@/types/directus";
@@ -66,8 +67,9 @@ export default async function GebedstijdenTvPage() {
   };
 
   // ─── CSV ophalen — exact zelfde patroon als /gebedstijden ──
-  let todayRow: PrayerTimeRow | null = null;
-  let fileInfo: { title: string; year: number } | null = null;
+  let todayRow:    PrayerTimeRow | null = null;
+  let tomorrowRow: PrayerTimeRow | null = null;
+  let fileInfo:    { title: string; year: number } | null = null;
 
   try {
     const prayerFile = await getActivePrayerTimeFile();
@@ -91,7 +93,12 @@ export default async function GebedstijdenTvPage() {
           if (resp.ok) {
             const csv = await resp.text();
             const rows = parsePrayerTimesCSV(csv);
-            todayRow = getTodaysPrayerTimes(rows);
+            todayRow    = getTodaysPrayerTimes(rows);
+            // Voor "Fajr morgen" na Ishaa (delivery 9): pak de rij van
+            // morgen één keer aan op de server zodat de client niets
+            // extra hoeft te fetchen. null = CSV stopt vóór morgen
+            // (bv. jaareinde) — TV-helper valt dan netjes terug.
+            tomorrowRow = getTomorrowsPrayerTimes(rows);
             fileInfo = { title: prayerFile.title, year: prayerFile.year };
           }
         }
@@ -112,6 +119,7 @@ export default async function GebedstijdenTvPage() {
       siteName={siteName}
       logoUrl={logoUrl}
       todayRow={todayRow}
+      tomorrowRow={tomorrowRow}
       announcements={announcements}
       subtitle={subtitle}
       tvConfig={tvConfig}

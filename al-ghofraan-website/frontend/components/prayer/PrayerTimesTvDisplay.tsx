@@ -30,7 +30,7 @@ import { cn }                           from "@/lib/utils";
 import {
   getAmsterdamDateParts,
   getAmsterdamMinutes,
-  getNextPrayerKey,
+  getNextPrayerInfo,
   timeToMinutes,
   type PrayerKey,
 } from "@/lib/prayerTimes";
@@ -88,6 +88,14 @@ interface Props {
   siteName:      string;
   logoUrl:       string | null;
   todayRow:      PrayerTimeRow | null;
+  /**
+   * Rij voor de dag NA `todayRow`. Wordt gebruikt om na Ishaa
+   * "Fajr morgen om 04:12" te kunnen tonen — zowel in de slide-card
+   * (Fajr-tile krijgt de tijd van morgen + highlight) als in de
+   * bottom-bar countdown. Mag null zijn; helper valt dan terug op
+   * Fajr van vandaag zodat de UI nooit leeg blijft.
+   */
+  tomorrowRow:   PrayerTimeRow | null;
   announcements: TvAnnouncement[];
   subtitle?:     string | null;
   tvConfig?:     TvConfig;
@@ -97,6 +105,7 @@ export default function PrayerTimesTvDisplay({
   siteName,
   logoUrl,
   todayRow,
+  tomorrowRow,
   announcements,
   subtitle,
   tvConfig,
@@ -183,19 +192,54 @@ export default function PrayerTimesTvDisplay({
     ? `${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")}`
     : "";
 
-  // Eerstvolgend gebed + minuten-countdown (voor onderbalk)
-  const nextPrayerKey = mounted && todayRow ? getNextPrayerKey(todayRow, now) : null;
+  // ─── Eerstvolgend gebed ────────────────────────────────────
+  // Nieuw gedrag (delivery 9): na Ishaa wordt Fajr van morgen het
+  // volgende gebed. We bouwen een minimale rows-array van
+  // `[todayRow, tomorrowRow]` (alleen niet-null) en laten de helper
+  // bepalen welk gebed nu hoort te tellen.
+  //
+  // De `minutesUntil` uit de helper is initieel correct, maar omdat
+  // `now` elke seconde tikt rekenen we de minuten zelf opnieuw uit
+  // op basis van de huidige Amsterdam-minuten + targetdag. Zo loopt
+  // de countdown vloeiend mee zonder server-refresh.
+  const nextInfo = useMemo(() => {
+    if (!mounted) return null;
+    const rows: PrayerTimeRow[] = [];
+    if (todayRow)    rows.push(todayRow);
+    if (tomorrowRow) rows.push(tomorrowRow);
+    if (rows.length === 0) return null;
+    return getNextPrayerInfo(rows, now);
+  }, [mounted, todayRow, tomorrowRow, now]);
+
+  const nextPrayerKey: PrayerKey | null = nextInfo?.key ?? null;
   const nextPrayer    = GEBEDEN.find((g) => g.key === nextPrayerKey) ?? null;
 
-  // Minuten tot volgend gebed — gebruikt voor "over X minuten" / "over X uur Y minuten"
+  // Live minuten-countdown — herberekend op elke `now`-tik.
   let minutesUntilNext: number | null = null;
-  if (mounted && nextPrayer && todayRow) {
-    const targetMin = timeToMinutes(todayRow[nextPrayer.key] as string);
-    const nowMin    = getAmsterdamMinutes(now);
-    if (targetMin !== null && targetMin >= nowMin) {
-      minutesUntilNext = targetMin - nowMin;
+  if (mounted && nextInfo) {
+    const target = timeToMinutes(nextInfo.time);
+    const nowMin = getAmsterdamMinutes(now);
+    if (target !== null) {
+      const diff = nextInfo.isTomorrow
+        ? (24 * 60 - nowMin) + target
+        : (target - nowMin);
+      minutesUntilNext = diff > 0 ? diff : 0;
     }
   }
+
+  // Rij voor de slide-card: bij isTomorrow wordt de Fajr-tile gevuld
+  // met de tijd van morgen. Andere tiles tonen vandaag's tijden (al
+  // verstreken, maar staan niet highlighted dus die context blijft
+  // leesbaar). Wanneer er geen todayRow is, valt het terug op
+  // tomorrowRow (zodat de TV nooit een lege state heeft).
+  const slideRow: PrayerTimeRow | null = useMemo(() => {
+    if (!todayRow && !tomorrowRow) return null;
+    if (!todayRow) return tomorrowRow;
+    if (nextInfo?.isTomorrow) {
+      return { ...todayRow, [nextInfo.key]: nextInfo.time };
+    }
+    return todayRow;
+  }, [todayRow, tomorrowRow, nextInfo]);
 
   const currentSlide = slides[slideIdx] ?? { kind: "prayer" as const };
 
@@ -231,7 +275,7 @@ export default function PrayerTimesTvDisplay({
         <main className="min-h-0 flex items-center justify-center p-6 md:p-10 lg:p-12 overflow-hidden">
           {currentSlide.kind === "prayer" ? (
             <PrayerSlide
-              todayRow={todayRow}
+              todayRow={slideRow}
               nextPrayerKey={nextPrayerKey}
             />
           ) : (
@@ -242,11 +286,8 @@ export default function PrayerTimesTvDisplay({
         <BottomBar
           mounted={mounted}
           nextPrayer={nextPrayer}
-          nextPrayerTime={
-            nextPrayer && todayRow
-              ? (todayRow[nextPrayer.key] as string)
-              : null
-          }
+          nextPrayerTime={nextInfo?.time ?? null}
+          isTomorrow={nextInfo?.isTomorrow ?? false}
           minutesUntilNext={minutesUntilNext}
           slides={slides}
           slideIdx={slideIdx}
@@ -333,6 +374,7 @@ function BottomBar({
   mounted,
   nextPrayer,
   nextPrayerTime,
+  isTomorrow,
   minutesUntilNext,
   slides,
   slideIdx,
@@ -340,12 +382,15 @@ function BottomBar({
   mounted:           boolean;
   nextPrayer:        { key: PrayerKey; label: string; arabic: string; Icon: LucideIcon } | null;
   nextPrayerTime:    string | null;
+  /** Of het eerstvolgende gebed pas morgen is — voegt "morgen" toe aan de tekst. */
+  isTomorrow:        boolean;
   minutesUntilNext:  number | null;
   slides:            Slide[];
   slideIdx:          number;
 }) {
   // Bouw de "over X minuten" tekst — afhankelijk van of het gebed binnen
-  // een uur valt of langer.
+  // een uur valt of langer. Werkt ook voor "morgen" omdat de caller een
+  // grote `minutesUntilNext` doorgeeft (bv. 425 voor 7 uur).
   let countdownText = "";
   if (mounted && nextPrayer && minutesUntilNext !== null) {
     if (minutesUntilNext === 0) {
@@ -356,7 +401,7 @@ function BottomBar({
     } else {
       const hours = Math.floor(minutesUntilNext / 60);
       const mins  = minutesUntilNext % 60;
-      const hLab  = hours === 1 ? "uur" : "uur";
+      const hLab  = "uur"; // 1 uur / 2 uur — geen meervoud in NL
       const mLab  = mins  === 1 ? "minuut" : "minuten";
       countdownText = mins > 0
         ? `over ${hours} ${hLab} en ${mins} ${mLab}`
@@ -371,6 +416,9 @@ function BottomBar({
           <>
             <span className="text-sand/70">Volgend gebed: </span>
             <span className="text-white font-medium">{nextPrayer.label}</span>
+            {isTomorrow && (
+              <span className="text-sand/70"> morgen</span>
+            )}
             {countdownText && (
               <>
                 <span className="text-sand/70"> {countdownText}</span>
@@ -381,8 +429,11 @@ function BottomBar({
             )}
           </>
         ) : mounted ? (
+          // Echt geen gebedstijden beschikbaar (geen vandaag, geen morgen)
+          // — bv. CSV ontbreekt of stopt. Geen "tot morgen" tekst meer:
+          // delivery 9 verwijdert die misleidende melding overal.
           <span className="text-sand/60 italic">
-            Alle gebeden van vandaag zijn voorbij — tot morgen, in shaa Allah.
+            Gebedstijden zijn tijdelijk niet beschikbaar.
           </span>
         ) : (
           <span aria-hidden="true">&nbsp;</span>

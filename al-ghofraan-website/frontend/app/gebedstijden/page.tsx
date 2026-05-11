@@ -19,6 +19,7 @@ import {
   parsePrayerTimesCSV,
   getTodaysPrayerTimes,
   getCurrentMonthRows,
+  getNextPrayerInfo,
   getNextPrayerKey,
   formatPrayerFileTitle,
   getAmsterdamDateParts,
@@ -127,12 +128,37 @@ export default async function GebedstijdenPage() {
   const ctaSections   = sections.filter((s) => s.type === "cta");
   const otherSections = sections.filter((s) => s.type !== "cta");
 
-  // Bereken eerstvolgend gebed o.b.v. huidige tijd. Bij geen todayRow of
-  // wanneer alle gebeden voorbij zijn → null = geen highlight (eenvoudig).
-  // Bij rendering met de FALLBACK_ROW gebruiken we de fallback-row zelf
-  // zodat de "volgende"-tag ook in offline state plausibel oogt.
+  // ─── Eerstvolgend gebed ─────────────────────────────────────
+  // Nieuw gedrag (delivery 9): wanneer alle gebeden van vandaag voorbij
+  // zijn beschouwen we Fajr van morgen als het volgende gebed. De helper
+  // `getNextPrayerInfo` geeft niet alleen de key terug, maar ook of het
+  // gebed op morgen valt + welke CSV-rij erbij hoort.
+  //
+  // De TodayPrayerCard krijgt een licht-gemixte rij: alle tiles van
+  // vandaag, behalve het highlighted gebed dat zijn waarde uit
+  // `info.sourceRow` haalt zodat de getoonde tijd correspondeert met
+  // het moment dat ook gemarkeerd wordt.
+  //
+  // FALLBACK: wanneer er geen todayRow is, gebruiken we (zoals voorheen)
+  // FALLBACK_ROW voor de visuele preview in dev. Daarop draait dezelfde
+  // info-helper zodat er ook bij offline-state een plausibele highlight
+  // verschijnt.
   const rowForHighlight = todayRow || FALLBACK_ROW;
-  const nextPrayerKey   = getNextPrayerKey(rowForHighlight);
+  const nextInfo = getNextPrayerInfo(allRows.length ? allRows : [rowForHighlight]);
+  const nextPrayerKey   = nextInfo?.key ?? getNextPrayerKey(rowForHighlight);
+
+  // Stel de rij samen die we aan de today-card geven.
+  // - Bij isTomorrow=true: kopieer todayRow en overschrijf alleen de
+  //   `fajr`-tile met de tijd van morgen. Andere tiles blijven leesbaar
+  //   maar staan niet highlighted.
+  // - Bij isTomorrow=false: gewoon todayRow.
+  const cardRow: PrayerTimeRow = (() => {
+    if (!todayRow) return rowForHighlight;
+    if (nextInfo && nextInfo.isTomorrow) {
+      return { ...todayRow, [nextInfo.key]: nextInfo.time };
+    }
+    return todayRow;
+  })();
 
   // Vandaag-header label (weekdag dd-mm)
   const todayParts = getAmsterdamDateParts();
@@ -221,10 +247,12 @@ export default async function GebedstijdenPage() {
 
             {todayRow ? (
               <>
-                <TodayPrayerCard row={todayRow} nextPrayerKey={nextPrayerKey} />
-                {nextPrayerKey === null && (
+                <TodayPrayerCard row={cardRow} nextPrayerKey={nextPrayerKey} />
+                {nextInfo && (
                   <p className="font-body text-xs text-taupe mt-3 text-center">
-                    Alle gebeden van vandaag zijn voorbij. Tot morgen, in shaa Allah.
+                    {nextInfo.isTomorrow
+                      ? `Volgend gebed: ${nextInfo.label} morgen om ${nextInfo.time}`
+                      : `Volgend gebed: ${nextInfo.label} om ${nextInfo.time}`}
                   </p>
                 )}
               </>
