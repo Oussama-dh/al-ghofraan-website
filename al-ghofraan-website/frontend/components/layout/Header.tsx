@@ -90,14 +90,25 @@ export default function Header({ settings, navItems, logoUrl }: HeaderProps) {
         </div>
       </div>
 
-      {/* Mobiel menu */}
+      {/* Mobiel menu
+          - `max-h-[28rem]` (en bij open `max-h-[calc(100vh-4rem)]`) zorgt dat
+            het menu nooit voorbij de viewport groeit; de header zelf is 4rem
+            (h-16) hoog op mobiel, dus we trekken die af.
+          - `overflow-y-auto` activeert verticale scroll binnen het menu zodra
+            de inhoud te lang is — alle items blijven bereikbaar.
+          - `overscroll-contain` voorkomt dat de body meeschuift als de
+            bezoeker voorbij het einde van het menu door-scrollt.
+          - In gesloten staat blijft `max-h-0 + overflow-hidden` zodat de
+            collapse-animatie zachtjes blijft werken zoals voorheen. */}
       <div
         className={cn(
-          "md:hidden overflow-hidden transition-all duration-300 ease-in-out",
-          menuOpen ? "max-h-[28rem] border-t border-sand-200" : "max-h-0"
+          "md:hidden transition-[max-height] duration-300 ease-in-out",
+          menuOpen
+            ? "max-h-[calc(100vh-4rem)] overflow-y-auto overscroll-contain border-t border-sand-200"
+            : "max-h-0 overflow-hidden"
         )}
       >
-        <nav className="px-4 py-3 flex flex-col gap-1">
+        <nav className="px-4 py-3 pb-6 flex flex-col gap-1">
           {items.map((item) => renderNavLink(item, true, () => setMenuOpen(false)))}
         </nav>
       </div>

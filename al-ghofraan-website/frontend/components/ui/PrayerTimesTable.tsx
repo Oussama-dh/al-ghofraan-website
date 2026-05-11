@@ -161,12 +161,12 @@ export default function PrayerTimesTable({
                   </td>
                 )}
                 <td className="px-4 py-2.5 whitespace-nowrap">
+                  {formatDateCell(row, shortDateOnly)}
                   {isToday && (
-                    <span className="inline-block bg-slate-mosque text-white text-xs px-2 py-0.5 rounded-full mr-2">
+                    <span className="inline-block bg-slate-mosque text-white text-xs px-2 py-0.5 rounded-full ml-2">
                       Vandaag
                     </span>
                   )}
-                  {formatDateCell(row, shortDateOnly)}
                 </td>
                 {GEBEDEN.map((g) => (
                   <td key={g.key} className="px-3 py-2.5 text-center tabular-nums">

@@ -200,15 +200,23 @@ export default async function GebedstijdenPage() {
 
           <div className="mb-12">
             <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
-              <h2 className="font-display text-2xl text-ink flex items-center gap-3">
-                <span className="w-2 h-8 bg-slate-mosque rounded-full inline-block" />
-                <span className="capitalize">Vandaag — {todayWeekday} {dd}-{mm}</span>
-              </h2>
-              {todayHijriLabel && (
-                <span className="font-body text-sm text-taupe-dark bg-slate-mosque/5 border border-slate-mosque/15 rounded-full px-3 py-1">
-                  {todayHijriLabel}
+              {/* Heading: "22 Dhul-Qi'dah 1447 — Vandaag" (Hijri vóór het
+                  woord Vandaag). Als de Hijri-datum niet kon worden bepaald
+                  (bv. Node zonder ICU), valt het label terug op alleen
+                  "Vandaag" zodat de pagina nooit blanco kop heeft. De
+                  Nederlandse weekdag + dd-mm staan in een subtielere regel
+                  eronder zodat ze zichtbaar blijven. */}
+              <div className="flex flex-col gap-1">
+                <h2 className="font-display text-2xl text-ink flex items-center gap-3">
+                  <span className="w-2 h-8 bg-slate-mosque rounded-full inline-block" />
+                  <span>
+                    {todayHijriLabel ? `${todayHijriLabel} — Vandaag` : "Vandaag"}
+                  </span>
+                </h2>
+                <span className="font-body text-sm text-taupe-dark pl-5 capitalize">
+                  {todayWeekday} {dd}-{mm}
                 </span>
-              )}
+              </div>
             </div>
 
             {todayRow ? (

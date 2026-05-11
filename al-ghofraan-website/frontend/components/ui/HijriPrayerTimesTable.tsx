@@ -135,11 +135,6 @@ export default function HijriPrayerTimesTable({
                 )}
               >
                 <td className="px-4 py-2.5 whitespace-nowrap">
-                  {isToday && (
-                    <span className="inline-block bg-slate-mosque text-white text-xs px-2 py-0.5 rounded-full mr-2">
-                      Vandaag
-                    </span>
-                  )}
                   <span className="font-display text-base text-slate-mosque">
                     {hijri.day}
                   </span>
@@ -149,6 +144,11 @@ export default function HijriPrayerTimesTable({
                       className="ml-1.5 inline-block text-amber-600 text-[10px] uppercase tracking-wider"
                     >
                       *
+                    </span>
+                  )}
+                  {isToday && (
+                    <span className="inline-block bg-slate-mosque text-white text-xs px-2 py-0.5 rounded-full ml-2">
+                      Vandaag
                     </span>
                   )}
                 </td>
