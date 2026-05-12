@@ -5,6 +5,7 @@ import Link             from "next/link";
 import { useState }     from "react";
 import { Menu, X }      from "lucide-react";
 import { cn }           from "@/lib/utils";
+import ThemeToggle      from "@/components/theme/ThemeToggle";
 import type { NavigationItem, SiteSettings } from "@/types/directus";
 
 interface HeaderProps {
@@ -75,18 +76,22 @@ export default function Header({ settings, navItems, logoUrl }: HeaderProps) {
           {/* Desktop navigatie */}
           <nav className="hidden md:flex items-center gap-1">
             {items.map((item) => renderNavLink(item, false, () => setMenuOpen(false)))}
+            <ThemeToggle className="ml-2" />
           </nav>
 
-          {/* Mobiel menu-knop */}
-          <button
-            type="button"
-            className="md:hidden p-2 rounded-lg text-ink hover:bg-sand transition-colors"
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-label="Menu openen"
-            aria-expanded={menuOpen}
-          >
-            {menuOpen ? <X size={22} strokeWidth={2} /> : <Menu size={22} strokeWidth={2} />}
-          </button>
+          {/* Mobiel: theme-toggle naast hamburger */}
+          <div className="md:hidden flex items-center gap-1">
+            <ThemeToggle />
+            <button
+              type="button"
+              className="p-2 rounded-lg text-ink hover:bg-sand transition-colors"
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-label="Menu openen"
+              aria-expanded={menuOpen}
+            >
+              {menuOpen ? <X size={22} strokeWidth={2} /> : <Menu size={22} strokeWidth={2} />}
+            </button>
+          </div>
         </div>
       </div>
 
