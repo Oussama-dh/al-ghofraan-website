@@ -5,6 +5,8 @@ import { Amiri, Outfit } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import ThemeScript     from "@/components/theme/ThemeScript";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import {
   getSiteSettings,
   getNavigationItems,
@@ -97,24 +99,37 @@ export default async function RootLayout({
   const showFooter = settings?.footer_enabled !== false; // default true
 
   return (
-    <html lang="nl" className={`${amiri.variable} ${outfit.variable}`}>
+    <html
+      lang="nl"
+      className={`${amiri.variable} ${outfit.variable}`}
+      // suppressHydrationWarning omdat de pre-hydration script (.dark class
+      // + data-theme attribuut) <html> al muteert vóór React hydrateert.
+      // React zou anders een mismatch op dit element melden.
+      suppressHydrationWarning
+    >
       <body className="min-h-screen flex flex-col">
-        <Header
-          settings={settings}
-          navItems={headerNav}
-          logoUrl={logoUrl}
-        />
-        <main className="flex-1">{children}</main>
-        {showFooter && (
-          <Footer
+        {/* Pre-hydration theme-script — moet zo vroeg mogelijk in <body>
+            staan zodat de juiste .dark-class al gezet is voordat de
+            eerste pixel wordt getekend. */}
+        <ThemeScript />
+        <ThemeProvider>
+          <Header
             settings={settings}
-            navItems={footerNav}
-            logoUrl={footerLogoUrl}
-            emailIcon={emailIcon}
-            phoneIcon={phoneIcon}
-            addressIcon={addressIcon}
+            navItems={headerNav}
+            logoUrl={logoUrl}
           />
-        )}
+          <main className="flex-1">{children}</main>
+          {showFooter && (
+            <Footer
+              settings={settings}
+              navItems={footerNav}
+              logoUrl={footerLogoUrl}
+              emailIcon={emailIcon}
+              phoneIcon={phoneIcon}
+              addressIcon={addressIcon}
+            />
+          )}
+        </ThemeProvider>
       </body>
     </html>
   );
