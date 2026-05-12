@@ -42,10 +42,12 @@ const imageUrl = imageId ? getAssetUrl(imageId) : null;
         className
       )}
     >
-      {/* Afbeelding */}
+      {/* Afbeelding — object-contain zodat verticale flyers/posters volledig zichtbaar
+          blijven (delivery 12). bg-sand-100 vult de letterbox-strepen rond afwijkende
+          aspect-ratio's met een rustige achtergrondkleur. */}
       <div
         className={cn(
-          "relative bg-sand overflow-hidden",
+          "relative bg-sand-100 overflow-hidden",
           featured ? "md:w-2/5 h-52 md:h-auto" : "h-48"
         )}
       >
@@ -54,7 +56,7 @@ const imageUrl = imageId ? getAssetUrl(imageId) : null;
   <img
     src={imageUrl}
     alt={activity.title}
-    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+    className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
   />
 ) : (
           <div className="absolute inset-0 pattern-overlay bg-sand flex items-center justify-center">

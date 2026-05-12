@@ -114,13 +114,15 @@ function ProgramCard({ program }: { program: EducationProgram }) {
         "shadow-sm hover:shadow-md transition-all duration-300",
       )}
     >
-      <div className="relative bg-sand overflow-hidden h-48">
+      {/* Afbeelding — object-contain zodat verticale onderwijsflyers volledig
+          zichtbaar blijven (delivery 12). */}
+      <div className="relative bg-sand-100 overflow-hidden h-48">
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={imageUrl}
             alt={program.title}
-            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
           <div className="absolute inset-0 pattern-overlay bg-sand flex items-center justify-center">

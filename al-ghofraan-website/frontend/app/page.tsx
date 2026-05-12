@@ -120,7 +120,7 @@ export default async function HomePage() {
               </div>
             )}
             <div
-              className="prose prose-lg max-w-none font-body text-ink leading-relaxed prose-headings:font-display prose-headings:text-ink prose-a:text-slate-mosque"
+              className="rich-text max-w-none"
               dangerouslySetInnerHTML={{ __html: page.body }}
             />
           </Container>

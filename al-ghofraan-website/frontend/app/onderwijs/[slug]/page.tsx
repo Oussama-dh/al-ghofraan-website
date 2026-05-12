@@ -147,9 +147,12 @@ export default async function EducationProgramDetailPage({ params }: Props) {
       <section className="bg-sand-50 py-12 lg:py-16">
         <Container narrow>
           {imageUrl && (
-            <div className="relative h-64 sm:h-80 rounded-2xl overflow-hidden mb-8 shadow-md">
+            // Flyer-presentatie: object-contain + aspect-ratio met max-h zorgt dat
+            // verticale onderwijsflyers volledig zichtbaar blijven zonder de pagina
+            // op te blazen op grote schermen (delivery 12).
+            <div className="relative w-full aspect-[4/5] sm:aspect-[3/4] max-h-[70vh] rounded-2xl overflow-hidden mb-8 shadow-md bg-sand-100">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imageUrl} alt={program.title} className="absolute inset-0 w-full h-full object-cover" />
+              <img src={imageUrl} alt={program.title} className="absolute inset-0 w-full h-full object-contain" />
             </div>
           )}
 
@@ -171,7 +174,7 @@ export default async function EducationProgramDetailPage({ params }: Props) {
 
           {program.description && (
             <div
-              className="prose prose-lg max-w-none font-body text-ink leading-relaxed prose-headings:font-display prose-headings:text-ink prose-a:text-slate-mosque mb-10"
+              className="rich-text max-w-none mb-10"
               dangerouslySetInnerHTML={{ __html: program.description }}
             />
           )}

@@ -6,17 +6,91 @@
    Google Fonts — geladen via next/font in layout.tsx
    ────────────────────────────────────────── */
 
+/*
+  ─── Thematische kleur-variabelen ─────────────────────────────
+  Het Al-Ghofraan-palet zit achter CSS-variabelen. Tailwind's
+  `colors`-config gebruikt deze vars (zie tailwind.config.ts), zodat
+  elk bestaand `bg-sand-50`, `text-ink`, `border-sand-200`, etc.
+  zonder verdere wijziging meeschakelt tussen light en dark.
+
+  Light = bestaande look uit delivery 9. Dark is in delivery 11
+  flink donkerder geworden:
+    - page-bg richting bijna-zwart (#111315)
+    - surface/cards iets lichter antraciet (#1b1f23)
+    - borders subtiel (#2a3036)
+    - tekst warm crème (#f4efe6) i.p.v. helderwit
+    - secundaire tekst zachte taupe (#b8aa99)
+    - accent slate-mosque blijft donker voor heroes; `text-slate-mosque`
+      krijgt in dark mode een aparte regel (zie verderop) om als
+      lichte accenttekst toch leesbaar te blijven.
+*/
 @layer base {
   :root {
-    --color-sand:        #ece5df;
-    --color-sand-light:  #f9f7f5;
-    --color-taupe:       #a99d85;
-    --color-slate:       #4d5b6f;
-    --color-ink:         #1a1a1a;
-    --color-white:       #ffffff;
+    --c-sand-50:    249 247 245;   /* #f9f7f5 — page background */
+    --c-sand-100:   236 229 223;   /* #ece5df — card-on-page bg, hover bg */
+    --c-sand-200:   221 211 200;   /* #ddd3c8 — borders, dividers */
+    --c-sand-300:   201 186 169;   /* #c9baa9 — sterke randen, decoratie */
 
-    --font-display: var(--font-amiri);
-    --font-body:    var(--font-outfit);
+    --c-taupe:      169 157 133;   /* #a99d85 — secundaire tekst */
+    --c-taupe-dark: 140 130 105;   /* #8c8269 — body tekst secundair */
+    --c-taupe-light:196 186 170;   /* #c4baaa — subtielere variant */
+
+    --c-slate-mosque:77 91 111;    /* #4d5b6f — primaire accent + hero-bg */
+    --c-slate-dark:  58 69 88;     /* #3a4558 — hover-staat */
+    --c-slate-light:107 122 141;   /* #6b7a8d — lichte accent-variant */
+
+    --c-ink:        26 26 26;      /* #1a1a1a — primaire body-tekst */
+
+    /* Achtergrond op "kaart-niveau" (bv. cards op een sand-50 page). */
+    --c-surface:        255 255 255;
+    --c-surface-strong: 255 255 255;
+
+    /* Selectie-kleur — accent met witte tekst. */
+    --c-selection-bg: 77 91 111;
+    --c-selection-fg: 255 255 255;
+  }
+
+  .dark {
+    /*
+      Donkere variant — bijna-zwart i.p.v. de eerdere blauwgrijs-poging
+      uit delivery 10. Waardes gekozen voor:
+        - rustig, niet flashy
+        - voldoende contrast tussen page/surface/border
+        - warme tekst (geen pure-wit) zodat lange teksten niet
+          "schreeuwen" op het donkere oppervlak
+    */
+    --c-sand-50:     17 19 21;     /* #111315 — page background */
+    --c-sand-100:    27 31 35;     /* #1b1f23 — card / hover bg */
+    --c-sand-200:    42 48 54;     /* #2a3036 — borders */
+    --c-sand-300:    62 70 78;     /* iets lichter dan border voor sterke lijnen */
+
+    --c-taupe:       184 170 153;  /* #b8aa99 — secundaire tekst */
+    --c-taupe-dark:  208 196 180;  /* iets lichter — body secundair op donker */
+    --c-taupe-light: 138 128 116;  /* subtielere variant — mute hints */
+
+    /*
+      slate-mosque BLIJFT donker in dark mode, zodat `bg-slate-mosque`
+      heroes echt donker blijven en niet veranderen in een lichtblauwe
+      massa. We kiezen een lichtere variant dan light (77 91 111) zou
+      voor accent-text te slecht contrast geven op de bijna-zwarte page-
+      bg, dus we maken `text-slate-mosque` apart lichter via een aparte
+      CSS-regel hieronder (.dark .text-slate-mosque).
+
+      Concrete waarde 71 84 102 ≈ #475466 — iets donkerder dan light
+      (77 91 111). Met witte tekst → ~9:1 contrast (AAA). Dat is
+      perfect voor heroes.
+    */
+    --c-slate-mosque: 71 84 102;   /* #475466 — donker accent / hero-bg */
+    --c-slate-dark:   53 62 76;    /* #353e4c — nog donkerder voor hover/gradient-stop */
+    --c-slate-light:  92 109 132;  /* #5c6d84 — lichtere accent-variant */
+
+    --c-ink:         244 239 230;  /* #f4efe6 — primaire tekst, warm crème */
+
+    --c-surface:        27 31 35;  /* #1b1f23 — kaarten */
+    --c-surface-strong: 35 40 46;  /* iets prominenter voor modals/popovers */
+
+    --c-selection-bg: 143 163 191; /* #8fa3bf — accent-blauw voor selectie */
+    --c-selection-fg: 17 19 21;
   }
 
   * {
@@ -25,11 +99,16 @@
 
   html {
     scroll-behavior: smooth;
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
   }
 
   body {
     @apply bg-sand-50 text-ink font-body antialiased;
     font-feature-settings: "kern" 1, "liga" 1;
+    transition: background-color 200ms ease, color 200ms ease;
   }
 
   h1, h2, h3 {
@@ -48,17 +127,21 @@
     font-feature-settings: "kern" 1;
   }
 
-  /* Selectie kleur */
+  /* Selectie kleur — via variabele zodat dark mode meeschakelt. */
   ::selection {
-    background-color: #4d5b6f;
-    color: #fff;
+    background-color: rgb(var(--c-selection-bg));
+    color:            rgb(var(--c-selection-fg));
   }
 }
 
 @layer components {
-  /* Geometrisch patroon overlay */
+  /* Geometrisch patroon overlay. Donkere mode krijgt een iets
+     subtielere versie. */
   .pattern-overlay {
     background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23a99d85' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  .dark .pattern-overlay {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23a99d85' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4h-4zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
   }
 
   /* Sierlijke arabesque-lijn */
@@ -75,6 +158,52 @@
   .section-wave {
     clip-path: ellipse(100% 55% at 50% 100%);
   }
+
+  /*
+    Kaart-oppervlak. Veel componenten gebruiken `bg-white` voor
+    cards. In light mode = wit. In dark mode laten we hetzelfde
+    class hercoderen naar de donker-surface kleur — geen 50+ files
+    aanpassen.
+  */
+  .dark .bg-white {
+    background-color: rgb(var(--c-surface));
+  }
+  /*
+    Tailwind's opacity-modifier `bg-white/95` rendert als
+    `rgb(255 255 255 / 0.95)` en valt buiten de `.dark .bg-white`-
+    regel hierboven. De sticky header gebruikt `bg-white/95` voor
+    een licht-doorzichtig effect; in dark mode willen we daar onze
+    donkere surface-tint zien met dezelfde transparancy.
+  */
+  .dark .bg-white\/95 {
+    background-color: rgb(var(--c-surface) / 0.95);
+  }
+  .dark .bg-white\/90 {
+    background-color: rgb(var(--c-surface) / 0.90);
+  }
+  .dark .bg-white\/80 {
+    background-color: rgb(var(--c-surface) / 0.80);
+  }
+
+  /*
+    Accent-tekst-fix:
+      `text-slate-mosque` wordt veel gebruikt als accentkleur in light
+      mode op een sand-page. De variabele zelf blijft donker (voor
+      heroes), dus directe doorrekening zou het bijna-onleesbaar maken
+      op een donker-grijze page. We forceren `text-slate-mosque` in
+      dark mode naar een lichtere accent-tint (#8fa3bf — door de
+      gebruiker voorgesteld). Voor links is de hover-tint nog iets
+      lichter. Border en background blijven onaangeraakt.
+  */
+  .dark .text-slate-mosque {
+    color: rgb(143 163 191);
+  }
+  .dark .hover\:text-slate-mosque:hover {
+    color: rgb(143 163 191);
+  }
+  .dark .hover\:text-slate-dark:hover {
+    color: rgb(174 192 213);
+  }
 }
 
 @layer utilities {
@@ -86,4 +215,316 @@
   .animation-delay-200 { animation-delay: 200ms; }
   .animation-delay-300 { animation-delay: 300ms; }
   .animation-delay-400 { animation-delay: 400ms; }
+
+  /*
+    `bg-surface` — expliciete kaart-achtergrond die wél meeschakelt.
+    Nieuwe code mag dit gebruiken i.p.v. `bg-white`. Bestaande
+    `bg-white`-gebruik blijft werken via de `.dark .bg-white`-regel
+    hierboven, dus het is geen verplichting.
+  */
+  .bg-surface { background-color: rgb(var(--c-surface)); }
+  .bg-surface-strong { background-color: rgb(var(--c-surface-strong)); }
+
+  /*
+    TV-display moet ALTIJD dezelfde donkere look hebben — onafhankelijk
+    van de bezoeker zijn theme-keuze. Door binnen `.tv-scope` het
+    light-mode-palet hard te overschrijven blijft de TV identiek aan
+    delivery 9, ook als iemand de site bezoekt in dark mode en
+    daarna naar /gebedstijden/tv navigeert.
+    De TV-pagina wikkelt zijn root-element in een `.tv-scope` div
+    (zie components/prayer/PrayerTimesTvDisplay.tsx).
+  */
+  .tv-scope {
+    --c-sand-50:    249 247 245;
+    --c-sand-100:   236 229 223;
+    --c-sand-200:   221 211 200;
+    --c-sand-300:   201 186 169;
+    --c-taupe:      169 157 133;
+    --c-taupe-dark: 140 130 105;
+    --c-taupe-light:196 186 170;
+    --c-slate-mosque:77 91 111;
+    --c-slate-dark:  58 69 88;
+    --c-slate-light:107 122 141;
+    --c-ink:        26 26 26;
+    --c-surface:        255 255 255;
+    --c-surface-strong: 255 255 255;
+  }
+  /*
+    Zorg dat binnen `.tv-scope` ook onze dark-mode CSS-overrides
+    weer worden teruggedraaid. Zonder dit zou `.dark .bg-white`
+    nog steeds matchen (de selector kijkt naar `.dark` op <html>,
+    niet naar `.tv-scope`). Door binnen `.tv-scope` `bg-white` weer
+    expliciet wit te maken en `text-slate-mosque` weer naar zijn
+    light-waarde te zetten, blijft de TV bitwise identiek aan
+    delivery 9 ongeacht user-thema.
+  */
+  .tv-scope .bg-white       { background-color: rgb(255 255 255); }
+  .tv-scope .bg-white\/95   { background-color: rgb(255 255 255 / 0.95); }
+  .tv-scope .bg-white\/90   { background-color: rgb(255 255 255 / 0.90); }
+  .tv-scope .bg-white\/80   { background-color: rgb(255 255 255 / 0.80); }
+  .tv-scope .text-slate-mosque { color: rgb(77 91 111); }
+}
+
+/*
+  ─── Rich-text (delivery 13) ──────────────────────────────────
+  Herbruikbare styling voor HTML die uit Directus' TinyMCE WYSIWYG
+  komt (`input-rich-text-html`). Vervangt de dode `prose*` classes
+  uit @tailwindcss/typography (plugin is niet geïnstalleerd —
+  daarom werkten die classes voorheen nergens).
+
+  Gebruik:
+    <div
+      className="rich-text"
+      dangerouslySetInnerHTML={{ __html: page.body }}
+    />
+
+  Compactere variant (voor FAQ-antwoorden e.d.):
+    <div className="rich-text rich-text--sm" ... />
+
+  Ontwerpkeuzes:
+  - Alle kleuren via bestaande CSS-vars (--c-ink, --c-taupe-dark,
+    --c-slate-mosque, --c-sand-200). Dark mode schakelt automatisch
+    mee via de `.dark` overrides hierboven.
+  - Selectors zijn `.rich-text > tag` waar mogelijk, plus losse
+    tag-selectors voor geneste elementen. Specificiteit blijft laag
+    genoeg dat Tailwind utility classes (zoals `text-center` op een
+    enkel element) en inline `style="..."` uit TinyMCE altijd winnen.
+  - TinyMCE in Directus slaat alignment standaard op als
+    `<p style="text-align: center;">`. Daar hoeven we niets voor te
+    doen — inline style heeft de hoogste specificiteit.
+    Als fallback ondersteunen we ook `.text-center/.text-left/
+    .text-right/.text-justify` classes op directe kinderen.
+  - Geen sanitization toegevoegd in deze delivery (uit scope).
+*/
+@layer components {
+  .rich-text {
+    color: rgb(var(--c-ink));
+    font-family: var(--font-outfit), sans-serif;
+    line-height: 1.7;
+    word-wrap: break-word;
+  }
+
+  /* Eerste/laatste-kind: trim top/bottom margin om dubbele spacing
+     met containende layout te voorkomen. */
+  .rich-text > *:first-child { margin-top: 0; }
+  .rich-text > *:last-child  { margin-bottom: 0; }
+
+  /* ── Headings ─────────────────────────────────────────────── */
+  .rich-text h1,
+  .rich-text h2,
+  .rich-text h3,
+  .rich-text h4,
+  .rich-text h5,
+  .rich-text h6 {
+    font-family: var(--font-amiri), serif;
+    color: rgb(var(--c-ink));
+    font-weight: 600;
+    line-height: 1.25;
+    margin-top: 2em;
+    margin-bottom: 0.6em;
+  }
+  .rich-text h1 { font-size: 2.25rem; }   /* 36px */
+  .rich-text h2 { font-size: 1.75rem; }   /* 28px */
+  .rich-text h3 { font-size: 1.375rem; }  /* 22px */
+  .rich-text h4 { font-size: 1.125rem; }  /* 18px */
+  .rich-text h5 { font-size: 1rem; }
+  .rich-text h6 {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgb(var(--c-taupe-dark));
+  }
+
+  /* ── Paragrafen ──────────────────────────────────────────── */
+  .rich-text p {
+    margin-top: 0;
+    margin-bottom: 1em;
+  }
+
+  /* ── Inline ───────────────────────────────────────────────── */
+  .rich-text strong,
+  .rich-text b {
+    font-weight: 600;
+    color: inherit;
+  }
+  .rich-text em,
+  .rich-text i { font-style: italic; }
+  .rich-text u { text-decoration: underline; }
+  .rich-text s,
+  .rich-text del { text-decoration: line-through; }
+  .rich-text mark {
+    background-color: rgb(var(--c-sand-200));
+    color: inherit;
+    padding: 0 0.2em;
+    border-radius: 0.2em;
+  }
+  .rich-text code:not(pre code) {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background-color: rgb(var(--c-sand-100));
+    color: rgb(var(--c-ink));
+    padding: 0.1em 0.35em;
+    border-radius: 0.25em;
+    font-size: 0.9em;
+  }
+
+  /* ── Links ────────────────────────────────────────────────── */
+  .rich-text a {
+    color: rgb(var(--c-slate-mosque));
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+    text-decoration-thickness: 0.06em;
+    transition: color 150ms ease;
+  }
+  .rich-text a:hover {
+    color: rgb(var(--c-slate-dark));
+  }
+  /* In dark mode is --c-slate-mosque donker; gebruik de aparte
+     dark-link kleur die de site ook elders gebruikt. */
+  .dark .rich-text a {
+    color: rgb(var(--c-slate-light));
+  }
+  .dark .rich-text a:hover {
+    color: rgb(var(--c-ink));
+  }
+
+  /* ── Lijsten ──────────────────────────────────────────────── */
+  .rich-text ul,
+  .rich-text ol {
+    margin-top: 0;
+    margin-bottom: 1em;
+    padding-left: 1.6em;
+  }
+  .rich-text ul { list-style: disc; }
+  .rich-text ol { list-style: decimal; }
+  .rich-text li {
+    margin-top: 0.35em;
+    margin-bottom: 0.35em;
+  }
+  .rich-text li > p { margin-bottom: 0.35em; }
+  .rich-text ul ul,
+  .rich-text ul ol,
+  .rich-text ol ul,
+  .rich-text ol ol {
+    margin-top: 0.35em;
+    margin-bottom: 0.35em;
+  }
+
+  /* ── Blockquotes ──────────────────────────────────────────── */
+  .rich-text blockquote {
+    margin: 1.5em 0;
+    padding: 0.5em 1.2em;
+    border-left: 3px solid rgb(var(--c-slate-mosque));
+    color: rgb(var(--c-taupe-dark));
+    font-style: italic;
+    background-color: rgb(var(--c-sand-100) / 0.4);
+    border-radius: 0 0.5rem 0.5rem 0;
+  }
+  .rich-text blockquote p:last-child { margin-bottom: 0; }
+
+  /* ── Horizontale lijn ─────────────────────────────────────── */
+  .rich-text hr {
+    border: 0;
+    border-top: 1px solid rgb(var(--c-sand-200));
+    margin: 2em 0;
+  }
+
+  /* ── Afbeeldingen / figuren ───────────────────────────────── */
+  .rich-text img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.75rem;
+    margin: 1.25em 0;
+  }
+  .rich-text figure {
+    margin: 1.5em 0;
+  }
+  .rich-text figure img { margin: 0; }
+  .rich-text figcaption {
+    margin-top: 0.5em;
+    font-size: 0.875em;
+    color: rgb(var(--c-taupe-dark));
+    text-align: center;
+  }
+
+  /* ── Tabellen (TinyMCE kan deze invoegen) ─────────────────── */
+  .rich-text table {
+    width: 100%;
+    margin: 1.5em 0;
+    border-collapse: collapse;
+    font-size: 0.95em;
+  }
+  .rich-text th,
+  .rich-text td {
+    padding: 0.5em 0.75em;
+    border: 1px solid rgb(var(--c-sand-200));
+    text-align: left;
+    vertical-align: top;
+  }
+  .rich-text th {
+    background-color: rgb(var(--c-sand-100));
+    font-weight: 600;
+  }
+
+  /* ── Code-blokken ─────────────────────────────────────────── */
+  .rich-text pre {
+    margin: 1.25em 0;
+    padding: 1em;
+    background-color: rgb(var(--c-sand-100));
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.9em;
+    line-height: 1.5;
+  }
+  .rich-text pre code {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    font-size: inherit;
+  }
+
+  /* ── Uitlijning-fallbacks ─────────────────────────────────────
+     Inline `style="text-align: center"` uit TinyMCE werkt vanzelf
+     (inline style wint). Sommige editors slaan uitlijning op als
+     class — die ondersteunen we hieronder als directe-kind selector
+     om geen utility-classes elders te raken. */
+  .rich-text > .text-left,
+  .rich-text > .text-center,
+  .rich-text > .text-right,
+  .rich-text > .text-justify {
+    display: block;
+  }
+  .rich-text > .text-left    { text-align: left; }
+  .rich-text > .text-center  { text-align: center; }
+  .rich-text > .text-right   { text-align: right; }
+  .rich-text > .text-justify { text-align: justify; }
+
+  /* ── Compacte variant (FAQ-antwoorden, etc.) ──────────────── */
+  .rich-text--sm {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: rgb(var(--c-taupe-dark));
+  }
+  .rich-text--sm p { margin-bottom: 0.65em; }
+  .rich-text--sm h1,
+  .rich-text--sm h2,
+  .rich-text--sm h3,
+  .rich-text--sm h4,
+  .rich-text--sm h5,
+  .rich-text--sm h6 {
+    margin-top: 1em;
+    margin-bottom: 0.4em;
+  }
+  .rich-text--sm h1 { font-size: 1.25rem; }
+  .rich-text--sm h2 { font-size: 1.125rem; }
+  .rich-text--sm h3 { font-size: 1rem; }
+  .rich-text--sm h4,
+  .rich-text--sm h5,
+  .rich-text--sm h6 { font-size: 0.95rem; }
+  .rich-text--sm ul,
+  .rich-text--sm ol { margin-bottom: 0.65em; padding-left: 1.3em; }
+  .rich-text--sm li { margin-top: 0.2em; margin-bottom: 0.2em; }
+  .rich-text--sm blockquote { margin: 1em 0; padding: 0.35em 1em; }
+  .rich-text--sm hr { margin: 1.25em 0; }
+  .rich-text--sm img { margin: 0.75em 0; }
 }

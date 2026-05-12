@@ -97,14 +97,17 @@ export default async function ActivityDetailPage({ params }: Props) {
       <section className="bg-sand-50 py-12 lg:py-16">
         <Container narrow>
           {imageUrl && (
-            <div className="relative h-64 sm:h-80 rounded-2xl overflow-hidden mb-8 shadow-md">
+            // Flyer-presentatie: object-contain + aspect-ratio met max-h zorgt dat
+            // verticale flyers/posters volledig zichtbaar blijven zonder de pagina
+            // op te blazen op grote schermen (delivery 12).
+            <div className="relative w-full aspect-[4/5] sm:aspect-[3/4] max-h-[70vh] rounded-2xl overflow-hidden mb-8 shadow-md bg-sand-100">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imageUrl} alt={activity.title} className="absolute inset-0 w-full h-full object-cover" />
+              <img src={imageUrl} alt={activity.title} className="absolute inset-0 w-full h-full object-contain" />
             </div>
           )}
 
           <div
-            className="prose prose-lg max-w-none font-body text-ink leading-relaxed"
+            className="rich-text max-w-none"
             dangerouslySetInnerHTML={{ __html: activity.description || "" }}
           />
 
