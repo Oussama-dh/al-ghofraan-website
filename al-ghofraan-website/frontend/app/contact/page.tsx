@@ -149,7 +149,7 @@ export default async function ContactPage() {
           {/* Optionele body uit page_content */}
           {page?.body && (
             <div
-              className="prose prose-lg max-w-none font-body text-ink leading-relaxed prose-headings:font-display prose-headings:text-ink prose-a:text-slate-mosque mt-12"
+              className="rich-text max-w-none mt-12"
               dangerouslySetInnerHTML={{ __html: page.body }}
             />
           )}

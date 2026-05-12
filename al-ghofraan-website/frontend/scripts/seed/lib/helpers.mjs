@@ -32,6 +32,107 @@ export async function ensureField(client, collection, field) {
   return true;
 }
 
+/**
+ * Idempotent patcher voor `meta.options` op een bestaand veld.
+ *
+ * Anders dan `ensureField` (die nieuwe velden CREATE't) raakt deze helper
+ * een bestaand veld aan om `meta.options` bij te werken zonder de
+ * schemadefinitie of de inhoud van het veld te wijzigen. Gebruikt voor
+ * dingen zoals de TinyMCE toolbar op rich-text velden.
+ *
+ * Veiligheidskenmerken:
+ * - Skipt netjes als het veld niet bestaat (warning, geen crash).
+ * - Skipt als `expectedInterface` is meegegeven en het veld een ander
+ *   interface heeft (zo raken we nooit per ongeluk een veld van een
+ *   ander type aan).
+ * - `toolbar` wordt gemerged: bestaande entries blijven in hun volgorde
+ *   staan; alleen ontbrekende entries uit `toolbarAdditions` worden
+ *   achteraan toegevoegd. Er wordt nooit een toolbar-entry verwijderd.
+ * - Andere `options`-sleutels worden via Object-spread gemerged: bestaande
+ *   waarden blijven staan, nieuwe alleen toegevoegd als de sleutel
+ *   nog niet bestaat (in `extraOptions`).
+ * - PATCH wordt alleen verstuurd als er daadwerkelijk iets verandert.
+ *
+ * @param {object}   client
+ * @param {string}   collection
+ * @param {string}   fieldName
+ * @param {object}   patch
+ * @param {string[]} [patch.toolbarAdditions]  toolbar-entries om toe te voegen (merge)
+ * @param {object}   [patch.extraOptions]      andere options-sleutels (alleen als nog niet aanwezig)
+ * @param {string}   [patch.expectedInterface] verwacht interface, bv. "input-rich-text-html"
+ */
+export async function ensureFieldOptions(client, collection, fieldName, patch = {}) {
+  const { toolbarAdditions = [], extraOptions = {}, expectedInterface } = patch;
+
+  // 1. Veld ophalen
+  let field;
+  try {
+    const res = await client.get(`/fields/${collection}/${fieldName}`);
+    field = res?.data;
+  } catch (e) {
+    if (is404(e)) {
+      console.log(`  ⚠ veld "${collection}.${fieldName}" bestaat niet — overgeslagen`);
+      return false;
+    }
+    throw e;
+  }
+
+  if (!field || !field.meta) {
+    console.log(`  ⚠ veld "${collection}.${fieldName}" heeft geen meta — overgeslagen`);
+    return false;
+  }
+
+  // 2. Interface controleren (veiligheidsnet)
+  if (expectedInterface && field.meta.interface !== expectedInterface) {
+    console.log(
+      `  ⚠ veld "${collection}.${fieldName}" heeft interface "${field.meta.interface}" ` +
+      `(verwacht "${expectedInterface}") — overgeslagen`
+    );
+    return false;
+  }
+
+  // 3. Bestaande options lezen
+  const currentOptions = field.meta.options || {};
+  const newOptions = { ...currentOptions };
+  let changed = false;
+
+  // 4. Toolbar mergen (unieke union, behoud bestaande volgorde)
+  if (toolbarAdditions.length > 0) {
+    const currentToolbar = Array.isArray(currentOptions.toolbar) ? currentOptions.toolbar : [];
+    const merged = currentToolbar.slice();
+    for (const key of toolbarAdditions) {
+      if (!merged.includes(key)) {
+        merged.push(key);
+        changed = true;
+      }
+    }
+    if (changed) {
+      newOptions.toolbar = merged;
+    }
+  }
+
+  // 5. Andere options-sleutels alleen toevoegen als ze ontbreken
+  for (const [k, v] of Object.entries(extraOptions)) {
+    if (!(k in currentOptions)) {
+      newOptions[k] = v;
+      changed = true;
+    }
+  }
+
+  // 6. Geen wijziging → niets versturen
+  if (!changed) {
+    console.log(`  · veld "${collection}.${fieldName}" ongewijzigd`);
+    return false;
+  }
+
+  // 7. PATCH alleen meta.options (rest van het veld blijft intact)
+  await client.patch(`/fields/${collection}/${fieldName}`, {
+    meta: { options: newOptions },
+  });
+  console.log(`  ↻ veld "${collection}.${fieldName}" options bijgewerkt`);
+  return true;
+}
+
 // ─── ITEMS (upsert via natural key) ─────────────────────────
 
 /**

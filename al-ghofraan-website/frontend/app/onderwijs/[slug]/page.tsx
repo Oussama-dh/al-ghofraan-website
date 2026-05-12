@@ -174,7 +174,7 @@ export default async function EducationProgramDetailPage({ params }: Props) {
 
           {program.description && (
             <div
-              className="prose prose-lg max-w-none font-body text-ink leading-relaxed prose-headings:font-display prose-headings:text-ink prose-a:text-slate-mosque mb-10"
+              className="rich-text max-w-none mb-10"
               dangerouslySetInnerHTML={{ __html: program.description }}
             />
           )}

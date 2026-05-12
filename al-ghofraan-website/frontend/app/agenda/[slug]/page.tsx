@@ -107,7 +107,7 @@ export default async function ActivityDetailPage({ params }: Props) {
           )}
 
           <div
-            className="prose prose-lg max-w-none font-body text-ink leading-relaxed"
+            className="rich-text max-w-none"
             dangerouslySetInnerHTML={{ __html: activity.description || "" }}
           />
 

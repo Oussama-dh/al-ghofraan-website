@@ -55,7 +55,7 @@ export default function FaqSection({
               </summary>
 
               <div
-                className="prose prose-sm max-w-none mt-3 font-body text-taupe-dark leading-relaxed prose-a:text-slate-mosque"
+                className="rich-text rich-text--sm max-w-none mt-3"
                 dangerouslySetInnerHTML={{ __html: faq.answer }}
               />
             </details>

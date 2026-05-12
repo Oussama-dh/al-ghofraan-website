@@ -264,3 +264,267 @@
   .tv-scope .bg-white\/80   { background-color: rgb(255 255 255 / 0.80); }
   .tv-scope .text-slate-mosque { color: rgb(77 91 111); }
 }
+
+/*
+  ─── Rich-text (delivery 13) ──────────────────────────────────
+  Herbruikbare styling voor HTML die uit Directus' TinyMCE WYSIWYG
+  komt (`input-rich-text-html`). Vervangt de dode `prose*` classes
+  uit @tailwindcss/typography (plugin is niet geïnstalleerd —
+  daarom werkten die classes voorheen nergens).
+
+  Gebruik:
+    <div
+      className="rich-text"
+      dangerouslySetInnerHTML={{ __html: page.body }}
+    />
+
+  Compactere variant (voor FAQ-antwoorden e.d.):
+    <div className="rich-text rich-text--sm" ... />
+
+  Ontwerpkeuzes:
+  - Alle kleuren via bestaande CSS-vars (--c-ink, --c-taupe-dark,
+    --c-slate-mosque, --c-sand-200). Dark mode schakelt automatisch
+    mee via de `.dark` overrides hierboven.
+  - Selectors zijn `.rich-text > tag` waar mogelijk, plus losse
+    tag-selectors voor geneste elementen. Specificiteit blijft laag
+    genoeg dat Tailwind utility classes (zoals `text-center` op een
+    enkel element) en inline `style="..."` uit TinyMCE altijd winnen.
+  - TinyMCE in Directus slaat alignment standaard op als
+    `<p style="text-align: center;">`. Daar hoeven we niets voor te
+    doen — inline style heeft de hoogste specificiteit.
+    Als fallback ondersteunen we ook `.text-center/.text-left/
+    .text-right/.text-justify` classes op directe kinderen.
+  - Geen sanitization toegevoegd in deze delivery (uit scope).
+*/
+@layer components {
+  .rich-text {
+    color: rgb(var(--c-ink));
+    font-family: var(--font-outfit), sans-serif;
+    line-height: 1.7;
+    word-wrap: break-word;
+  }
+
+  /* Eerste/laatste-kind: trim top/bottom margin om dubbele spacing
+     met containende layout te voorkomen. */
+  .rich-text > *:first-child { margin-top: 0; }
+  .rich-text > *:last-child  { margin-bottom: 0; }
+
+  /* ── Headings ─────────────────────────────────────────────── */
+  .rich-text h1,
+  .rich-text h2,
+  .rich-text h3,
+  .rich-text h4,
+  .rich-text h5,
+  .rich-text h6 {
+    font-family: var(--font-amiri), serif;
+    color: rgb(var(--c-ink));
+    font-weight: 600;
+    line-height: 1.25;
+    margin-top: 2em;
+    margin-bottom: 0.6em;
+  }
+  .rich-text h1 { font-size: 2.25rem; }   /* 36px */
+  .rich-text h2 { font-size: 1.75rem; }   /* 28px */
+  .rich-text h3 { font-size: 1.375rem; }  /* 22px */
+  .rich-text h4 { font-size: 1.125rem; }  /* 18px */
+  .rich-text h5 { font-size: 1rem; }
+  .rich-text h6 {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgb(var(--c-taupe-dark));
+  }
+
+  /* ── Paragrafen ──────────────────────────────────────────── */
+  .rich-text p {
+    margin-top: 0;
+    margin-bottom: 1em;
+  }
+
+  /* ── Inline ───────────────────────────────────────────────── */
+  .rich-text strong,
+  .rich-text b {
+    font-weight: 600;
+    color: inherit;
+  }
+  .rich-text em,
+  .rich-text i { font-style: italic; }
+  .rich-text u { text-decoration: underline; }
+  .rich-text s,
+  .rich-text del { text-decoration: line-through; }
+  .rich-text mark {
+    background-color: rgb(var(--c-sand-200));
+    color: inherit;
+    padding: 0 0.2em;
+    border-radius: 0.2em;
+  }
+  .rich-text code:not(pre code) {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background-color: rgb(var(--c-sand-100));
+    color: rgb(var(--c-ink));
+    padding: 0.1em 0.35em;
+    border-radius: 0.25em;
+    font-size: 0.9em;
+  }
+
+  /* ── Links ────────────────────────────────────────────────── */
+  .rich-text a {
+    color: rgb(var(--c-slate-mosque));
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+    text-decoration-thickness: 0.06em;
+    transition: color 150ms ease;
+  }
+  .rich-text a:hover {
+    color: rgb(var(--c-slate-dark));
+  }
+  /* In dark mode is --c-slate-mosque donker; gebruik de aparte
+     dark-link kleur die de site ook elders gebruikt. */
+  .dark .rich-text a {
+    color: rgb(var(--c-slate-light));
+  }
+  .dark .rich-text a:hover {
+    color: rgb(var(--c-ink));
+  }
+
+  /* ── Lijsten ──────────────────────────────────────────────── */
+  .rich-text ul,
+  .rich-text ol {
+    margin-top: 0;
+    margin-bottom: 1em;
+    padding-left: 1.6em;
+  }
+  .rich-text ul { list-style: disc; }
+  .rich-text ol { list-style: decimal; }
+  .rich-text li {
+    margin-top: 0.35em;
+    margin-bottom: 0.35em;
+  }
+  .rich-text li > p { margin-bottom: 0.35em; }
+  .rich-text ul ul,
+  .rich-text ul ol,
+  .rich-text ol ul,
+  .rich-text ol ol {
+    margin-top: 0.35em;
+    margin-bottom: 0.35em;
+  }
+
+  /* ── Blockquotes ──────────────────────────────────────────── */
+  .rich-text blockquote {
+    margin: 1.5em 0;
+    padding: 0.5em 1.2em;
+    border-left: 3px solid rgb(var(--c-slate-mosque));
+    color: rgb(var(--c-taupe-dark));
+    font-style: italic;
+    background-color: rgb(var(--c-sand-100) / 0.4);
+    border-radius: 0 0.5rem 0.5rem 0;
+  }
+  .rich-text blockquote p:last-child { margin-bottom: 0; }
+
+  /* ── Horizontale lijn ─────────────────────────────────────── */
+  .rich-text hr {
+    border: 0;
+    border-top: 1px solid rgb(var(--c-sand-200));
+    margin: 2em 0;
+  }
+
+  /* ── Afbeeldingen / figuren ───────────────────────────────── */
+  .rich-text img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.75rem;
+    margin: 1.25em 0;
+  }
+  .rich-text figure {
+    margin: 1.5em 0;
+  }
+  .rich-text figure img { margin: 0; }
+  .rich-text figcaption {
+    margin-top: 0.5em;
+    font-size: 0.875em;
+    color: rgb(var(--c-taupe-dark));
+    text-align: center;
+  }
+
+  /* ── Tabellen (TinyMCE kan deze invoegen) ─────────────────── */
+  .rich-text table {
+    width: 100%;
+    margin: 1.5em 0;
+    border-collapse: collapse;
+    font-size: 0.95em;
+  }
+  .rich-text th,
+  .rich-text td {
+    padding: 0.5em 0.75em;
+    border: 1px solid rgb(var(--c-sand-200));
+    text-align: left;
+    vertical-align: top;
+  }
+  .rich-text th {
+    background-color: rgb(var(--c-sand-100));
+    font-weight: 600;
+  }
+
+  /* ── Code-blokken ─────────────────────────────────────────── */
+  .rich-text pre {
+    margin: 1.25em 0;
+    padding: 1em;
+    background-color: rgb(var(--c-sand-100));
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.9em;
+    line-height: 1.5;
+  }
+  .rich-text pre code {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    font-size: inherit;
+  }
+
+  /* ── Uitlijning-fallbacks ─────────────────────────────────────
+     Inline `style="text-align: center"` uit TinyMCE werkt vanzelf
+     (inline style wint). Sommige editors slaan uitlijning op als
+     class — die ondersteunen we hieronder als directe-kind selector
+     om geen utility-classes elders te raken. */
+  .rich-text > .text-left,
+  .rich-text > .text-center,
+  .rich-text > .text-right,
+  .rich-text > .text-justify {
+    display: block;
+  }
+  .rich-text > .text-left    { text-align: left; }
+  .rich-text > .text-center  { text-align: center; }
+  .rich-text > .text-right   { text-align: right; }
+  .rich-text > .text-justify { text-align: justify; }
+
+  /* ── Compacte variant (FAQ-antwoorden, etc.) ──────────────── */
+  .rich-text--sm {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: rgb(var(--c-taupe-dark));
+  }
+  .rich-text--sm p { margin-bottom: 0.65em; }
+  .rich-text--sm h1,
+  .rich-text--sm h2,
+  .rich-text--sm h3,
+  .rich-text--sm h4,
+  .rich-text--sm h5,
+  .rich-text--sm h6 {
+    margin-top: 1em;
+    margin-bottom: 0.4em;
+  }
+  .rich-text--sm h1 { font-size: 1.25rem; }
+  .rich-text--sm h2 { font-size: 1.125rem; }
+  .rich-text--sm h3 { font-size: 1rem; }
+  .rich-text--sm h4,
+  .rich-text--sm h5,
+  .rich-text--sm h6 { font-size: 0.95rem; }
+  .rich-text--sm ul,
+  .rich-text--sm ol { margin-bottom: 0.65em; padding-left: 1.3em; }
+  .rich-text--sm li { margin-top: 0.2em; margin-bottom: 0.2em; }
+  .rich-text--sm blockquote { margin: 1em 0; padding: 0.35em 1em; }
+  .rich-text--sm hr { margin: 1.25em 0; }
+  .rich-text--sm img { margin: 0.75em 0; }
+}
