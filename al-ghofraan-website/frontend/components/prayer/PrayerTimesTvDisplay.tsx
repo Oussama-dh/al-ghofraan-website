@@ -245,7 +245,10 @@ export default function PrayerTimesTvDisplay({
 
   // ─── Render ─────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-50 bg-slate-mosque text-white overflow-hidden">
+    // `tv-scope` pin de kleur-variabelen op de light-mode waardes
+    // zodat /gebedstijden/tv er identiek uitziet onafhankelijk van
+    // de bezoeker zijn theme-keuze (delivery 10-fix).
+    <div className="tv-scope fixed inset-0 z-50 bg-slate-mosque text-white overflow-hidden">
       {/* Decoratieve achtergrond */}
       <div
         aria-hidden="true"

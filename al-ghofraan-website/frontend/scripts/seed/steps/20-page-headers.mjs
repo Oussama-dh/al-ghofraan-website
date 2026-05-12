@@ -59,7 +59,7 @@ export async function setupPageHeaders(client) {
       slug:         "gebedstijden",
       arabic_title: "مواقيت الصلاة",
       title:        "Gebedstijden",
-      subtitle:     "Bekijk de actuele gebedstijden van moskee Al-Ghofraan",
+      subtitle:     "Bekijk de actuele gebedstijden van Den Haag",
       intro:        null,
     },
     {
