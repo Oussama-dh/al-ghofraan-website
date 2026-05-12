@@ -1,6 +1,23 @@
 import type { Config } from "tailwindcss";
 
+/*
+  Delivery 10 — Dark-mode:
+  --------------------------------------------------------------------
+  - `darkMode: "class"` zodat we een `.dark` class op <html> kunnen
+    schakelen (zie components/theme/ThemeProvider.tsx).
+  - Het kleuren-palet is omgehangen achter CSS-variabelen die in
+    app/globals.css worden gedefinieerd. Een kleur zoals `sand-50`
+    wordt nu `rgb(var(--c-sand-50) / <alpha>)` — Tailwind ondersteunt
+    deze "RGB-channels"-syntax sinds v3.0 en zo blijft `bg-sand-50/40`
+    werken voor opacity-modifiers.
+  - In light-mode is het visuele resultaat exact gelijk aan delivery 9.
+  - In dark-mode (zie `.dark { ... }` in globals.css) krijgen dezelfde
+    semantische namen donkere tinten zodat alle bestaande components
+    zonder per-bestand wijziging meeschakelen.
+*/
+
 const config: Config = {
+  darkMode: "class",
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,25 +26,24 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Al-Ghofraan kleurenpalet
         sand: {
-          50:  "#f9f7f5",
-          100: "#ece5df",
-          200: "#ddd3c8",
-          300: "#c9baa9",
-          DEFAULT: "#ece5df",
+          50:  "rgb(var(--c-sand-50)  / <alpha-value>)",
+          100: "rgb(var(--c-sand-100) / <alpha-value>)",
+          200: "rgb(var(--c-sand-200) / <alpha-value>)",
+          300: "rgb(var(--c-sand-300) / <alpha-value>)",
+          DEFAULT: "rgb(var(--c-sand-100) / <alpha-value>)",
         },
         taupe: {
-          DEFAULT: "#a99d85",
-          dark:    "#8c8269",
-          light:   "#c4baaa",
+          DEFAULT: "rgb(var(--c-taupe)       / <alpha-value>)",
+          dark:    "rgb(var(--c-taupe-dark)  / <alpha-value>)",
+          light:   "rgb(var(--c-taupe-light) / <alpha-value>)",
         },
         slate: {
-          mosque: "#4d5b6f",
-          dark:   "#3a4558",
-          light:  "#6b7a8d",
+          mosque: "rgb(var(--c-slate-mosque) / <alpha-value>)",
+          dark:   "rgb(var(--c-slate-dark)   / <alpha-value>)",
+          light:  "rgb(var(--c-slate-light)  / <alpha-value>)",
         },
-        ink: "#1a1a1a",
+        ink: "rgb(var(--c-ink) / <alpha-value>)",
       },
       fontFamily: {
         display: ["var(--font-amiri)", "serif"],
@@ -63,9 +79,9 @@ const config: Config = {
       typography: {
         DEFAULT: {
           css: {
-            color:           "#1a1a1a",
+            color:           "rgb(var(--c-ink))",
             "h1,h2,h3,h4":  { fontFamily: "var(--font-amiri), serif" },
-            a:               { color: "#4d5b6f" },
+            a:               { color: "rgb(var(--c-slate-mosque))" },
           },
         },
       },
