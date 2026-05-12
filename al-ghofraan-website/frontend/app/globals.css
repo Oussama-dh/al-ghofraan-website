@@ -6,17 +6,91 @@
    Google Fonts — geladen via next/font in layout.tsx
    ────────────────────────────────────────── */
 
+/*
+  ─── Thematische kleur-variabelen ─────────────────────────────
+  Het Al-Ghofraan-palet zit achter CSS-variabelen. Tailwind's
+  `colors`-config gebruikt deze vars (zie tailwind.config.ts), zodat
+  elk bestaand `bg-sand-50`, `text-ink`, `border-sand-200`, etc.
+  zonder verdere wijziging meeschakelt tussen light en dark.
+
+  Light = bestaande look uit delivery 9. Dark is in delivery 11
+  flink donkerder geworden:
+    - page-bg richting bijna-zwart (#111315)
+    - surface/cards iets lichter antraciet (#1b1f23)
+    - borders subtiel (#2a3036)
+    - tekst warm crème (#f4efe6) i.p.v. helderwit
+    - secundaire tekst zachte taupe (#b8aa99)
+    - accent slate-mosque blijft donker voor heroes; `text-slate-mosque`
+      krijgt in dark mode een aparte regel (zie verderop) om als
+      lichte accenttekst toch leesbaar te blijven.
+*/
 @layer base {
   :root {
-    --color-sand:        #ece5df;
-    --color-sand-light:  #f9f7f5;
-    --color-taupe:       #a99d85;
-    --color-slate:       #4d5b6f;
-    --color-ink:         #1a1a1a;
-    --color-white:       #ffffff;
+    --c-sand-50:    249 247 245;   /* #f9f7f5 — page background */
+    --c-sand-100:   236 229 223;   /* #ece5df — card-on-page bg, hover bg */
+    --c-sand-200:   221 211 200;   /* #ddd3c8 — borders, dividers */
+    --c-sand-300:   201 186 169;   /* #c9baa9 — sterke randen, decoratie */
 
-    --font-display: var(--font-amiri);
-    --font-body:    var(--font-outfit);
+    --c-taupe:      169 157 133;   /* #a99d85 — secundaire tekst */
+    --c-taupe-dark: 140 130 105;   /* #8c8269 — body tekst secundair */
+    --c-taupe-light:196 186 170;   /* #c4baaa — subtielere variant */
+
+    --c-slate-mosque:77 91 111;    /* #4d5b6f — primaire accent + hero-bg */
+    --c-slate-dark:  58 69 88;     /* #3a4558 — hover-staat */
+    --c-slate-light:107 122 141;   /* #6b7a8d — lichte accent-variant */
+
+    --c-ink:        26 26 26;      /* #1a1a1a — primaire body-tekst */
+
+    /* Achtergrond op "kaart-niveau" (bv. cards op een sand-50 page). */
+    --c-surface:        255 255 255;
+    --c-surface-strong: 255 255 255;
+
+    /* Selectie-kleur — accent met witte tekst. */
+    --c-selection-bg: 77 91 111;
+    --c-selection-fg: 255 255 255;
+  }
+
+  .dark {
+    /*
+      Donkere variant — bijna-zwart i.p.v. de eerdere blauwgrijs-poging
+      uit delivery 10. Waardes gekozen voor:
+        - rustig, niet flashy
+        - voldoende contrast tussen page/surface/border
+        - warme tekst (geen pure-wit) zodat lange teksten niet
+          "schreeuwen" op het donkere oppervlak
+    */
+    --c-sand-50:     17 19 21;     /* #111315 — page background */
+    --c-sand-100:    27 31 35;     /* #1b1f23 — card / hover bg */
+    --c-sand-200:    42 48 54;     /* #2a3036 — borders */
+    --c-sand-300:    62 70 78;     /* iets lichter dan border voor sterke lijnen */
+
+    --c-taupe:       184 170 153;  /* #b8aa99 — secundaire tekst */
+    --c-taupe-dark:  208 196 180;  /* iets lichter — body secundair op donker */
+    --c-taupe-light: 138 128 116;  /* subtielere variant — mute hints */
+
+    /*
+      slate-mosque BLIJFT donker in dark mode, zodat `bg-slate-mosque`
+      heroes echt donker blijven en niet veranderen in een lichtblauwe
+      massa. We kiezen een lichtere variant dan light (77 91 111) zou
+      voor accent-text te slecht contrast geven op de bijna-zwarte page-
+      bg, dus we maken `text-slate-mosque` apart lichter via een aparte
+      CSS-regel hieronder (.dark .text-slate-mosque).
+
+      Concrete waarde 71 84 102 ≈ #475466 — iets donkerder dan light
+      (77 91 111). Met witte tekst → ~9:1 contrast (AAA). Dat is
+      perfect voor heroes.
+    */
+    --c-slate-mosque: 71 84 102;   /* #475466 — donker accent / hero-bg */
+    --c-slate-dark:   53 62 76;    /* #353e4c — nog donkerder voor hover/gradient-stop */
+    --c-slate-light:  92 109 132;  /* #5c6d84 — lichtere accent-variant */
+
+    --c-ink:         244 239 230;  /* #f4efe6 — primaire tekst, warm crème */
+
+    --c-surface:        27 31 35;  /* #1b1f23 — kaarten */
+    --c-surface-strong: 35 40 46;  /* iets prominenter voor modals/popovers */
+
+    --c-selection-bg: 143 163 191; /* #8fa3bf — accent-blauw voor selectie */
+    --c-selection-fg: 17 19 21;
   }
 
   * {
@@ -25,11 +99,16 @@
 
   html {
     scroll-behavior: smooth;
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
   }
 
   body {
     @apply bg-sand-50 text-ink font-body antialiased;
     font-feature-settings: "kern" 1, "liga" 1;
+    transition: background-color 200ms ease, color 200ms ease;
   }
 
   h1, h2, h3 {
@@ -48,17 +127,21 @@
     font-feature-settings: "kern" 1;
   }
 
-  /* Selectie kleur */
+  /* Selectie kleur — via variabele zodat dark mode meeschakelt. */
   ::selection {
-    background-color: #4d5b6f;
-    color: #fff;
+    background-color: rgb(var(--c-selection-bg));
+    color:            rgb(var(--c-selection-fg));
   }
 }
 
 @layer components {
-  /* Geometrisch patroon overlay */
+  /* Geometrisch patroon overlay. Donkere mode krijgt een iets
+     subtielere versie. */
   .pattern-overlay {
     background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23a99d85' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  .dark .pattern-overlay {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23a99d85' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4h-4zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
   }
 
   /* Sierlijke arabesque-lijn */
@@ -75,6 +158,52 @@
   .section-wave {
     clip-path: ellipse(100% 55% at 50% 100%);
   }
+
+  /*
+    Kaart-oppervlak. Veel componenten gebruiken `bg-white` voor
+    cards. In light mode = wit. In dark mode laten we hetzelfde
+    class hercoderen naar de donker-surface kleur — geen 50+ files
+    aanpassen.
+  */
+  .dark .bg-white {
+    background-color: rgb(var(--c-surface));
+  }
+  /*
+    Tailwind's opacity-modifier `bg-white/95` rendert als
+    `rgb(255 255 255 / 0.95)` en valt buiten de `.dark .bg-white`-
+    regel hierboven. De sticky header gebruikt `bg-white/95` voor
+    een licht-doorzichtig effect; in dark mode willen we daar onze
+    donkere surface-tint zien met dezelfde transparancy.
+  */
+  .dark .bg-white\/95 {
+    background-color: rgb(var(--c-surface) / 0.95);
+  }
+  .dark .bg-white\/90 {
+    background-color: rgb(var(--c-surface) / 0.90);
+  }
+  .dark .bg-white\/80 {
+    background-color: rgb(var(--c-surface) / 0.80);
+  }
+
+  /*
+    Accent-tekst-fix:
+      `text-slate-mosque` wordt veel gebruikt als accentkleur in light
+      mode op een sand-page. De variabele zelf blijft donker (voor
+      heroes), dus directe doorrekening zou het bijna-onleesbaar maken
+      op een donker-grijze page. We forceren `text-slate-mosque` in
+      dark mode naar een lichtere accent-tint (#8fa3bf — door de
+      gebruiker voorgesteld). Voor links is de hover-tint nog iets
+      lichter. Border en background blijven onaangeraakt.
+  */
+  .dark .text-slate-mosque {
+    color: rgb(143 163 191);
+  }
+  .dark .hover\:text-slate-mosque:hover {
+    color: rgb(143 163 191);
+  }
+  .dark .hover\:text-slate-dark:hover {
+    color: rgb(174 192 213);
+  }
 }
 
 @layer utilities {
@@ -86,4 +215,52 @@
   .animation-delay-200 { animation-delay: 200ms; }
   .animation-delay-300 { animation-delay: 300ms; }
   .animation-delay-400 { animation-delay: 400ms; }
+
+  /*
+    `bg-surface` — expliciete kaart-achtergrond die wél meeschakelt.
+    Nieuwe code mag dit gebruiken i.p.v. `bg-white`. Bestaande
+    `bg-white`-gebruik blijft werken via de `.dark .bg-white`-regel
+    hierboven, dus het is geen verplichting.
+  */
+  .bg-surface { background-color: rgb(var(--c-surface)); }
+  .bg-surface-strong { background-color: rgb(var(--c-surface-strong)); }
+
+  /*
+    TV-display moet ALTIJD dezelfde donkere look hebben — onafhankelijk
+    van de bezoeker zijn theme-keuze. Door binnen `.tv-scope` het
+    light-mode-palet hard te overschrijven blijft de TV identiek aan
+    delivery 9, ook als iemand de site bezoekt in dark mode en
+    daarna naar /gebedstijden/tv navigeert.
+    De TV-pagina wikkelt zijn root-element in een `.tv-scope` div
+    (zie components/prayer/PrayerTimesTvDisplay.tsx).
+  */
+  .tv-scope {
+    --c-sand-50:    249 247 245;
+    --c-sand-100:   236 229 223;
+    --c-sand-200:   221 211 200;
+    --c-sand-300:   201 186 169;
+    --c-taupe:      169 157 133;
+    --c-taupe-dark: 140 130 105;
+    --c-taupe-light:196 186 170;
+    --c-slate-mosque:77 91 111;
+    --c-slate-dark:  58 69 88;
+    --c-slate-light:107 122 141;
+    --c-ink:        26 26 26;
+    --c-surface:        255 255 255;
+    --c-surface-strong: 255 255 255;
+  }
+  /*
+    Zorg dat binnen `.tv-scope` ook onze dark-mode CSS-overrides
+    weer worden teruggedraaid. Zonder dit zou `.dark .bg-white`
+    nog steeds matchen (de selector kijkt naar `.dark` op <html>,
+    niet naar `.tv-scope`). Door binnen `.tv-scope` `bg-white` weer
+    expliciet wit te maken en `text-slate-mosque` weer naar zijn
+    light-waarde te zetten, blijft de TV bitwise identiek aan
+    delivery 9 ongeacht user-thema.
+  */
+  .tv-scope .bg-white       { background-color: rgb(255 255 255); }
+  .tv-scope .bg-white\/95   { background-color: rgb(255 255 255 / 0.95); }
+  .tv-scope .bg-white\/90   { background-color: rgb(255 255 255 / 0.90); }
+  .tv-scope .bg-white\/80   { background-color: rgb(255 255 255 / 0.80); }
+  .tv-scope .text-slate-mosque { color: rgb(77 91 111); }
 }
