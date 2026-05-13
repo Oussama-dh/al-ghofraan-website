@@ -2,7 +2,7 @@
 
 import type { Metadata } from "next";
 import Container from "@/components/ui/Container";
-import SectionTitle from "@/components/ui/SectionTitle";
+import PageHero      from "@/components/sections/PageHero";
 import Button from "@/components/ui/Button";
 import PrayerTimesOverview from "@/components/ui/PrayerTimesOverview";
 import { ChevronLeft } from "lucide-react";
@@ -72,22 +72,11 @@ export default async function GebedstijdenOverzichtPage() {
 
   return (
     <>
-      <section className="bg-slate-mosque py-16 relative overflow-hidden">
-        <div className="absolute inset-0 pattern-overlay" />
-        <Container className="relative z-10">
-          <SectionTitle
-            title="Gebedstijden overzicht"
-            arabic="مواقيت الصلاة"
-            subtitle={fileInfo ? `${fileInfo.title}` : "Maandoverzicht"}
-            light
-          />
-        </Container>
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 40" fill="none" preserveAspectRatio="none" className="w-full">
-            <path d="M0,40 C360,0 1080,0 1440,40 L1440,40 L0,40 Z" fill="#f9f7f5" />
-          </svg>
-        </div>
-      </section>
+      <PageHero
+        title="Gebedstijden overzicht"
+        arabic="مواقيت الصلاة"
+        subtitle={fileInfo ? `${fileInfo.title}` : "Maandoverzicht"}
+      />
 
       <section className="bg-sand-50 py-12 lg:py-16">
         <Container>

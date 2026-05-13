@@ -106,6 +106,7 @@ export default async function HomePage() {
         subtitle={page?.subtitle || undefined}
         intro={page?.intro    || undefined}
         arabic={page?.arabic_title || undefined}
+        backgroundImage={page?.hero_background_image}
       />
 
       {/* Body uit page_content (rich text) */}
@@ -231,7 +232,7 @@ export default async function HomePage() {
               <div>
                 <h3 className="font-display text-xl text-ink">Gebedstijden</h3>
                 <p className="font-body text-sm text-taupe-dark mt-0.5">
-                  Bekijk de actuele gebedstijden van Den Haag.
+                  Bekijk de actuele gebedstijden van moskee Al-Ghofraan.
                 </p>
               </div>
             </div>
