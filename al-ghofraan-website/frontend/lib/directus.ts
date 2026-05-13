@@ -28,6 +28,7 @@ import type {
   TvAnnouncement,
   HijriDateOverride,
   ContactSubject,
+  Vacancy,
 } from "@/types/directus";
 
 const DIRECTUS_INTERNAL_URL =
@@ -352,6 +353,73 @@ export async function getAllArticleSlugs(): Promise<string[]> {
       return (result as Array<{ slug: string }>).map((r) => r.slug).filter(Boolean);
     },
     "getAllArticleSlugs",
+    []
+  );
+}
+
+// ─── vacancies (delivery 18) ─────────────────────────────────
+// Volgt het articles-patroon: filter op status=published voor publiek,
+// sortering via `sort` met `-published_at` als tiebreaker.
+
+const VACANCY_LIST_FIELDS = [
+  "id", "status", "title", "slug", "summary",
+  "location", "hours", "deadline",
+  "sort", "published_at",
+];
+
+const VACANCY_FULL_FIELDS = [
+  ...VACANCY_LIST_FIELDS,
+  "body", "apply_url", "contact_email", "hero_image", "created_at",
+];
+
+export async function getVacancies(): Promise<Vacancy[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("vacancies", {
+          filter: { status: { _eq: "published" } } as never,
+          sort:   ["sort", "-published_at"],
+          limit:  -1,
+          fields: VACANCY_LIST_FIELDS as never,
+        })
+      );
+      return result as unknown as Vacancy[];
+    },
+    "getVacancies",
+    []
+  );
+}
+
+export async function getVacancyBySlug(slug: string): Promise<Vacancy | null> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("vacancies", {
+          filter: { slug: { _eq: slug }, status: { _eq: "published" } } as never,
+          limit:  1,
+          fields: VACANCY_FULL_FIELDS as never,
+        })
+      );
+      return ((result as unknown as Vacancy[])[0]) ?? null;
+    },
+    `getVacancyBySlug(${slug})`,
+    null
+  );
+}
+
+export async function getAllVacancySlugs(): Promise<string[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("vacancies", {
+          filter: { status: { _eq: "published" } } as never,
+          limit:  -1,
+          fields: ["slug"],
+        })
+      );
+      return (result as Array<{ slug: string }>).map((r) => r.slug).filter(Boolean);
+    },
+    "getAllVacancySlugs",
     []
   );
 }

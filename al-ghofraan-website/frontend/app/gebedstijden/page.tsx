@@ -1,12 +1,23 @@
 // app/gebedstijden/page.tsx
+//
+// Vandaag-card + volledig maandoverzicht. Delivery 17 wijzigingen:
+//   - De tabel-block onderaan is vervangen door `PrayerTimesOverview`,
+//     dezelfde component die `/gebedstijden/overzicht` ook gebruikt.
+//     Daarmee zijn de Nederlandse + Islamitische kalender-presentaties
+//     overal identiek (toggle, maand-selectors, tabelstijl).
+//   - Datum-presentatie in de "Vandaag"-header gebruikt nu de Nederlandse
+//     notatie (bv. "vrijdag 1 mei") in plaats van "vrijdag 01-05".
+//   - "Bekijk maandoverzicht"-knop is verwijderd: het maandoverzicht
+//     staat nu direct op deze pagina, dus de doorverwijzing zou
+//     redundant zijn. `/gebedstijden/overzicht` blijft wel bestaan
+//     voor oude bookmarks.
 
 import type { Metadata }          from "next";
 import Container                  from "@/components/ui/Container";
 import PageHero                   from "@/components/sections/PageHero";
-import Button                     from "@/components/ui/Button";
-import PrayerTimesTable, { TodayPrayerCard } from "@/components/ui/PrayerTimesTable";
+import { TodayPrayerCard }        from "@/components/ui/PrayerTimesTable";
+import PrayerTimesOverview        from "@/components/ui/PrayerTimesOverview";
 import { PageSectionsList }       from "@/components/sections/PageSectionRenderer";
-import { CalendarDays }           from "lucide-react";
 import {
   getActivePrayerTimeFile,
   getInternalAssetUrl,
@@ -18,12 +29,12 @@ import {
 import {
   parsePrayerTimesCSV,
   getTodaysPrayerTimes,
-  getCurrentMonthRows,
   getNextPrayerInfo,
   getNextPrayerKey,
   formatPrayerFileTitle,
   getAmsterdamDateParts,
   getDayName,
+  formatDatePartsShort,
 } from "@/lib/prayerTimes";
 import {
   buildHijriOverrideMap,
@@ -73,7 +84,6 @@ export default async function GebedstijdenPage() {
   const pagePromise     = getPageContent("gebedstijden");
 
   let allRows: PrayerTimeRow[] = [];
-  let monthRows: PrayerTimeRow[] = [];
   let todayRow: PrayerTimeRow | null = null;
   let fileInfo: { title: string; year: number; uploaded_at: string } | null = null;
   let error: string | null = null;
@@ -105,7 +115,6 @@ export default async function GebedstijdenPage() {
           if (resp.ok) {
             const csv = await resp.text();
             allRows   = parsePrayerTimesCSV(csv);
-            monthRows = getCurrentMonthRows(allRows);
             todayRow  = getTodaysPrayerTimes(allRows);
             fileInfo  = {
               title:       prayerFile.title,
@@ -160,10 +169,14 @@ export default async function GebedstijdenPage() {
     return todayRow;
   })();
 
-  // Vandaag-header label (weekdag dd-mm)
+  // Vandaag-header label: weekdag + Nederlandse datum (bv. "vrijdag 1 mei")
+  // — delivery 17 vervangt het oude dd-mm formaat.
   const todayParts = getAmsterdamDateParts();
-  const dd = String(todayParts.day).padStart(2, "0");
-  const mm = String(todayParts.month).padStart(2, "0");
+  const todayDateLabel = formatDatePartsShort(
+    todayParts.year,
+    todayParts.month,
+    todayParts.day,
+  );
   // Weekdag op basis van gebedstijden-rij (datum-string in CSV) als die bestaat,
   // anders zelf opbouwen vanuit Amsterdamse parts.
   const todayWeekday = todayRow
@@ -172,9 +185,6 @@ export default async function GebedstijdenPage() {
         const d = new Date(todayParts.year, todayParts.month - 1, todayParts.day);
         return ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"][d.getDay()];
       })();
-
-  // Highlight in tabel matcht op datum-string van vandaag-rij
-  const todayDatum = todayRow?.datum;
 
   // Hijri-datum voor vandaag (voor subtiele weergave bij vandaag-card).
   // Falen mag stil — Hijri is hier optioneel/extra.
@@ -190,9 +200,6 @@ export default async function GebedstijdenPage() {
   const subtitleText = fileInfo
     ? formatPrayerFileTitle(fileInfo.title, fileInfo.year)
     : "Actuele gebedstijden";
-
-  // Toon eerste 31 rijen als fallback wanneer huidige maand leeg is
-  const displayRows = monthRows.length > 0 ? monthRows : allRows.slice(0, 31);
 
   return (
     <>
@@ -220,8 +227,9 @@ export default async function GebedstijdenPage() {
                   woord Vandaag). Als de Hijri-datum niet kon worden bepaald
                   (bv. Node zonder ICU), valt het label terug op alleen
                   "Vandaag" zodat de pagina nooit blanco kop heeft. De
-                  Nederlandse weekdag + dd-mm staan in een subtielere regel
-                  eronder zodat ze zichtbaar blijven. */}
+                  Nederlandse weekdag + datum (delivery 17: "vrijdag 1 mei"
+                  in plaats van "vrijdag 01-05") staan in een subtielere
+                  regel eronder zodat ze zichtbaar blijven. */}
               <div className="flex flex-col gap-1">
                 <h2 className="font-display text-2xl text-ink flex items-center gap-3">
                   <span className="w-2 h-8 bg-slate-mosque rounded-full inline-block" />
@@ -230,7 +238,7 @@ export default async function GebedstijdenPage() {
                   </span>
                 </h2>
                 <span className="font-body text-sm text-taupe-dark pl-5 capitalize">
-                  {todayWeekday} {dd}-{mm}
+                  {todayWeekday} {todayDateLabel}
                 </span>
               </div>
             </div>
@@ -264,23 +272,18 @@ export default async function GebedstijdenPage() {
             )}
           </div>
 
-          {displayRows.length > 0 && (
+          {/* Maandoverzicht — delivery 17: zelfde component als
+              /gebedstijden/overzicht. Toggle Gregoriaans/Hijri,
+              maand-selectors en tabelstijl zijn nu uniform tussen
+              beide routes. De "Bekijk maandoverzicht"-knop is
+              verwijderd omdat dit blok zelf al het volledige
+              overzicht toont; de aparte /overzicht route blijft
+              wel bestaan voor oude bookmarks. */}
+          {allRows.length > 0 && (
             <div>
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
-                <h2 className="font-display text-2xl text-ink flex items-center gap-3">
-                  <span className="w-2 h-8 bg-taupe/40 rounded-full inline-block" />
-                  Overzicht {monthRows.length > 0 ? "deze maand" : ""}
-                </h2>
-                <Button href="/gebedstijden/overzicht" variant="outline" size="sm" className="shrink-0">
-                  <CalendarDays className="w-4 h-4" />
-                  Bekijk maandoverzicht
-                </Button>
-              </div>
-              <PrayerTimesTable
-                rows={displayRows}
-                todayDatum={todayDatum}
-                shortDateOnly
-                showDayColumn
+              <PrayerTimesOverview
+                rows={allRows}
+                hijriOverrides={hijriOverridesAll}
               />
             </div>
           )}

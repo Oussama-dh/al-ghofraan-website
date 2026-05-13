@@ -4,14 +4,15 @@ import { Sunrise, Sun, CloudSun, Sunset, Moon, MoonStar } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PrayerTimeRow } from "@/types/directus";
-import { parseRowDate, getDayName } from "@/lib/prayerTimes";
+import { getDayName, formatRowDateShort, formatRowDateLong } from "@/lib/prayerTimes";
 import type { PrayerKey } from "@/lib/prayerTimes";
 
 interface PrayerTimesTableProps {
   rows:           PrayerTimeRow[];
   todayDatum?:    string;
   className?:     string;
-  /** Toon de Datum-kolom in dd-mm formaat (voor maandweergave) */
+  /** Korte datum-notatie zonder jaar (bv. "1 mei") voor maandweergave.
+   *  Lang formaat (bv. "1 mei 2026") als deze prop niet gezet is. */
   shortDateOnly?: boolean;
   /** Toon een aparte Dag-kolom met Nederlandse weekdag (lowercase) */
   showDayColumn?: boolean;
@@ -99,14 +100,14 @@ export function TodayPrayerCard({ row, nextPrayerKey }: TodayCardProps) {
   );
 }
 
-/** Format de datum-kolom: kort (dd-mm) of volledig zoals opgeslagen. */
+/** Format de datum-kolom met Nederlandse maandnaam (delivery 17):
+ *   - shortDateOnly=true  → "1 mei"
+ *   - shortDateOnly=false → "1 mei 2026"
+ *
+ *  Bij parsing-fout valt de cel terug op de raw CSV-string zodat de
+ *  tabel nooit een lege cel toont. */
 function formatDateCell(row: PrayerTimeRow, shortDateOnly: boolean): string {
-  if (!shortDateOnly) return row.datum;
-  const p = parseRowDate(row.datum);
-  if (!p) return row.datum;
-  const dd = String(p.day).padStart(2, "0");
-  const mm = String(p.month).padStart(2, "0");
-  return `${dd}-${mm}`;
+  return shortDateOnly ? formatRowDateShort(row) : formatRowDateLong(row);
 }
 
 export default function PrayerTimesTable({

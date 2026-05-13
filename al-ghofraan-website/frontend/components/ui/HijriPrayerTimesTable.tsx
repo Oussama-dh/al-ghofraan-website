@@ -109,10 +109,16 @@ export default function HijriPrayerTimesTable({
             // Highlight de "vandaag"-rij: zelfde CSV-datum als todayDatum.
             const isToday = !!csvRow && !!todayDatum && csvRow.datum === todayDatum;
 
-            // Format gregoriaanse datum als dd-mm
-            const dd = String(gregorian.getUTCDate()).padStart(2, "0");
-            const mm = String(gregorian.getUTCMonth() + 1).padStart(2, "0");
-            const gregLabel = `${dd}-${mm}`;
+            // Format gregoriaanse datum als NL (bv. "1 mei") — delivery 17.
+            // We bouwen het Intl format direct op het UTC Date-object zodat
+            // we onafhankelijk van browser-tz het juiste dagnummer + maand
+            // tonen. Geen jaar in deze cel: in de strip bovenaan staat de
+            // Hijri-maand al en de pagina-context maakt het jaar duidelijk.
+            const gregLabel = gregorian.toLocaleDateString("nl-NL", {
+              day:      "numeric",
+              month:    "long",
+              timeZone: "UTC",
+            });
 
             // Weekdag (NL, lowercase). gregorian is UTC midnight — `getUTCDay`
             // geeft een consistente dag onafhankelijk van browser-tz.
