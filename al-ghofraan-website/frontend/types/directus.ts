@@ -37,6 +37,30 @@ export interface Activity {
   registration_button_text?: string | null;
   registration_success_message?: string | null;
   registration_extra_note?: string | null;
+  /**
+   * Delivery 19 — Inschrijflimiet.
+   *   - max_registrations:        max aantal inschrijvingen. Leeg/null = onbeperkt.
+   *   - show_registration_limit:  toon "Nog X plekken beschikbaar" op de site.
+   *   - require_age:              leeftijd verplicht in formulier + server-side.
+   * Server-side enforcement van `max_registrations` en `require_age` gebeurt
+   * in `app/api/inschrijven/route.ts`. Frontend toont alleen de UI-melding.
+   */
+  max_registrations?: number | null;
+  show_registration_limit?: boolean | null;
+  require_age?: boolean | null;
+  /**
+   * Delivery 20 — Minimumleeftijd + docent-info.
+   *   - minimum_age:  als positief getal → leeftijd is automatisch verplicht
+   *                   (ook bij require_age=false) en wordt server-side
+   *                   afgedwongen. Leeg/0 = geen minimum.
+   *   - teacher:      vrije tekst (naam docent / spreker).
+   *   - show_teacher: bepaalt of `teacher` op /agenda/[slug] zichtbaar is.
+   *                   Standaard false zodat per ongeluk gevulde namen niet
+   *                   onbedoeld gepubliceerd worden.
+   */
+  minimum_age?: number | null;
+  teacher?: string | null;
+  show_teacher?: boolean | null;
 }
 
 // ─── prayer_time_files ───────────────────────────────────────
@@ -476,6 +500,10 @@ export interface Vacancy {
   body?: string | null;
   location?: string | null;
   hours?: string | null;
+  /** Delivery 19 — vrij tekstveld bv. "€ 2.500 – € 3.200 per maand" of "Vrijwilligersvergoeding". */
+  salary?: string | null;
+  /** Delivery 19 — vrij tekstveld bv. "1 jaar met optie tot verlenging" of "Onbepaalde tijd". */
+  contract_duration?: string | null;
   deadline?: string | null;
   apply_url?: string | null;
   contact_email?: string | null;
@@ -609,6 +637,44 @@ export interface HijriDateOverride {
   created_at?: string | null;
 }
 
+// ─── prayer_calendar_highlights ──────────────────────────────
+/**
+ * Delivery 21 — Datums die in de gebedstijden-kalender visueel
+ * gemarkeerd worden (Eid, Ramadan, Laylatul Qadr, eigen events, etc.).
+ *
+ * - Highlights matchen op `gregorian_date` (ISO YYYY-MM-DD).
+ * - Frontend toont alleen records met `status=published` en
+ *   `show_on_calendar=true`.
+ * - `type` bepaalt standaard kleur/icoon; `color`/`icon` zijn
+ *   optionele overrides (advanced).
+ * - `show_on_tv` is gereserveerd voor latere TV-uitbreiding en
+ *   wordt in deze delivery NIET door de frontend gelezen.
+ */
+export type PrayerCalendarHighlightType =
+  | "eid"
+  | "ramadan"
+  | "special"
+  | "event"
+  | "note";
+
+export interface PrayerCalendarHighlight {
+  id: number;
+  status: "draft" | "published" | "archived";
+  /** YYYY-MM-DD — match-key voor zowel Gregoriaanse als Hijri-tabel. */
+  gregorian_date: string;
+  title: string;
+  description?: string | null;
+  type: PrayerCalendarHighlightType;
+  /** Optionele HEX override (`#RRGGBB`). Ongeldig of leeg → type-default. */
+  color?: string | null;
+  /** Optionele lucide-icoon naam (whitelist). Ongeldig of leeg → type-default. */
+  icon?: string | null;
+  show_on_calendar: boolean;
+  show_on_tv: boolean;
+  sort?: number | null;
+  created_at?: string | null;
+}
+
 // ─── SDK Schema ──────────────────────────────────────────────
 export interface DirectusSchema {
   activities: Activity[];
@@ -633,4 +699,5 @@ export interface DirectusSchema {
   article_categories: ArticleCategory[];
   video_categories: VideoCategory[];
   vacancies: Vacancy[];
+  prayer_calendar_highlights: PrayerCalendarHighlight[];
 }

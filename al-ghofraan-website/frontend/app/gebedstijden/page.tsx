@@ -25,6 +25,7 @@ import {
   getSiteSettings,
   getPageSectionsWithItems,
   getHijriDateOverrides,
+  getPrayerCalendarHighlights,
 } from "@/lib/directus";
 import {
   parsePrayerTimesCSV,
@@ -190,6 +191,9 @@ export default async function GebedstijdenPage() {
   // Falen mag stil — Hijri is hier optioneel/extra.
   const hijriOverridesAll = await getHijriDateOverrides();
   const hijriOverrideMap  = buildHijriOverrideMap(hijriOverridesAll);
+  // Delivery 21 — Kalender-highlights (Eid, Ramadan, etc.). Helper filtert
+  // al op status=published + show_on_calendar=true; lege array bij fout.
+  const calendarHighlights = await getPrayerCalendarHighlights();
   const todayHijri = (() => {
     const d = new Date(Date.UTC(todayParts.year, todayParts.month - 1, todayParts.day));
     return getHijriDate(d, hijriOverrideMap);
@@ -284,6 +288,7 @@ export default async function GebedstijdenPage() {
               <PrayerTimesOverview
                 rows={allRows}
                 hijriOverrides={hijriOverridesAll}
+                highlights={calendarHighlights}
               />
             </div>
           )}

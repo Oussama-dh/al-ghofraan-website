@@ -314,6 +314,23 @@ interface SourceData {
    */
   requireTermsAcceptance: boolean;
   allowMultipleStudents:  boolean;
+  /**
+   * Delivery 19 — Activity-specifieke flow toggles. Voor education-bron
+   * blijven deze op `null`/`false`: education heeft geen capaciteit-veld
+   * en geen `require_age`-veld (multi-student flow met eigen per-student
+   * optionele leeftijd).
+   *
+   *   maxRegistrations: integer > 0 = limiet, null = onbeperkt.
+   *   requireAge:       true = leeftijd verplicht in activity-tak.
+   *
+   * Delivery 20 — Extra activity-veld:
+   *   minimumAge:       integer > 0 = leeftijd ≥ minimum, anders 403.
+   *                     Null = geen minimum. Wanneer gevuld is leeftijd
+   *                     automatisch verplicht (ook bij requireAge=false).
+   */
+  maxRegistrations: number | null;
+  requireAge:       boolean;
+  minimumAge:       number | null;
 }
 
 async function findSource(
@@ -325,12 +342,30 @@ async function findSource(
       const result = await directusServer.request(
         readItems("activities", {
           filter: { slug: { _eq: slug }, status: { _eq: "published" } } as never,
-          fields: ["id", "title", "registration_enabled", "target_gender"],
+          fields: [
+            "id", "title", "registration_enabled", "target_gender",
+            // Delivery 19 — capaciteit + leeftijd-vereiste.
+            "max_registrations", "require_age",
+            // Delivery 20 — minimumleeftijd.
+            "minimum_age",
+          ],
           limit:  1,
         }),
       );
       const row = (result as Activity[])[0];
       if (!row) return { ok: false, status: 404, error: "Activiteit niet gevonden." };
+      // max_registrations: alleen geldig als positief getal. Anders = onbeperkt.
+      const max =
+        typeof row.max_registrations === "number" && row.max_registrations > 0
+          ? row.max_registrations
+          : null;
+      // minimum_age: alleen geldig als positief getal. Anders = geen minimum.
+      // (0 of negatief behandelen we als "niet ingesteld" — een activiteit
+      // voor leeftijd 0+ is hetzelfde als geen minimum.)
+      const minAge =
+        typeof row.minimum_age === "number" && row.minimum_age > 0
+          ? row.minimum_age
+          : null;
       return {
         ok: true,
         data: {
@@ -345,6 +380,9 @@ async function findSource(
           // onbedoelde restricties opleggen.
           requireTermsAcceptance: false,
           allowMultipleStudents:  false,
+          maxRegistrations:       max,
+          requireAge:             row.require_age === true,
+          minimumAge:             minAge,
         },
       };
     } else {
@@ -376,6 +414,12 @@ async function findSource(
           targetGender:        normalizeTargetGender(row.target_gender),
           requireTermsAcceptance: requireTerms,
           allowMultipleStudents:  allowMulti,
+          // Delivery 19 — education heeft geen capaciteit/age-vereiste velden.
+          // Defaults zijn permissief (geen extra restricties).
+          maxRegistrations: null,
+          requireAge:       false,
+          // Delivery 20 — education heeft geen minimum_age.
+          minimumAge:       null,
         },
       };
     }
@@ -441,6 +485,86 @@ export async function POST(request: Request) {
     const genderError = checkGenderAgainstTarget(src.targetGender, body.gender);
     if (genderError) {
       return NextResponse.json({ error: genderError }, { status: 403 });
+    }
+
+    // ─── Delivery 19 — Require age (vóór capaciteit) ────────
+    // Eerst de cheapere check: leeftijd-vereiste valideren we zonder
+    // extra DB-call. Wanneer admin `require_age = true` heeft staan
+    // moet er een geldige leeftijd in de payload zitten (de parser
+    // valideert bereik 1–120 al; hier alleen aanwezigheid).
+    //
+    // Delivery 20 — Wanneer `minimum_age` gevuld is (positief getal),
+    // wordt leeftijd óók automatisch verplicht: zonder leeftijd kun
+    // je het minimum niet controleren. We trekken die twee triggers
+    // hier samen in één aanwezigheids-check.
+    const ageRequiredEffective =
+      src.requireAge || src.minimumAge !== null;
+    if (ageRequiredEffective && (body.age === undefined || body.age === null)) {
+      return NextResponse.json(
+        { error: "Leeftijd is verplicht voor deze activiteit." },
+        { status: 400 },
+      );
+    }
+
+    // ─── Delivery 20 — Minimum age (vóór capaciteit) ────────
+    // Wanneer minimum_age gevuld is EN leeftijd aanwezig (de check
+    // hierboven heeft de "missing"-case al afgevangen): vergelijken
+    // met het minimum. Lager dan minimum → 403 Forbidden met een
+    // duidelijke melding.
+    if (
+      src.minimumAge !== null &&
+      typeof body.age === "number" &&
+      body.age < src.minimumAge
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            `U moet ten minste ${src.minimumAge} jaar oud zijn om in te schrijven ` +
+            `voor deze activiteit.`,
+        },
+        { status: 403 },
+      );
+    }
+
+    // ─── Delivery 19 — Capaciteit-check ─────────────────────
+    // Tel het aantal bestaande activity-registraties voor dit specifieke
+    // item. Bij `max_registrations === null` slaan we de query over.
+    //
+    // Bij count-fout: we kunnen veilig niet bepalen of er nog plek is →
+    // weigeren (fail-closed). De UI is fail-open en zou dan de gebruiker
+    // hebben laten proberen; admin ziet daardoor sneller dat de count
+    // niet werkt.
+    //
+    // Race condition: er is geen DB-lock. Twee gelijktijdige requests
+    // kunnen beide door de check komen wanneer er nog 1 plek over is.
+    // Voor moskee-schaal acceptabel; gedocumenteerd in CHANGES.md.
+    if (src.maxRegistrations !== null) {
+      try {
+        const existing = await directusServer.request(
+          readItems("registrations", {
+            filter: {
+              type:              { _eq: "activity" },
+              source_collection: { _eq: "activities" },
+              source_id:         { _eq: src.sourceId },
+            } as never,
+            fields: ["id"],
+            limit:  -1,
+          }),
+        );
+        const count = (existing as Array<{ id: unknown }>).length;
+        if (count >= src.maxRegistrations) {
+          return NextResponse.json(
+            { error: "Deze activiteit zit vol. Inschrijven is niet meer mogelijk." },
+            { status: 409 },
+          );
+        }
+      } catch (countErr) {
+        console.error("[inschrijven] capaciteit-check mislukt:", countErr);
+        return NextResponse.json(
+          { error: "Inschrijving kon niet worden opgeslagen. Probeer het later opnieuw." },
+          { status: 500 },
+        );
+      }
     }
 
     try {

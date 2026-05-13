@@ -14,9 +14,10 @@
 import { Sunrise, Sun, CloudSun, Sunset, Moon, MoonStar } from "lucide-react";
 import type { LucideIcon }    from "lucide-react";
 import { cn }                  from "@/lib/utils";
-import type { PrayerTimeRow }  from "@/types/directus";
+import type { PrayerTimeRow, PrayerCalendarHighlight }  from "@/types/directus";
 import type { PrayerKey }      from "@/lib/prayerTimes";
 import type { HijriMonthRow }  from "@/lib/hijri";
+import { normalizeToIsoDate, getHighlightStyles, getHighlightIcon } from "@/lib/highlights";
 
 const GEBEDEN: ReadonlyArray<{
   key:    PrayerKey;
@@ -49,6 +50,11 @@ interface HijriPrayerTimesTableProps {
   /** "Datum"-string van vandaag (CSV-rij) — voor highlight. */
   todayDatum?: string;
   className?:  string;
+  /**
+   * Delivery 21 — Kalender-highlights gemapt op ISO-datum (YYYY-MM-DD).
+   * Match gaat via de UTC `gregorian` Date van elke Hijri-rij.
+   */
+  highlightsByIso?: Map<string, PrayerCalendarHighlight[]>;
 }
 
 /**
@@ -82,7 +88,9 @@ export default function HijriPrayerTimesTable({
   csvRows,
   todayDatum,
   className,
+  highlightsByIso,
 }: HijriPrayerTimesTableProps) {
+  const hasHighlights = !!highlightsByIso && highlightsByIso.size > 0;
   return (
     <div className={cn("overflow-x-auto rounded-2xl border border-sand-200 bg-white shadow-sm", className)}>
       <table className="w-full text-sm font-body">
@@ -124,6 +132,11 @@ export default function HijriPrayerTimesTable({
             // geeft een consistente dag onafhankelijk van browser-tz.
             const weekday = NL_WEEKDAYS[gregorian.getUTCDay()];
 
+            // Delivery 21 — Highlight lookup via ISO van het UTC Date-object.
+            const isoForHighlight = hasHighlights ? normalizeToIsoDate(gregorian) : null;
+            const highlights = isoForHighlight ? highlightsByIso!.get(isoForHighlight) : undefined;
+            const hasRowHighlight = highlights && highlights.length > 0;
+
             // Hijri dag — toon óók kort de maand-afkorting voor leesbaarheid
             // wanneer de tabel los wordt gekopieerd. Hier 2 cijfers + de
             // monthName komt al in de strip bovenaan, dus alleen het dagnummer.
@@ -138,6 +151,7 @@ export default function HijriPrayerTimesTable({
                       ? "bg-white"
                       : "bg-sand-50/50",
                   "hover:bg-sand-100",
+                  hasRowHighlight && "border-l-4 border-l-slate-mosque/40",
                 )}
               >
                 <td className="px-4 py-2.5 whitespace-nowrap">
@@ -160,6 +174,28 @@ export default function HijriPrayerTimesTable({
                 </td>
                 <td className="px-4 py-2.5 whitespace-nowrap text-taupe-dark tabular-nums">
                   {gregLabel}
+                  {hasRowHighlight && (
+                    <span className="inline-flex flex-wrap gap-1 ml-2 align-middle">
+                      {highlights!.map((h) => {
+                        const styles = getHighlightStyles(h);
+                        const Icon   = getHighlightIcon(h);
+                        return (
+                          <span
+                            key={h.id}
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                              styles.badgeClass,
+                            )}
+                            style={styles.badgeStyle}
+                            title={h.description ? `${h.title} — ${h.description}` : h.title}
+                          >
+                            <Icon className="w-3 h-3" strokeWidth={2} />
+                            {h.title}
+                          </span>
+                        );
+                      })}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-2.5 whitespace-nowrap text-taupe-dark capitalize">
                   {weekday}

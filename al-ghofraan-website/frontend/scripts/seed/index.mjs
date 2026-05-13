@@ -30,6 +30,8 @@ import { setupRichTextToolbar }    from "./steps/27-rich-text-toolbar.mjs";
 import { setupHeroBackground }     from "./steps/28-hero-background.mjs";
 import { setupVacatures }          from "./steps/29-vacatures.mjs";
 import { setupVacancyRole }        from "./steps/30-vacancy-role.mjs";
+import { setupVacancyStatusColors } from "./steps/31-vacancy-status-colors.mjs";
+import { setupPrayerCalendarHighlights } from "./steps/32-prayer-calendar-highlights.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -47,6 +49,7 @@ import { seedSiteSettings }         from "./steps/04-site-settings.mjs";
 import { seedPageContent }          from "./steps/05-page-content.mjs";
 import { seedFaq }                  from "./steps/06-faq.mjs";
 import { seedActivities }           from "./steps/07-activities.mjs";
+import { setupActivityFormFields }  from "./steps/07b-activity-form-fields.mjs";
 import { seedIconSettings }         from "./steps/08-icon-settings.mjs";
 import { seedPageSections }         from "./steps/09-page-sections.mjs";
 import { seedExamplePages }         from "./steps/10-example-pages.mjs";
@@ -103,6 +106,7 @@ try {
   await seedPageContent(client);         // 5.  pagina's
   await seedFaq(client);                 // 6.  faq
   await seedActivities(client);          // 7.  activiteiten
+  await setupActivityFormFields(client); // 7b. inschrijfformulier-velden op activities (delivery 19)
   await setupRegistrationContentFields(client); // 11b. beheerbare inschrijfteksten op education_programs + activities
   await setupEducationFlowFields(client);    // 11c. onderwijs-flow toggles op education_programs (form-zichtbaarheid, voorwaarden, multi-student)
   await seedIconSettings(client);        // 8.  icon-settings
@@ -113,6 +117,8 @@ try {
   await setupHeroBackground(client);     // 28. optioneel hero_background_image veld op page_content
   await setupVacatures(client);          // 29. page_content + nav-item voor /vacatures (soft-create)
   await setupVacancyRole(client);        // 30. rol + policy "Vacature beheerder" met filter slug=vacatures
+  await setupVacancyStatusColors(client); // 31. kleurcodering vacancies.status (delivery 19, bestaande installs)
+  await setupPrayerCalendarHighlights(client); // 32. kalender-highlights voor gebedstijden (delivery 21)
 
   console.log("");
   console.log("╔══════════════════════════════════════════════════════╗");

@@ -29,6 +29,7 @@ import type {
   HijriDateOverride,
   ContactSubject,
   Vacancy,
+  PrayerCalendarHighlight,
 } from "@/types/directus";
 
 const DIRECTUS_INTERNAL_URL =
@@ -112,6 +113,8 @@ export async function getActivities(options?: {
             "registration_intro_title", "registration_intro_text",
             "registration_button_text", "registration_success_message",
             "registration_extra_note",
+            // Delivery 21 — minimum_age tonen op /agenda overzichtskaart.
+            "minimum_age",
           ],
         })
       );
@@ -141,6 +144,8 @@ export async function getUpcomingActivities(limit = 6): Promise<Activity[]> {
             "registration_intro_title", "registration_intro_text",
             "registration_button_text", "registration_success_message",
             "registration_extra_note",
+            // Delivery 21 — minimum_age tonen op homepage upcoming-cards.
+            "minimum_age",
           ],
         })
       );
@@ -165,6 +170,50 @@ export async function getActivityBySlug(slug: string): Promise<Activity | null> 
     `getActivityBySlug(${slug})`,
     null
   );
+}
+
+/**
+ * Delivery 19 — Telt het aantal `registrations`-records voor een specifieke
+ * activiteit. Gebruikt om de capaciteit-UI (`max_registrations` /
+ * `show_registration_limit`) op `/agenda/[slug]` te tonen.
+ *
+ * Wat we tellen: records met `type=activity`, `source_collection=activities`
+ * en `source_id` gelijk aan de activity-id. Geen filter op status — een
+ * "cancelled" inschrijving telt nog steeds als bezette plek tot admin
+ * 'm verwijdert; dat is een bewuste keuze (zie CHANGES.md delivery 19).
+ *
+ * Vereist de admin-token (`DIRECTUS_TOKEN`) omdat `registrations` géén
+ * public read-permission heeft (en mag krijgen). Bij ontbrekende token
+ * of fout retourneren we `null` zodat de UI fail-open kan reageren —
+ * de server-side enforcement in `app/api/inschrijven/route.ts` doet
+ * z'n eigen onafhankelijke check.
+ */
+export async function getActivityRegistrationCount(
+  activityId: string | number,
+): Promise<number | null> {
+  if (!DIRECTUS_TOKEN) return null;
+  try {
+    const result = await directusServer.request(
+      readItems("registrations", {
+        filter: {
+          type:              { _eq: "activity" },
+          source_collection: { _eq: "activities" },
+          source_id:         { _eq: String(activityId) },
+        } as never,
+        fields: ["id"],
+        limit:  -1,
+      }),
+    );
+    return (result as Array<{ id: unknown }>).length;
+  } catch (err) {
+    if (IS_DEV) {
+      console.warn(
+        `[directus] getActivityRegistrationCount(${activityId}) mislukt:`,
+        (err as Error)?.message || err,
+      );
+    }
+    return null;
+  }
 }
 
 // ─── Education programs ──────────────────────────────────────
@@ -369,7 +418,10 @@ const VACANCY_LIST_FIELDS = [
 
 const VACANCY_FULL_FIELDS = [
   ...VACANCY_LIST_FIELDS,
-  "body", "apply_url", "contact_email", "hero_image", "created_at",
+  // Delivery 19 — salary + contract_duration tonen op detail-pagina onder
+  // "Arbeidsvoorwaarden" naast locatie/uren/deadline.
+  "body", "salary", "contract_duration",
+  "apply_url", "contact_email", "hero_image", "created_at",
 ];
 
 export async function getVacancies(): Promise<Vacancy[]> {
@@ -662,6 +714,39 @@ export async function getHijriDateOverrides(): Promise<HijriDateOverride[]> {
       return (result as unknown as HijriDateOverride[]) ?? [];
     },
     "getHijriDateOverrides",
+    []
+  );
+}
+
+// ─── Prayer calendar highlights ──────────────────────────────
+//
+// Delivery 21 — Datums die in de gebedstijden-kalender visueel
+// gemarkeerd worden (Eid, Ramadan, eigen events, etc.).
+// Filtering op `status=published` en `show_on_calendar=true` gebeurt
+// hier al, zodat consumenten een schone lijst krijgen.
+const PRAYER_CALENDAR_HIGHLIGHT_FIELDS = [
+  "id", "status", "gregorian_date", "title", "description",
+  "type", "color", "icon",
+  "show_on_calendar", "show_on_tv", "sort", "created_at",
+];
+
+export async function getPrayerCalendarHighlights(): Promise<PrayerCalendarHighlight[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("prayer_calendar_highlights", {
+          filter: {
+            status:           { _eq: "published" },
+            show_on_calendar: { _eq: true },
+          } as never,
+          sort:   ["gregorian_date", "sort"],
+          limit:  -1,
+          fields: PRAYER_CALENDAR_HIGHLIGHT_FIELDS,
+        })
+      );
+      return (result as unknown as PrayerCalendarHighlight[]) ?? [];
+    },
+    "getPrayerCalendarHighlights",
     []
   );
 }

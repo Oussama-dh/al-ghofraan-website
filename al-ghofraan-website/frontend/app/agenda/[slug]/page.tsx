@@ -5,9 +5,11 @@ import { notFound }       from "next/navigation";
 import Container          from "@/components/ui/Container";
 import Button             from "@/components/ui/Button";
 import { Icon }           from "@/lib/icons";
+import { User }           from "lucide-react";
 import RegistrationForm   from "@/components/registration/RegistrationForm";
 import {
   getActivityBySlug,
+  getActivityRegistrationCount,
   getAssetUrl,
   getIconSettings,
   resolveIconKey,
@@ -43,6 +45,66 @@ export default async function ActivityDetailPage({ params }: Props) {
   const locationIcon = resolveIconKey(iconMap, ICON_KEYS.activityLocation);
 
   const imageUrl = getAssetUrl(activity.image as never);
+
+  // ─── Delivery 19 — Capaciteit-check ──────────────────────────────
+  // Bepaalt of het inschrijfformulier getoond mag worden en welke
+  // boodschap er eventueel boven staat.
+  //
+  //   maxRegistrations: integer of null. Null = onbeperkt.
+  //   currentCount    : null als de count-call faalt of geen token; in
+  //                     dat geval fail-open op de UI (formulier wel tonen)
+  //                     en laat de server-side check in route.ts beslissen.
+  //   isFull          : true wanneer count gelukt is en >= max.
+  //   showLimit       : alleen relevant wanneer max gevuld is.
+  //
+  // Geen telling (en geen extra Directus-call) wanneer max niet is gezet.
+  const maxRegistrations =
+    typeof activity.max_registrations === "number" && activity.max_registrations > 0
+      ? activity.max_registrations
+      : null;
+  const showLimit = activity.show_registration_limit === true;
+
+  const currentCount: number | null = maxRegistrations !== null
+    ? await getActivityRegistrationCount(activity.id)
+    : null;
+
+  const isFull =
+    maxRegistrations !== null &&
+    currentCount !== null &&
+    currentCount >= maxRegistrations;
+
+  // "Nog X plekken beschikbaar" — alleen wanneer admin het tonen aanzet,
+  // max gevuld is, count gelukt is en er nog plek over is.
+  const spotsLeftLabel: string | null =
+    showLimit && maxRegistrations !== null && currentCount !== null && !isFull
+      ? `Nog ${Math.max(0, maxRegistrations - currentCount)} plekken beschikbaar`
+      : null;
+
+  // ─── Delivery 20 — Minimumleeftijd + docent ──────────────────────
+  // minimum_age wordt zichtbaar als pill bij het formulier wanneer gevuld
+  // (positief getal). Documenteert ook waarom leeftijd verplicht is in
+  // het formulier zelf.
+  const minimumAge =
+    typeof activity.minimum_age === "number" && activity.minimum_age > 0
+      ? activity.minimum_age
+      : null;
+  const minimumAgeLabel: string | null =
+    minimumAge !== null ? `Minimumleeftijd: ${minimumAge} jaar` : null;
+
+  // Docent: alleen tonen wanneer admin de toggle aanzet ÉN het veld is
+  // gevuld. Lege string of whitespace → niet tonen.
+  const teacherName =
+    activity.show_teacher === true &&
+    typeof activity.teacher === "string" &&
+    activity.teacher.trim().length > 0
+      ? activity.teacher.trim()
+      : null;
+
+  // RegistrationForm-prop: leeftijd verplicht wanneer require_age aanstaat
+  // OF er een minimumleeftijd is. Zonder leeftijd kan de minimum-check
+  // niet uitgevoerd worden; daarom wordt aanwezigheid daar al afgedwongen.
+  const ageRequiredForForm =
+    activity.require_age === true || minimumAge !== null;
 
   return (
     <>
@@ -83,6 +145,16 @@ export default async function ActivityDetailPage({ params }: Props) {
                   {activity.location}
                 </span>
               )}
+              {/* Delivery 20 — Docent. Alleen tonen wanneer show_teacher=true
+                  en teacher gevuld. Lucide User-icoon direct (geen Icon-
+                  abstractie nodig — die is voor admin-instelbare iconen
+                  en docent heeft die instelbaarheid niet). */}
+              {teacherName && (
+                <span className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  {teacherName}
+                </span>
+              )}
             </div>
           </div>
         </Container>
@@ -112,19 +184,56 @@ export default async function ActivityDetailPage({ params }: Props) {
 
           {activity.registration_enabled && (
             <div className="mt-10">
-              <RegistrationForm
-                type="activity"
-                sourceSlug={activity.slug}
-                sourceTitle={activity.title}
-                targetGender={activity.target_gender ?? null}
-                contentTexts={{
-                  intro_title:     activity.registration_intro_title,
-                  intro_text:      activity.registration_intro_text,
-                  button_text:     activity.registration_button_text,
-                  success_message: activity.registration_success_message,
-                  extra_note:      activity.registration_extra_note,
-                }}
-              />
+              {isFull ? (
+                // ── Vol-melding (geen formulier) ────────────────────
+                <div
+                  role="status"
+                  className="rounded-2xl border border-sand-200 bg-white p-6 lg:p-8 text-center"
+                >
+                  <h2 className="font-display text-xl text-ink mb-2">
+                    Deze activiteit zit vol
+                  </h2>
+                  <p className="font-body text-sm text-taupe-dark max-w-md mx-auto">
+                    Inschrijven is niet meer mogelijk. Houd onze website in
+                    de gaten voor nieuwe activiteiten.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Pills boven het formulier — meerdere mogelijk, naast
+                      elkaar (capaciteit + minimumleeftijd). */}
+                  {(spotsLeftLabel || minimumAgeLabel) && (
+                    <div className="mb-4 flex flex-wrap gap-2">
+                      {spotsLeftLabel && (
+                        <div className="inline-flex items-center gap-2 rounded-full bg-slate-mosque/10 text-slate-mosque px-3 py-1 text-xs font-medium">
+                          <span aria-hidden>●</span>
+                          {spotsLeftLabel}
+                        </div>
+                      )}
+                      {minimumAgeLabel && (
+                        <div className="inline-flex items-center gap-2 rounded-full bg-taupe/15 text-taupe-dark px-3 py-1 text-xs font-medium">
+                          <span aria-hidden>●</span>
+                          {minimumAgeLabel}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <RegistrationForm
+                    type="activity"
+                    sourceSlug={activity.slug}
+                    sourceTitle={activity.title}
+                    targetGender={activity.target_gender ?? null}
+                    requireAge={ageRequiredForForm}
+                    contentTexts={{
+                      intro_title:     activity.registration_intro_title,
+                      intro_text:      activity.registration_intro_text,
+                      button_text:     activity.registration_button_text,
+                      success_message: activity.registration_success_message,
+                      extra_note:      activity.registration_extra_note,
+                    }}
+                  />
+                </>
+              )}
             </div>
           )}
 

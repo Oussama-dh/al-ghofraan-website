@@ -1,9 +1,9 @@
 // components/ui/PrayerTimesOverview.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import HijriPrayerTimesTable from "@/components/ui/HijriPrayerTimesTable";
-import PrayerTimesTable      from "@/components/ui/PrayerTimesTable";
+import PrayerTimesTable from "@/components/ui/PrayerTimesTable";
 import {
   parseRowDate,
   getMonthRows,
@@ -17,8 +17,13 @@ import {
   getHijriDate,
   formatHijriShortNl,
 } from "@/lib/hijri";
-import type { PrayerTimeRow, HijriDateOverride } from "@/types/directus";
-import { cn }               from "@/lib/utils";
+import { buildHighlightMap } from "@/lib/highlights";
+import type {
+  PrayerTimeRow,
+  HijriDateOverride,
+  PrayerCalendarHighlight,
+} from "@/types/directus";
+import { cn } from "@/lib/utils";
 
 interface PrayerTimesOverviewProps {
   rows: PrayerTimeRow[];
@@ -30,6 +35,12 @@ interface PrayerTimesOverviewProps {
    * effectief opschuiven.
    */
   hijriOverrides?: HijriDateOverride[];
+  /**
+   * Delivery 21 — Kalender-highlights (Eid, Ramadan, eigen events). Worden
+   * intern omgezet naar een Map<isoDate, highlights[]> en doorgegeven aan
+   * beide tabellen.
+   */
+  highlights?: PrayerCalendarHighlight[];
 }
 
 type CalendarMode = "hijri" | "gregorian";
@@ -37,23 +48,34 @@ type CalendarMode = "hijri" | "gregorian";
 const ALL_HIJRI_MONTHS = listHijriMonths();
 
 const NL_MONTH_NAMES = [
-  "januari",  "februari", "maart",     "april",
-  "mei",      "juni",     "juli",      "augustus",
-  "september","oktober",  "november",  "december",
+  "januari", "februari", "maart", "april",
+  "mei", "juni", "juli", "augustus",
+  "september", "oktober", "november", "december",
 ];
 
-export default function PrayerTimesOverview({ rows, hijriOverrides }: PrayerTimesOverviewProps) {
+export default function PrayerTimesOverview({ rows, hijriOverrides, highlights }: PrayerTimesOverviewProps) {
   // ─── Calendar mode toggle ─────────────────────────────────
   // Default = "gregorian" (Nederlandse maand-weergave is de
   // herkenbaarste voor de meeste bezoekers). De toggle hieronder
   // laat de bezoeker omschakelen naar "hijri" voor de Islamitische
   // maand-weergave.
   const [calendarMode, setCalendarMode] = useState<CalendarMode>("gregorian");
+  const [mounted, setMounted] = useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   // ─── 1. Override map (één keer bouwen) ────────────────────
   const overrideMap = useMemo(
     () => buildHijriOverrideMap(hijriOverrides ?? []),
     [hijriOverrides],
+  );
+
+  // Delivery 21 — Highlights map (ISO-datum → highlights[]). Wordt
+  // gedeeld door beide tabellen.
+  const highlightsByIso = useMemo(
+    () => (mounted ? buildHighlightMap(highlights ?? []) : undefined),
+    [highlights, mounted],
   );
 
   // ─── 2. Bepaal de gregoriaanse range van de CSV ───────────
@@ -89,14 +111,14 @@ export default function PrayerTimesOverview({ rows, hijriOverrides }: PrayerTime
     }
     if (availableHijriMonths.length > 0) {
       return {
-        year:  availableHijriMonths[0].year,
+        year: availableHijriMonths[0].year,
         month: availableHijriMonths[0].month,
       };
     }
     return { year: 0, month: 0 };
   }, [availableHijriMonths, overrideMap]);
 
-  const [selectedHijriYear,  setSelectedHijriYear]  = useState<number>(defaultHijriSelection.year);
+  const [selectedHijriYear, setSelectedHijriYear] = useState<number>(defaultHijriSelection.year);
   const [selectedHijriMonth, setSelectedHijriMonth] = useState<number>(defaultHijriSelection.month);
 
   // Beschikbare Hijri-jaren (uniek)
@@ -154,7 +176,7 @@ export default function PrayerTimesOverview({ rows, hijriOverrides }: PrayerTime
     return { year: 0, month: 0 };
   }, [availableGregorianYears, monthsByGregorianYear]);
 
-  const [selectedGregYear,  setSelectedGregYear]  = useState<number>(defaultGregorianSelection.year);
+  const [selectedGregYear, setSelectedGregYear] = useState<number>(defaultGregorianSelection.year);
   const [selectedGregMonth, setSelectedGregMonth] = useState<number>(defaultGregorianSelection.month);
 
   const monthsForSelectedGregYear = useMemo(() => {
@@ -191,34 +213,38 @@ export default function PrayerTimesOverview({ rows, hijriOverrides }: PrayerTime
   }, [gregorianMonthRows, overrideMap]);
 
   // ─── Vandaag-anker (CSV-datum-string) — voor highlight ───
-  const todayDatum = useMemo(() => {
-    const now = new Date();
-    const todayY = now.getFullYear();
-    const todayM = now.getMonth() + 1;
-    const todayD = now.getDate();
-    const match = rows.find((row) => {
-      const p = parseRowDate(row.datum);
-      return p && p.year === todayY && p.month === todayM && p.day === todayD;
-    });
-    return match?.datum;
-  }, [rows]);
+const todayDatum = useMemo(() => {
+  if (!mounted) return undefined;
+
+  const now = new Date();
+  const todayY = now.getFullYear();
+  const todayM = now.getMonth() + 1;
+  const todayD = now.getDate();
+
+  const match = rows.find((row) => {
+    const p = parseRowDate(row.datum);
+    return p && p.year === todayY && p.month === todayM && p.day === todayD;
+  });
+
+  return match?.datum;
+}, [rows, mounted]);
 
   // ─── Header-strip (alleen Hijri-mode) ────────────────────
   const hijriHeaderInfo = useMemo(() => {
     if (hijriMonthRows.length === 0) return null;
     const monthMeta = ALL_HIJRI_MONTHS.find((m) => m.month === selectedHijriMonth);
-    const monthLabel  = monthMeta ? monthMeta.nl : `Maand ${selectedHijriMonth}`;
+    const monthLabel = monthMeta ? monthMeta.nl : `Maand ${selectedHijriMonth}`;
     const arabicLabel = monthMeta ? monthMeta.ar : "";
     const first = hijriMonthRows[0].gregorian;
-    const last  = hijriMonthRows[hijriMonthRows.length - 1].gregorian;
+    const last = hijriMonthRows[hijriMonthRows.length - 1].gregorian;
     const fmtDate = (d: Date) =>
       `${String(d.getUTCDate()).padStart(2, "0")}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${d.getUTCFullYear()}`;
     return {
       monthLabel,
       arabicLabel,
-      year:  selectedHijriYear,
+      year: selectedHijriYear,
       range: `${fmtDate(first)} t/m ${fmtDate(last)}`,
-      days:  hijriMonthRows.length,
+      days: hijriMonthRows.length,
     };
   }, [hijriMonthRows, selectedHijriMonth, selectedHijriYear]);
 
@@ -360,6 +386,7 @@ export default function PrayerTimesOverview({ rows, hijriOverrides }: PrayerTime
               hijriRows={hijriMonthRows}
               csvRows={rows}
               todayDatum={todayDatum}
+              highlightsByIso={highlightsByIso}
             />
           ) : (
             availableHijriMonths.length > 0 && (
@@ -453,6 +480,7 @@ export default function PrayerTimesOverview({ rows, hijriOverrides }: PrayerTime
               shortDateOnly
               showDayColumn
               hijriByDatum={hijriByDatum}
+              highlightsByIso={highlightsByIso}
             />
           ) : (
             availableGregorianYears.length > 0 && (

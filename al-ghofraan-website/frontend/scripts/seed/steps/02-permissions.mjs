@@ -21,6 +21,10 @@ const COLLECTIONS = [
   { collection: "article_categories", filter: { status:    { _eq: "published" } } },
   { collection: "video_categories",   filter: { status:    { _eq: "published" } } },
   { collection: "vacancies",          filter: { status:    { _eq: "published" } } },
+  // Delivery 21 — kalender-highlights worden door /gebedstijden en
+  // /gebedstijden/overzicht gelezen. Filter op published; show_on_calendar
+  // wordt apart afgedwongen in `getPrayerCalendarHighlights`.
+  { collection: "prayer_calendar_highlights", filter: { status: { _eq: "published" } } },
   // BEWUST GEEN public-permissies voor `registrations`, `donations` en
   // `contact_messages`: die routes schrijven server-side via DIRECTUS_TOKEN.
   { collection: "directus_files",     filter: null },

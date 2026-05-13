@@ -90,6 +90,18 @@ const imageUrl = imageId ? getAssetUrl(imageId) : null;
               <span className="truncate">{activity.location}</span>
             </>
           )}
+          {/* Delivery 21 — Compact minimumleeftijd-badge (bv. "18+"). Alleen
+              tonen wanneer minimum_age > 0. Past binnen flex-wrap zodat
+              mobile layout intact blijft. Kleuren via palet-variabelen
+              (taupe) zodat dark mode automatisch correct werkt. */}
+          {typeof activity.minimum_age === "number" && activity.minimum_age > 0 && (
+            <span
+              className="inline-flex items-center rounded-md bg-taupe/15 text-taupe-dark px-1.5 py-0.5 text-xs font-medium border border-taupe/20"
+              title={`Minimumleeftijd: ${activity.minimum_age} jaar`}
+            >
+              {activity.minimum_age}+
+            </span>
+          )}
         </div>
 
         <h3
