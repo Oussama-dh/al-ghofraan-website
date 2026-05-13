@@ -80,7 +80,6 @@ export default async function ArtikelDetailPage({ params }: Props) {
   return (
     <>
       <section className="relative bg-slate-mosque text-white py-16 overflow-hidden">
-        <div className="absolute inset-0 pattern-overlay" />
         {imageUrl && (
           <div className="absolute inset-0 opacity-20">
             {/* eslint-disable-next-line @next/next/no-img-element */}

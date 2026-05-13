@@ -27,6 +27,7 @@ import { setupVideoCategories }     from "./steps/24-video-categories.mjs";
 import { setupRolesAndPolicies }    from "./steps/25-roles-policies.mjs";
 import { setupAdminListLayouts }    from "./steps/26-admin-list-layouts.mjs";
 import { setupRichTextToolbar }    from "./steps/27-rich-text-toolbar.mjs";
+import { setupHeroBackground }     from "./steps/28-hero-background.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -107,6 +108,7 @@ try {
   await seedExamplePages(client);        // 10. voorbeeld dynamische pagina
   await setupAdminListLayouts(client);   // 26. admin-lijst layouts (laatste — vereist dat alle velden bestaan)
   await setupRichTextToolbar(client);    // 27. rich-text WYSIWYG toolbar uitbreiden met alignment + extra knoppen
+  await setupHeroBackground(client);     // 28. optioneel hero_background_image veld op page_content
 
   console.log("");
   console.log("╔══════════════════════════════════════════════════════╗");

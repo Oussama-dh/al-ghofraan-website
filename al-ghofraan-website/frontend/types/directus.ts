@@ -136,6 +136,8 @@ export interface PageContent {
   seo_description?: string | null;
   status: "published" | "draft";
   icon?: string | null;
+  /** Optionele achtergrondafbeelding voor de page-hero (UUID uit directus_files). */
+  hero_background_image?: string | { id?: string } | null;
 }
 
 // ─── faq_items ───────────────────────────────────────────────
