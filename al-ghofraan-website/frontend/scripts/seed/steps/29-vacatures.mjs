@@ -185,6 +185,17 @@ export async function setupVacatures(client) {
         ],
       },
       display: "labels",
+      // Delivery 19 — kleurcodering voor de status-badges in de admin-lijst,
+      // consistent met andere collecties zoals `articles` en `donation_campaigns`.
+      // Voor bestaande installs (waar het veld al bestaat) dekt stap 31 dit af
+      // via een idempotente PATCH; voor nieuwe installs zit het hier inline.
+      display_options: {
+        choices: [
+          { text: "Gepubliceerd", value: "published", foreground: "#FFFFFF", background: "#2ECDA7" },
+          { text: "Concept",       value: "draft",     foreground: "#18222F", background: "#D3DAE4" },
+          { text: "Gearchiveerd",  value: "archived",  foreground: "#FFFFFF", background: "#A2B5CD" },
+        ],
+      },
     },
     schema: { default_value: "draft", is_nullable: false },
   });
@@ -250,6 +261,36 @@ export async function setupVacatures(client) {
       width:     "half",
       interface: "input",
       note:      "Bv. '4-8 uur per week' of 'Flexibel'.",
+    },
+    schema:{},
+  });
+
+  // Delivery 19 — Twee extra meta-velden voor de Arbeidsvoorwaarden-grid
+  // op de detail-pagina. Vrije tekstvelden (geen format-validatie) zodat
+  // admin zelf kan kiezen tussen "€ 2.500 – € 3.200 per maand",
+  // "Vrijwilligersvergoeding" of "In overleg".
+  await ensureField(client, "vacancies", {
+    field: "salary",
+    type:  "string",
+    meta:  {
+      width:     "half",
+      interface: "input",
+      note:
+        "Bv. '€ 2.500 – € 3.200 per maand', 'Vrijwilligersvergoeding' of " +
+        "'In overleg'. Alleen tonen op de site als gevuld.",
+    },
+    schema:{},
+  });
+
+  await ensureField(client, "vacancies", {
+    field: "contract_duration",
+    type:  "string",
+    meta:  {
+      width:     "half",
+      interface: "input",
+      note:
+        "Bv. '1 jaar met optie tot verlenging', 'Onbepaalde tijd' of " +
+        "'Vrijwilligersbasis'. Alleen tonen op de site als gevuld.",
     },
     schema:{},
   });

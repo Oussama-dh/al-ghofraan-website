@@ -3,9 +3,10 @@
 import { Sunrise, Sun, CloudSun, Sunset, Moon, MoonStar } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { PrayerTimeRow } from "@/types/directus";
-import { getDayName, formatRowDateShort, formatRowDateLong } from "@/lib/prayerTimes";
+import type { PrayerTimeRow, PrayerCalendarHighlight } from "@/types/directus";
+import { getDayName, formatRowDateShort, formatRowDateLong, parseRowDate } from "@/lib/prayerTimes";
 import type { PrayerKey } from "@/lib/prayerTimes";
+import { getHighlightStyles, getHighlightIcon } from "@/lib/highlights";
 
 interface PrayerTimesTableProps {
   rows:           PrayerTimeRow[];
@@ -22,6 +23,12 @@ interface PrayerTimesTableProps {
    * rechts een Hijri-kolom. Rijen zonder mapping krijgen "—".
    */
   hijriByDatum?:  Record<string, string>;
+  /**
+   * Delivery 21 — Kalender-highlights gemapt op ISO-datum (YYYY-MM-DD).
+   * Wanneer een rij matched: linker-rand-accent + inline badges in de
+   * datum-cel. Builder: `buildHighlightMap()` uit `lib/highlights.ts`.
+   */
+  highlightsByIso?: Map<string, PrayerCalendarHighlight[]>;
 }
 
 const GEBEDEN: ReadonlyArray<{
@@ -117,8 +124,10 @@ export default function PrayerTimesTable({
   shortDateOnly = false,
   showDayColumn = false,
   hijriByDatum,
+  highlightsByIso,
 }: PrayerTimesTableProps) {
   const showHijriColumn = !!hijriByDatum && Object.keys(hijriByDatum).length > 0;
+  const hasHighlights   = !!highlightsByIso && highlightsByIso.size > 0;
   return (
     <div className={cn("overflow-x-auto rounded-2xl border border-sand-200 bg-white shadow-sm", className)}>
       <table className="w-full text-sm font-body">
@@ -146,6 +155,20 @@ export default function PrayerTimesTable({
             const isToday = todayDatum && row.datum === todayDatum;
             const dayName = showDayColumn ? getDayName(row.datum) : "";
             const hijri   = showHijriColumn ? (hijriByDatum![row.datum] ?? "") : "";
+
+            // Delivery 21 — Match highlight op ISO-datum afgeleid van row.datum.
+            // parseRowDate accepteert ISO + DD-MM-YYYY + DD/MM/YYYY; we
+            // normaliseren naar ISO voor de map-lookup.
+            let highlights: PrayerCalendarHighlight[] | undefined;
+            if (hasHighlights) {
+              const p = parseRowDate(row.datum);
+              if (p) {
+                const iso = `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
+                highlights = highlightsByIso!.get(iso);
+              }
+            }
+            const hasRowHighlight = highlights && highlights.length > 0;
+
             return (
               <tr
                 key={`${row.datum}-${idx}`}
@@ -153,7 +176,10 @@ export default function PrayerTimesTable({
                   "border-t border-sand-200 transition-colors",
                   isToday ? "bg-slate-mosque/10 font-semibold"
                           : idx % 2 === 0 ? "bg-white" : "bg-sand-50/50",
-                  "hover:bg-sand-100"
+                  "hover:bg-sand-100",
+                  // Highlight-rij accent — linker-rand. Werkt in beide modi
+                  // via slate-mosque CSS-variabele.
+                  hasRowHighlight && "border-l-4 border-l-slate-mosque/40",
                 )}
               >
                 {showDayColumn && (
@@ -166,6 +192,28 @@ export default function PrayerTimesTable({
                   {isToday && (
                     <span className="inline-block bg-slate-mosque text-white text-xs px-2 py-0.5 rounded-full ml-2">
                       Vandaag
+                    </span>
+                  )}
+                  {hasRowHighlight && (
+                    <span className="inline-flex flex-wrap gap-1 ml-2 align-middle">
+                      {highlights!.map((h) => {
+                        const styles = getHighlightStyles(h);
+                        const Icon   = getHighlightIcon(h);
+                        return (
+                          <span
+                            key={h.id}
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                              styles.badgeClass,
+                            )}
+                            style={styles.badgeStyle}
+                            title={h.description ? `${h.title} — ${h.description}` : h.title}
+                          >
+                            <Icon className="w-3 h-3" strokeWidth={2} />
+                            {h.title}
+                          </span>
+                        );
+                      })}
                     </span>
                   )}
                 </td>

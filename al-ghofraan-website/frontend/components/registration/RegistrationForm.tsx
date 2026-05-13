@@ -60,6 +60,20 @@ interface RegistrationFormProps {
   requireTermsAcceptance?: boolean;
   allowMultipleStudents?: boolean;
 
+  /**
+   * Delivery 19 — Leeftijd verplicht maken (alleen activity-mode).
+   *
+   *     true  → leeftijd-input krijgt `required` + label-asterisk +
+   *             client-side validatie weigert lege waarde
+   *     false → leeftijd blijft optioneel (bestaande gedrag)
+   *
+   * Voor education-mode wordt deze prop genegeerd: dat is een multi-student
+   * flow waar leeftijd per student al z'n eigen optionele invoer heeft, en
+   * waar `require_age` op `activities` semantisch niet van toepassing is.
+   * De API gebruikt voor education zijn eigen flow-toggles.
+   */
+  requireAge?: boolean;
+
   className?: string;
   /** ID van de form-section voor anchor-links (#inschrijven). */
   anchorId?: string;
@@ -155,6 +169,7 @@ export default function RegistrationForm({
   termsLabel,
   requireTermsAcceptance = true,
   allowMultipleStudents  = true,
+  requireAge             = false,
   className,
   anchorId = "inschrijven",
 }: RegistrationFormProps) {
@@ -165,6 +180,9 @@ export default function RegistrationForm({
   // alles bij het oude (geen voorwaarden-checkbox, geen multi-student).
   const showTerms        = isEducation && requireTermsAcceptance;
   const showAddStudent   = isEducation && allowMultipleStudents;
+  // Delivery 19 — leeftijd-verplichting is alleen actief in activity-mode.
+  // Education-tak blijft per student optioneel (eigen flow, eigen API-tak).
+  const ageRequired      = !isEducation && requireAge;
 
   // ─── Beheerbare teksten met fallback ─────────────────────
   const text = useMemo(() => {
@@ -261,6 +279,15 @@ export default function RegistrationForm({
       }
       if (!s.gender) {
         return failWith("Geslacht is verplicht.");
+      }
+      // Delivery 19 — leeftijd verplicht wanneer `requireAge` aanstaat.
+      // Wanneer wel gevuld: existing parser checkt 1-120; hier alleen
+      // de aanwezigheid afdwingen. Server-side dubbele check in route.ts.
+      if (ageRequired) {
+        const ageVal = (s.age ?? "").trim();
+        if (!ageVal) {
+          return failWith("Leeftijd is verplicht voor deze activiteit.");
+        }
       }
       // Telefoon optioneel bij activiteiten — maar als gevuld dan 10 cijfers
       if (parent.phone.trim() && !isValidPhone10(parent.phone)) {
@@ -596,9 +623,14 @@ export default function RegistrationForm({
             </select>
           </div>
           <div>
-            <label className={labelClass}>Leeftijd</label>
+            <label className={labelClass}>
+              Leeftijd
+              {ageRequired && <span className="text-red-600" aria-hidden> *</span>}
+            </label>
             <input
               type="number" min={1} max={120} inputMode="numeric"
+              required={ageRequired}
+              aria-required={ageRequired || undefined}
               className={inputClass}
               value={students[0].age}
               onChange={(e) => updateStudent(0, "age", e.target.value)}

@@ -65,6 +65,10 @@ const RICH_TEXT_FIELDS = [
   { collection: "page_content",        field: "body" },
   { collection: "donation_campaigns",  field: "description" },
   { collection: "faq_items",           field: "answer" },
+  // Delivery 19 — vacancies.body kreeg in delivery 18 alleen de Directus
+  // default-toolbar (geen alignment/headings/lists). Nu meenemen in dezelfde
+  // merge zodat de body net zo bewerkbaar is als andere rich-text velden.
+  { collection: "vacancies",           field: "body" },
 ];
 
 export async function setupRichTextToolbar(client) {

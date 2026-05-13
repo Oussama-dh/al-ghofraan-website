@@ -6,7 +6,7 @@ import PageHero      from "@/components/sections/PageHero";
 import Button from "@/components/ui/Button";
 import PrayerTimesOverview from "@/components/ui/PrayerTimesOverview";
 import { ChevronLeft } from "lucide-react";
-import { getActivePrayerTimeFile, getInternalAssetUrl, getSiteSettings, getPageSectionsWithItems, getHijriDateOverrides } from "@/lib/directus";
+import { getActivePrayerTimeFile, getInternalAssetUrl, getSiteSettings, getPageSectionsWithItems, getHijriDateOverrides, getPrayerCalendarHighlights } from "@/lib/directus";
 import { parsePrayerTimesCSV } from "@/lib/prayerTimes";
 import type { PrayerTimeRow } from "@/types/directus";
 
@@ -28,6 +28,8 @@ export default async function GebedstijdenOverzichtPage() {
 
   // Hijri-overrides parallel ophalen — falen mag, vallen we terug op pure Intl-berekening
   const hijriOverrides = await getHijriDateOverrides();
+  // Delivery 21 — Kalender-highlights ophalen voor visuele markering in tabel.
+  const calendarHighlights = await getPrayerCalendarHighlights();
 
   try {
     const prayerFile = await getActivePrayerTimeFile();
@@ -95,7 +97,7 @@ export default async function GebedstijdenOverzichtPage() {
           )}
 
           {allRows.length > 0 ? (
-            <PrayerTimesOverview rows={allRows} hijriOverrides={hijriOverrides} />
+            <PrayerTimesOverview rows={allRows} hijriOverrides={hijriOverrides} highlights={calendarHighlights} />
           ) : (
             !error && (
               <div className="bg-white border border-sand-200 rounded-2xl p-8 text-center">

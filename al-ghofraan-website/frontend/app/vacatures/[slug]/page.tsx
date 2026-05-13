@@ -1,21 +1,45 @@
 // app/vacatures/[slug]/page.tsx
 //
-// Detail-pagina voor een individuele vacature (delivery 18).
+// Detail-pagina voor een individuele vacature.
 //
-// Filtering: getVacancyBySlug retourneert alleen records met
-// status=published. Drafts en archived → notFound().
+// Delivery 18 (origineel): basale hero + dl-grid + rich-text + CTA.
+// Delivery 19 (rewrite): professionele indeling met sectie-anchors en
+// uitgebreide meta-cards. Geen extra routes — alle secties zitten op
+// dezelfde pagina en worden via in-page anchors (`#...`) bereikt.
 //
-// Patronen hergebruikt:
-//   - Hero met optionele image: gelijke structuur als /artikelen/[slug]
-//     (delivery 12 image-overlay opacity-20 mechaniek).
-//   - Rich-text body via .rich-text class (delivery 13).
-//   - Defensieve veld-extractie: voorkomt 500's bij rare admin-input.
+// Indeling (top → bottom):
+//   1. Hero (donker, slate-mosque) — titel + summary + terug-link
+//   2. Pill-navigatie — anchor-links naar de drie secties (sticky)
+//   3. Sectie "Functieomschrijving" — rich-text body
+//   4. Sectie "Arbeidsvoorwaarden" — meta-cards grid
+//                                    (locatie, uren, salaris, contractduur, deadline)
+//                                    Alleen gevulde velden tonen.
+//   5. Sectie "Solliciteren" — CTA-blok (apply_url | /contact) + contact_email
+//
+// Patroon-keuzes:
+//   - Geen `next/image` (Directus assets quirk) — gebruik `<img>` + getAssetUrl.
+//   - Geen nieuwe Tailwind kleuren — alleen bestaande palette
+//     (sand, slate-mosque, taupe, ink).
+//   - Geen `prose` / @tailwindcss/typography — body gebruikt `.rich-text`.
+//   - Filtering: getVacancyBySlug retourneert alleen status=published;
+//     drafts/archived → notFound().
 
 import type { Metadata } from "next";
 import { notFound }      from "next/navigation";
 import Container         from "@/components/ui/Container";
 import Button            from "@/components/ui/Button";
-import { MapPin, Clock, CalendarClock, ExternalLink, Mail } from "lucide-react";
+import {
+  MapPin,
+  Clock,
+  Coins,
+  CalendarRange,
+  CalendarClock,
+  ExternalLink,
+  Mail,
+  Briefcase,
+  ListChecks,
+  Send,
+} from "lucide-react";
 import {
   getVacancyBySlug,
   getAllVacancySlugs,
@@ -54,6 +78,32 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title, description };
 }
 
+// ─── Helper: MetaCard ──────────────────────────────────────────────
+// Eén card per gevuld meta-veld in de Arbeidsvoorwaarden-grid.
+function MetaCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-sand-200 bg-white p-5 flex gap-4">
+      <div className="shrink-0 w-10 h-10 rounded-xl bg-slate-mosque/10 text-slate-mosque flex items-center justify-center">
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs uppercase tracking-wider text-taupe mb-1">
+          {label}
+        </p>
+        <p className="font-body text-sm text-ink break-words">{value}</p>
+      </div>
+    </div>
+  );
+}
+
 export default async function VacatureDetailPage({ params }: Props) {
   const vacancy = await getVacancyBySlug(params.slug);
   if (!vacancy) notFound();
@@ -69,17 +119,31 @@ export default async function VacatureDetailPage({ params }: Props) {
 
   const bodyHtml = typeof vacancy.body === "string" ? vacancy.body : "";
 
-  // CTA-link: extern (apply_url) heeft voorrang; anders /contact als
-  // fallback zodat de pagina altijd een actie heeft.
-  const hasApplyUrl   = typeof vacancy.apply_url === "string" && vacancy.apply_url.length > 0;
+  // CTA-link: extern (apply_url) heeft voorrang; anders /contact als fallback.
+  const hasApplyUrl     = typeof vacancy.apply_url === "string" && vacancy.apply_url.length > 0;
   const hasContactEmail = typeof vacancy.contact_email === "string" && vacancy.contact_email.length > 0;
-  const ctaHref       = hasApplyUrl ? vacancy.apply_url! : "/contact";
-  const ctaIsExternal = hasApplyUrl;
+  const ctaHref         = hasApplyUrl ? vacancy.apply_url! : "/contact";
+  const ctaIsExternal   = hasApplyUrl;
 
-  const showMeta = !!vacancy.location || !!vacancy.hours || !!vacancy.deadline;
+  // Meta-velden — alleen tonen als gevuld (defensief tegen lege strings).
+  const metaItems: Array<{ icon: React.ReactNode; label: string; value: string }> = [];
+  if (vacancy.location)
+    metaItems.push({ icon: <MapPin className="w-5 h-5" />,        label: "Locatie",       value: vacancy.location });
+  if (vacancy.hours)
+    metaItems.push({ icon: <Clock className="w-5 h-5" />,         label: "Uren",          value: vacancy.hours });
+  if (vacancy.salary)
+    metaItems.push({ icon: <Coins className="w-5 h-5" />,         label: "Salaris",       value: vacancy.salary });
+  if (vacancy.contract_duration)
+    metaItems.push({ icon: <CalendarRange className="w-5 h-5" />, label: "Contractduur",  value: vacancy.contract_duration });
+  if (vacancy.deadline)
+    metaItems.push({ icon: <CalendarClock className="w-5 h-5" />, label: "Deadline",      value: formatDate(vacancy.deadline) });
+
+  const hasMeta = metaItems.length > 0;
+  const hasBody = bodyHtml.length > 0;
 
   return (
     <>
+      {/* ─── 1. Hero ─────────────────────────────────────────── */}
       <section className="relative bg-slate-mosque text-white py-16 overflow-hidden">
         {imageUrl && (
           <div className="absolute inset-0 opacity-20">
@@ -111,88 +175,128 @@ export default async function VacatureDetailPage({ params }: Props) {
         </Container>
       </section>
 
+      {/* ─── 2. Pill-navigatie ──────────────────────────────────
+          Anchor-links naar de drie secties hieronder. Geen JS, geen
+          tabs-component — pure semantische links die scrollen naar
+          `#functieomschrijving` etc. Werkt zonder hydration. */}
+      <section className="bg-sand-50 border-b border-sand-200 sticky top-0 z-20 backdrop-blur-sm bg-sand-50/95">
+        <Container>
+          <nav className="flex flex-wrap gap-2 py-3" aria-label="Secties op deze pagina">
+            {hasBody && (
+              <a
+                href="#functieomschrijving"
+                className="inline-flex items-center gap-2 rounded-full border border-sand-200 bg-white px-4 py-1.5 text-sm font-medium text-ink hover:border-slate-mosque/40 hover:text-slate-mosque transition-colors"
+              >
+                <Briefcase className="w-3.5 h-3.5" />
+                Functieomschrijving
+              </a>
+            )}
+            {hasMeta && (
+              <a
+                href="#arbeidsvoorwaarden"
+                className="inline-flex items-center gap-2 rounded-full border border-sand-200 bg-white px-4 py-1.5 text-sm font-medium text-ink hover:border-slate-mosque/40 hover:text-slate-mosque transition-colors"
+              >
+                <ListChecks className="w-3.5 h-3.5" />
+                Arbeidsvoorwaarden
+              </a>
+            )}
+            <a
+              href="#solliciteren"
+              className="inline-flex items-center gap-2 rounded-full bg-slate-mosque text-white px-4 py-1.5 text-sm font-medium hover:bg-slate-dark transition-colors"
+            >
+              <Send className="w-3.5 h-3.5" />
+              Solliciteren
+            </a>
+          </nav>
+        </Container>
+      </section>
+
       <section className="bg-sand-50 py-12 lg:py-16">
         <Container narrow>
-          {/* Meta-grid: alleen tonen als er iets te tonen valt. */}
-          {showMeta && (
-            <dl className="grid gap-4 sm:grid-cols-3 mb-10 rounded-2xl border border-sand-200 bg-white p-6">
-              {vacancy.location && (
-                <div>
-                  <dt className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-taupe mb-1">
-                    <MapPin className="w-3.5 h-3.5" />
-                    Locatie
-                  </dt>
-                  <dd className="font-body text-sm text-ink">{vacancy.location}</dd>
-                </div>
-              )}
-              {vacancy.hours && (
-                <div>
-                  <dt className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-taupe mb-1">
-                    <Clock className="w-3.5 h-3.5" />
-                    Uren
-                  </dt>
-                  <dd className="font-body text-sm text-ink">{vacancy.hours}</dd>
-                </div>
-              )}
-              {vacancy.deadline && (
-                <div>
-                  <dt className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-taupe mb-1">
-                    <CalendarClock className="w-3.5 h-3.5" />
-                    Deadline
-                  </dt>
-                  <dd className="font-body text-sm text-ink">{formatDate(vacancy.deadline)}</dd>
-                </div>
-              )}
-            </dl>
+          {/* ─── 3. Functieomschrijving ──────────────────────── */}
+          {hasBody && (
+            <article id="functieomschrijving" className="scroll-mt-24 mb-12 lg:mb-16">
+              <header className="mb-5 flex items-center gap-2.5">
+                <Briefcase className="w-5 h-5 text-slate-mosque" />
+                <h2 className="font-display text-2xl text-ink">
+                  Functieomschrijving
+                </h2>
+              </header>
+              <div
+                className="rich-text max-w-none"
+                dangerouslySetInnerHTML={{ __html: bodyHtml }}
+              />
+            </article>
           )}
 
-          {bodyHtml && (
-            <div
-              className="rich-text max-w-none"
-              dangerouslySetInnerHTML={{ __html: bodyHtml }}
-            />
+          {/* ─── 4. Arbeidsvoorwaarden ───────────────────────── */}
+          {hasMeta && (
+            <article id="arbeidsvoorwaarden" className="scroll-mt-24 mb-12 lg:mb-16">
+              <header className="mb-5 flex items-center gap-2.5">
+                <ListChecks className="w-5 h-5 text-slate-mosque" />
+                <h2 className="font-display text-2xl text-ink">
+                  Arbeidsvoorwaarden
+                </h2>
+              </header>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {metaItems.map((m) => (
+                  <MetaCard
+                    key={m.label}
+                    icon={m.icon}
+                    label={m.label}
+                    value={m.value}
+                  />
+                ))}
+              </div>
+            </article>
           )}
 
-          {/* CTA-blok onderaan. Toont contact-email als extra optie alleen
-              als die in Directus is ingevuld; de hoofdknop blijft de
-              apply_url of (bij ontbreken) /contact. */}
-          <div className="mt-12 rounded-2xl border border-slate-mosque/15 bg-white p-6 lg:p-8 text-center">
-            <h2 className="font-display text-xl text-ink mb-2">
-              Interesse in deze vacature?
-            </h2>
-            <p className="font-body text-sm text-taupe-dark mb-5 max-w-xl mx-auto">
-              {hasApplyUrl
-                ? "Klik op de knop hieronder om te reageren via het externe formulier."
-                : "Neem contact met ons op om je interesse kenbaar te maken."}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-              {ctaIsExternal ? (
-                <a
-                  href={ctaHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-slate-mosque px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-dark transition-colors"
-                >
-                  Reageer op deze vacature
-                  <ExternalLink className="w-4 h-4" />
-                </a>
-              ) : (
-                <Button href={ctaHref} size="md">
-                  Neem contact op
-                </Button>
-              )}
+          {/* ─── 5. Solliciteren ─────────────────────────────── */}
+          <article id="solliciteren" className="scroll-mt-24">
+            <div className="rounded-2xl bg-slate-mosque text-white p-6 lg:p-10 text-center">
+              <header className="mb-3 flex items-center justify-center gap-2.5">
+                <Send className="w-5 h-5 text-sand/80" />
+                <h2 className="font-display text-2xl">
+                  Solliciteren
+                </h2>
+              </header>
+              <p className="font-body text-sm md:text-base text-sand/85 mb-6 max-w-xl mx-auto">
+                {hasApplyUrl
+                  ? "Klik op de knop hieronder om te reageren via het externe formulier."
+                  : "Neem contact met ons op om je interesse kenbaar te maken."}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                {ctaIsExternal ? (
+                  <a
+                    href={ctaHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-sm font-medium text-slate-mosque hover:bg-sand-50 transition-colors"
+                  >
+                    Solliciteer direct
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                ) : (
+                  <a
+                    href={ctaHref}
+                    className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-sm font-medium text-slate-mosque hover:bg-sand-50 transition-colors"
+                  >
+                    Neem contact op
+                  </a>
+                )}
 
-              {hasContactEmail && (
-                <a
-                  href={`mailto:${vacancy.contact_email}`}
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-mosque/30 px-5 py-2.5 text-sm font-medium text-slate-mosque hover:bg-slate-mosque/5 transition-colors"
-                >
-                  <Mail className="w-4 h-4" />
-                  {vacancy.contact_email}
-                </a>
-              )}
+                {hasContactEmail && (
+                  <a
+                    href={`mailto:${vacancy.contact_email}`}
+                    className="inline-flex items-center gap-2 rounded-lg border border-sand/30 px-6 py-3 text-sm font-medium text-white hover:bg-white/10 transition-colors"
+                  >
+                    <Mail className="w-4 h-4" />
+                    {vacancy.contact_email}
+                  </a>
+                )}
+              </div>
             </div>
-          </div>
+          </article>
         </Container>
       </section>
     </>
