@@ -454,6 +454,37 @@ export interface Article {
   updated_at?: string | null;
 }
 
+// ─── vacancies ───────────────────────────────────────────────
+/**
+ * Vacatures voor /vacatures overzicht + /vacatures/[slug] detail.
+ * Volgt het articles-patroon (status/slug/published_at).
+ *
+ * - status: alleen "published" is publiek zichtbaar; draft/archived
+ *   geven notFound() in de detail-route.
+ * - hero_image: optioneel; werkt via PageHero (delivery 16) met
+ *   dezelfde bg-black/40 overlay-conventie.
+ * - apply_url: externe URL voor solliciteren; als leeg valt CTA terug
+ *   op /contact.
+ * - deadline: optioneel; alleen tonen als gevuld.
+ */
+export interface Vacancy {
+  id: number;
+  status: "draft" | "published" | "archived";
+  title: string;
+  slug: string;
+  summary?: string | null;
+  body?: string | null;
+  location?: string | null;
+  hours?: string | null;
+  deadline?: string | null;
+  apply_url?: string | null;
+  contact_email?: string | null;
+  sort?: number | null;
+  published_at?: string | null;
+  created_at?: string | null;
+  hero_image?: string | DirectusFile | null;
+}
+
 // ─── videos ──────────────────────────────────────────────────
 // ─── video_categories ────────────────────────────────────────
 /**
@@ -601,4 +632,5 @@ export interface DirectusSchema {
   contact_subjects: ContactSubject[];
   article_categories: ArticleCategory[];
   video_categories: VideoCategory[];
+  vacancies: Vacancy[];
 }

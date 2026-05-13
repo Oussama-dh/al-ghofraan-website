@@ -259,13 +259,57 @@ export function formatRowDate(row: PrayerTimeRow): string {
   });
 }
 
-// Format een rij-datum als korte string (bv. "01-01")
+/**
+ * Korte UI-presentatie zonder jaartal, bv. "1 mei" (delivery 17).
+ *
+ * Voorheen gaf deze functie "01-05" terug. Dat is nu vervangen door
+ * de Nederlandse maandnaam zonder leading zero op de dag. Gebruikt
+ * door tabelcellen op `/gebedstijden` waar de jaarstijl uit context
+ * al duidelijk is.
+ *
+ * Belangrijk: dit is een PRESENTATIE-helper. Interne datum-keys
+ * (ISO `YYYY-MM-DD`, of de CSV-string `dd-mm-yyyy`) blijven
+ * onveranderd op hun originele plek.
+ */
 export function formatRowDateShort(row: PrayerTimeRow): string {
   const p = parseRowDate(row.datum);
   if (!p) return row.datum;
-  const dd = String(p.day).padStart(2, "0");
-  const mm = String(p.month).padStart(2, "0");
-  return `${dd}-${mm}`;
+  const date = new Date(p.year, p.month - 1, p.day);
+  return date.toLocaleDateString("nl-NL", {
+    day:   "numeric",
+    month: "long",
+  });
+}
+
+/**
+ * Lange UI-presentatie met jaartal, bv. "1 mei 2026" (delivery 17).
+ *
+ * Voor tabellen waar meerdere jaren door elkaar kunnen staan (zoals
+ * het volledige overzicht) of waar context onduidelijk maakt om welk
+ * jaar het gaat.
+ */
+export function formatRowDateLong(row: PrayerTimeRow): string {
+  const p = parseRowDate(row.datum);
+  if (!p) return row.datum;
+  const date = new Date(p.year, p.month - 1, p.day);
+  return date.toLocaleDateString("nl-NL", {
+    day:   "numeric",
+    month: "long",
+    year:  "numeric",
+  });
+}
+
+/**
+ * Format een (year, month, day) tupel als korte NL-datum: "1 mei".
+ * Voor losse datums die niet uit een PrayerTimeRow komen, zoals de
+ * vandaag-header (delivery 17).
+ */
+export function formatDatePartsShort(year: number, month: number, day: number): string {
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString("nl-NL", {
+    day:   "numeric",
+    month: "long",
+  });
 }
 
 // ─────────────────────────────────────────────────────────────

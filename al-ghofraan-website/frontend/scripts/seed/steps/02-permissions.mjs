@@ -20,6 +20,7 @@ const COLLECTIONS = [
   { collection: "contact_subjects",   filter: { status:    { _eq: "published" } } },
   { collection: "article_categories", filter: { status:    { _eq: "published" } } },
   { collection: "video_categories",   filter: { status:    { _eq: "published" } } },
+  { collection: "vacancies",          filter: { status:    { _eq: "published" } } },
   // BEWUST GEEN public-permissies voor `registrations`, `donations` en
   // `contact_messages`: die routes schrijven server-side via DIRECTUS_TOKEN.
   { collection: "directus_files",     filter: null },
