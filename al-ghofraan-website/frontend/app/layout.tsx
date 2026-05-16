@@ -7,6 +7,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ThemeScript     from "@/components/theme/ThemeScript";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import GoogleAnalytics  from "@/components/analytics/GoogleAnalytics";
 import {
   getSiteSettings,
   getNavigationItems,
@@ -130,6 +131,7 @@ export default async function RootLayout({
             />
           )}
         </ThemeProvider>
+        <GoogleAnalytics />
       </body>
     </html>
   );

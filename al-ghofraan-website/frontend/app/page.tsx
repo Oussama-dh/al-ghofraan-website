@@ -232,7 +232,7 @@ export default async function HomePage() {
               <div>
                 <h3 className="font-display text-xl text-ink">Gebedstijden</h3>
                 <p className="font-body text-sm text-taupe-dark mt-0.5">
-                  Bekijk de actuele gebedstijden van moskee Al-Ghofraan.
+                  Bekijk de actuele gebedstijden voor Den Haag en omgeving.
                 </p>
               </div>
             </div>
