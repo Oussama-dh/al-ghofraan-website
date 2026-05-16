@@ -1,13 +1,13 @@
 // app/layout.tsx
 
 import type { Metadata } from "next";
+import Script           from "next/script";
 import { Amiri, Outfit } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ThemeScript     from "@/components/theme/ThemeScript";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
-import GoogleAnalytics  from "@/components/analytics/GoogleAnalytics";
 import {
   getSiteSettings,
   getNavigationItems,
@@ -131,7 +131,33 @@ export default async function RootLayout({
             />
           )}
         </ThemeProvider>
-        <GoogleAnalytics />
+
+        {/* Google Analytics (GA4) — delivery 22.
+            Plaatsing in server-rendered layout zodat de <script>-tags
+            zichtbaar zijn in de initiële HTML (view-source). gtag.js
+            wordt geladen via next/script met strategy="afterInteractive"
+            zodat het de paint niet blokkeert.
+
+            TV-route uitsluiting: gtag('config', ...) wordt alleen
+            uitgevoerd als de pathname NIET met /gebedstijden/tv begint.
+            Het externe gtag.js wordt op de TV-route nog wel opgehaald,
+            maar zonder config-call registreert het geen pageview en
+            vervuilt het de analytics-data niet. */}
+        <Script
+          id="ga-loader"
+          src="https://www.googletagmanager.com/gtag/js?id=G-K19YMZJ71R"
+          strategy="afterInteractive"
+        />
+        <Script id="ga-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            if (!window.location.pathname.startsWith('/gebedstijden/tv')) {
+              gtag('config', 'G-K19YMZJ71R', { anonymize_ip: true });
+            }
+          `}
+        </Script>
       </body>
     </html>
   );
