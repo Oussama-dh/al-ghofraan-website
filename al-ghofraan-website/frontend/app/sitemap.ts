@@ -23,7 +23,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/artikelen",
     "/agenda",
     "/gebedstijden",
-    "/gebedstijden/overzicht",
     "/doneren",
     "/contact",
     "/privacy",

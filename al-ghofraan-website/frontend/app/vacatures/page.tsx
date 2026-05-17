@@ -23,8 +23,7 @@ import {
 } from "@/lib/directus";
 import { formatDate } from "@/lib/utils";
 
-export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
 
 const FALLBACK = {
   title:    "Vacatures",
