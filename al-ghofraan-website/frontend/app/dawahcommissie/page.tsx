@@ -17,8 +17,7 @@ import {
   ICON_KEYS,
 } from "@/lib/directus";
 
-export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
 
 const FALLBACK_BODY = `
   <h2>Wie zijn wij?</h2>

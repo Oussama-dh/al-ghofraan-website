@@ -21,8 +21,7 @@ interface Props {
   params: { slug: string };
 }
 
-export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const activity = await getActivityBySlug(params.slug);

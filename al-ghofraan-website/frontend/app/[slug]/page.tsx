@@ -23,8 +23,7 @@ import {
 } from "@/lib/directus";
 import { isReservedSlug } from "@/lib/reservedSlugs";
 
-export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
 export const dynamicParams = true;
 
 interface Props {

@@ -52,8 +52,7 @@ interface Props {
   params: { slug: string };
 }
 
-export const dynamic       = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
-export const revalidate    = 300;
+export const dynamic = "force-dynamic";
 export const dynamicParams = true;
 
 export async function generateStaticParams() {

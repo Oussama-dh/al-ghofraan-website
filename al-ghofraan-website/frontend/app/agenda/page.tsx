@@ -14,8 +14,7 @@ import {
 } from "@/lib/directus";
 import type { Activity }  from "@/types/directus";
 
-export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 // Fallbacks worden gebruikt zodra de admin het page_content-record voor
 // "agenda" leeg laat of nog niet heeft aangemaakt — zo blijft de pagina

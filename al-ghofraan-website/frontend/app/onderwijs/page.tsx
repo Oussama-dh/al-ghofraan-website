@@ -22,7 +22,7 @@ import {
 import { formatDate, cn } from "@/lib/utils";
 import type { EducationProgram } from "@/types/directus";
 
-export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
+export const dynamic = "force-dynamic";
 export const revalidate = 300;
 
 const FALLBACK = {

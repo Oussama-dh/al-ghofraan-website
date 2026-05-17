@@ -44,8 +44,7 @@ import {
 } from "@/lib/hijri";
 import type { PrayerTimeRow }     from "@/types/directus";
 
-export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 const HEADER_FALLBACK = {
   title:  "Gebedstijden",

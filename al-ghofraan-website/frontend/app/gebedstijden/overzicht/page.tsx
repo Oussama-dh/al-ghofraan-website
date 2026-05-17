@@ -10,8 +10,7 @@ import { getActivePrayerTimeFile, getInternalAssetUrl, getSiteSettings, getPageS
 import { parsePrayerTimesCSV } from "@/lib/prayerTimes";
 import type { PrayerTimeRow } from "@/types/directus";
 
-export const dynamic = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();

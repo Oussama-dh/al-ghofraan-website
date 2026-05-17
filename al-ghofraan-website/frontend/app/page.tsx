@@ -23,8 +23,7 @@ import {
 import { buildYouTubeEmbedUrl } from "@/lib/utils";
 import type { PageSection, PageSectionItem } from "@/types/directus";
 
-export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
 
 // ─── Fallback voor het missie-sectie blok ────────────────────
 //
