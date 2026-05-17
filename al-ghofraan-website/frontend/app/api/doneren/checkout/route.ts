@@ -238,14 +238,23 @@ export async function POST(request: Request) {
           : {}),
       });
     } else {
-      // monthly = subscription. Subscriptions ondersteunen geen iDEAL als
-      // betaalmethode (iDEAL is one-shot). Voor maandelijkse donaties is
-      // card de standaard. Stripe regelt SEPA-mandate intern als de
-      // gebruiker daarvoor kiest in checkout.
+      // monthly = subscription. Voor Nederlandse donateurs gebruiken we
+      // het iDEAL → SEPA Direct Debit pad: de eerste betaling loopt via
+      // iDEAL (donor authenticeert bij eigen bank), Stripe slaat tijdens
+      // die transactie automatisch het IBAN op als SEPA Direct Debit
+      // payment method, en alle volgende maand-afschrijvingen lopen via
+      // SEPA Direct Debit. `sepa_debit` is ook expliciet beschikbaar als
+      // de donor het IBAN direct wil invoeren zonder eerst via iDEAL te
+      // gaan. `card` blijft als fallback voor internationale donateurs.
+      //
+      // Vereisten in Stripe Dashboard (LIVE mode):
+      //   - SEPA Direct Debit moet geactiveerd zijn
+      //   - iDEAL moet geactiveerd zijn (was al het geval voor eenmalig)
+      // Zonder die activatie weigert Stripe de Checkout Session.
       const stripe = getStripe();
       session = await stripe.checkout.sessions.create({
         mode: "subscription",
-        payment_method_types: ["card"],
+        payment_method_types: ["ideal", "sepa_debit", "card"],
         line_items: [
           {
             price_data: {
