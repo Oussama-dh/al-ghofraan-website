@@ -1,38 +1,47 @@
 // lib/server/notifications.ts
 //
-// ─── Admin-notificaties — VOORBEREIDENDE LAAG ────────────────────
+// ─── Admin-notificaties — SMTP-VERZENDLAAG ───────────────────────
 //
-// Dit is een **voorbereidende** server-only helper. In deze delivery
-// verzendt deze code GEEN echte e-mails:
-//   - Geen SMTP-verbinding.
-//   - Geen `node:net` of `node:tls`.
-//   - Geen externe dependency (geen nodemailer, geen provider-SDK).
-//   - Geen netwerktoegang vanuit deze module.
+// Verzendt interne admin-notificaties via cPanel SMTP wanneer alle
+// volgende voorwaarden zijn voldaan:
+//   1. `site_settings.email_notifications_enabled === true`
+//   2. Een afdeling-specifiek `notification_email_<dept>` is gevuld
+//   3. De SMTP_* env-vars zijn geconfigureerd
 //
-// Wat hij wel doet:
-//   1. Leest `site_settings.email_notifications_enabled` en de
-//      bijbehorende `notification_email_<afdeling>` velden.
-//   2. Bepaalt of er voor deze gebeurtenis "verstuurd zou moeten
-//      worden" als er een verzendkanaal was.
-//   3. Bouwt een platte tekst-payload (subject + body) op basis van
-//      de gegevens van de inschrijving/contactmelding.
-//   4. Logt in development de payload als info, in productie alleen
-//      een neutrale info-regel ("notificatie voorbereid voor ...").
+// Wat het doet:
+//   - Leest `site_settings.email_notifications_enabled` en de
+//     bijbehorende `notification_email_<afdeling>` velden.
+//   - Stopt direct (no-op) als één van de twee voorwaarden faalt.
+//   - Bouwt een platte tekst-payload (subject + body) op basis van
+//     de gegevens van de inschrijving/contactmelding.
+//   - Verzendt via nodemailer (cPanel SMTP, configured via env-vars).
 //
-// Hiermee kunnen we:
-//   - de UI-velden vandaag al inrichten,
-//   - de API-routes vandaag al door de "happy path" laten gaan,
-//   - en straks alleen `dispatchAdminEmail()` invullen met een echte
-//     verzender (Brevo/Resend SDK of nodemailer-SMTP). De aanroepende
-//     code in /api/contact en /api/inschrijven blijft dan ongewijzigd.
+// From-header strategie (voor cPanel compatibiliteit):
+//   - From: "<email_from_name (Directus, fallback 'Al-Ghofraan')>
+//            <SMTP_USER>"
+//   - Reply-To: email_from_address (Directus) — als gevuld
+//   Reden: cPanel weigert From-headers die niet matchen met de
+//   authenticerende SMTP-user. Het Directus-veld `email_from_address`
+//   stuurt nu de Reply-To header, zodat antwoorden naar het juiste
+//   adres gaan zonder cPanel afzender-validatie te activeren.
 //
 // FAIL-SOFT GARANTIE:
 //   Een fout in deze helper MAG NOOIT een formulier-flow blokkeren.
 //   Alle publieke functies retourneren `Promise<void>` en swallowen
 //   exceptions in een try/catch. De aanroepende API kan hem zonder
 //   await uitvoeren of in een try/catch wrappen.
+//
+// SMTP env-vars:
+//   SMTP_HOST    — bijv. mail.al-ghofraan.nl
+//   SMTP_PORT    — bijv. 465 (SMTPS) of 587 (STARTTLS)
+//   SMTP_SECURE  — "true" voor port 465, "false" voor 587
+//   SMTP_USER    — bijv. noreply@al-ghofraan.nl
+//   SMTP_PASS    — wachtwoord van die mailbox
+//   Als één hiervan ontbreekt: warning in log, geen mail, geen throw.
 
 import type { SiteSettings } from "@/types/directus";
+import nodemailer            from "nodemailer";
+import type { Transporter }  from "nodemailer";
 
 // ─── Types per gebeurtenis ───────────────────────────────────
 
@@ -173,57 +182,129 @@ async function prepare(
 interface PreparedEmail {
   to:          string;
   fromName:    string;
-  fromAddress: string;  // mag leeg zijn — wordt straks gevuld door provider-default
+  fromAddress: string;  // het Directus email_from_address veld; wordt Reply-To
   subject:     string;
   body:        string;
   department:  Department;
 }
 
+// ─── SMTP transporter ────────────────────────────────────────
+
+interface SmtpConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+}
+
+let cachedTransporter: Transporter | null = null;
+let cachedConfigKey:   string             = "";
+
 /**
- * VERZENDPUNT — bewust een no-op in deze delivery.
+ * Lees SMTP-config uit env. Retourneert null als één van de
+ * verplichte vars ontbreekt — caller logt dan en doet een no-op.
+ */
+function readSmtpConfig(): SmtpConfig | null {
+  const host = (process.env.SMTP_HOST || "").trim();
+  const user = (process.env.SMTP_USER || "").trim();
+  const pass = process.env.SMTP_PASS || "";
+  const portRaw   = (process.env.SMTP_PORT   || "").trim();
+  const secureRaw = (process.env.SMTP_SECURE || "").trim().toLowerCase();
+
+  if (!host || !user || !pass || !portRaw) return null;
+
+  const port = Number(portRaw);
+  if (!Number.isFinite(port) || port <= 0 || port > 65535) return null;
+
+  // secure: expliciet "true" → SMTPS (typisch 465). Anders STARTTLS-upgrade
+  // (typisch 587). We accepteren ook "1" / "yes" als true, voor mensen die
+  // env-files met de hand bewerken.
+  const secure = secureRaw === "true" || secureRaw === "1" || secureRaw === "yes";
+
+  return { host, port, secure, user, pass };
+}
+
+/**
+ * Lazy + gecachete transporter. Cache-key bevat alle config-velden
+ * zodat env-aanpassingen tijdens dev hot-reload niet bijten.
+ * Geen pooling (laag volume), geen automatische verify (vermijdt
+ * cold-start TCP-handshake bij elke server-restart).
+ */
+function getTransporter(cfg: SmtpConfig): Transporter {
+  const key = `${cfg.host}|${cfg.port}|${cfg.secure}|${cfg.user}`;
+  if (cachedTransporter && cachedConfigKey === key) return cachedTransporter;
+
+  cachedTransporter = nodemailer.createTransport({
+    host:   cfg.host,
+    port:   cfg.port,
+    secure: cfg.secure,
+    auth:   { user: cfg.user, pass: cfg.pass },
+  });
+  cachedConfigKey = key;
+  return cachedTransporter;
+}
+
+/**
+ * VERZENDPUNT — verstuurt via SMTP (nodemailer) wanneer alle
+ * env-vars zijn geconfigureerd.
  *
- * Wanneer we later kiezen voor een echt kanaal, hoeft enkel deze
- * functie te worden vervangen. Mogelijke implementaties:
+ * Gedrag:
+ *   - SMTP-config compleet → verstuur. Bij fout: warn-log, throw NIET.
+ *   - SMTP-config incompleet → warn-log met welke vars ontbreken,
+ *     return zonder mail.
  *
- *   A) Nodemailer + SMTP (Brevo/Mailgun/AWS SES/Postmark SMTP-relay)
- *      - dependency: `nodemailer` (~150 KB, geen native deps)
- *      - import { createTransport } from "nodemailer";
- *      - env vars: SMTP_HOST/PORT/USER/PASSWORD/SECURE
+ * From-header strategie (cPanel-vriendelijk):
+ *   - SMTP envelope+From-header gebruikt SMTP_USER als adres
+ *     (verplicht door cPanel; from-spoofing wordt geweigerd).
+ *   - Display-name uit Directus `email_from_name`, fallback "Al-Ghofraan".
+ *   - Reply-To wordt op `email_from_address` (Directus) gezet wanneer
+ *     dat veld gevuld is — zo gaan replies naar het juiste mailbox.
  *
- *   B) Provider-SDK (Resend, Brevo, Postmark)
- *      - dependency: `resend` of `@getbrevo/brevo` of `postmark`
- *      - env vars: RESEND_API_KEY (etc.)
- *      - Voordeel: betere deliverability, geen SMTP-config nodig
- *
- *   C) Eigen pure-Node SMTP-client over node:net/node:tls
- *      - geen dependency, maar wel >300 regels onderhoud
- *      - in deze delivery EXPLICIET niet gekozen
- *
- * Tot die keuze gemaakt is, doet deze functie alleen:
- *   - log in development de volledige payload (handig voor testen)
- *   - log in productie een rustige info-regel zonder body
- *
- * Caller hoeft niets te wijzigen wanneer de implementatie verandert.
+ * Caller hoeft niets te wijzigen bij latere provider-wissels (bv.
+ * naar een provider-SDK). Alleen deze functie aanpassen.
  */
 async function dispatchAdminEmail(email: PreparedEmail): Promise<void> {
-  const isDev = process.env.NODE_ENV !== "production";
+  const cfg = readSmtpConfig();
 
-  if (isDev) {
-    // In development tonen we volledig wat verzonden ZOU worden.
-    // Logt netjes via console.log, niet console.warn — dit is een
-    // verwachte info-regel zolang de mailprovider niet is geconfigureerd.
-    console.log(
-      `[notify:${email.department}] (dev) zou verzenden naar ${email.to}\n` +
-      `  From: ${email.fromName} <${email.fromAddress || "(geen from-adres)"}>\n` +
-      `  Subject: ${email.subject}\n` +
-      `  --- body ---\n${indent(email.body, "  ")}\n  --- /body ---`,
+  if (!cfg) {
+    console.warn(
+      `[notify:${email.department}] SMTP niet (volledig) geconfigureerd ` +
+      `(check SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS env-vars) — ` +
+      `mail naar ${redactEmail(email.to)} overgeslagen.`,
     );
-  } else {
-    // In productie houden we het kort om logs niet vol te schrijven.
+    return;
+  }
+
+  const fromAddress = cfg.user;                          // verplicht = SMTP user
+  const fromName    = email.fromName || "Al-Ghofraan";   // display-name
+  const replyTo     = (email.fromAddress || "").trim() || undefined;
+
+  // Bouw de RFC5322 from-header: `"Display Name" <user@example.com>`.
+  // Escape dubbele quotes in display-name (defensief — site_settings
+  // veld kan in theorie alles bevatten).
+  const fromHeader = `"${fromName.replace(/"/g, '\\"')}" <${fromAddress}>`;
+
+  try {
+    const transporter = getTransporter(cfg);
+    await transporter.sendMail({
+      from:    fromHeader,
+      to:      email.to,
+      replyTo: replyTo,
+      subject: email.subject,
+      text:    email.body,
+    });
+    // Korte info-regel — geen body in log (privacy: donor-data).
     console.log(
-      `[notify:${email.department}] payload voorbereid voor ${redactEmail(email.to)} — ` +
-      `verzendkanaal nog niet geconfigureerd in deze delivery.`,
+      `[notify:${email.department}] mail verzonden naar ${redactEmail(email.to)}`,
     );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(
+      `[notify:${email.department}] SMTP-verzending naar ${redactEmail(email.to)} ` +
+      `mislukt (genegeerd): ${msg}`,
+    );
+    // GEEN throw — fail-soft contract.
   }
 }
 
@@ -294,10 +375,6 @@ function buildActivityBody(d: ActivityNotificationData): string {
 }
 
 // ─── Util ────────────────────────────────────────────────────
-
-function indent(text: string, prefix: string): string {
-  return text.split("\n").map((l) => prefix + l).join("\n");
-}
 
 /** Maskeer een e-mail in productie-logs: 'jan@voorbeeld.nl' → 'j***@voorbeeld.nl' */
 function redactEmail(email: string): string {
