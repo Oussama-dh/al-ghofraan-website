@@ -486,7 +486,25 @@ function PrayerSlide({
   }
 
   return (
-    <div className="w-full max-w-[1800px] grid grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6 lg:gap-8">
+    <div
+      className={cn(
+        "w-full max-w-[1800px] mx-auto",
+        // Gap-progressie: ruim genoeg op mobile/tablet, iets compacter
+        // op LG+ zodat de cards de schermbreedte gevuld houden zonder
+        // overdreven witruimte tussen vakjes.
+        "gap-4 md:gap-6 lg:gap-6",
+        // Mobile/tablet: 3-koloms grid (2 rijen × 3 cards). Op kleine
+        // schermen heeft fysieke breedte-verdeling weinig nut.
+        "grid grid-cols-3",
+        // LG+ (TV-doelmaat): flex-row met vaste pixel-breedte/hoogte
+        // per card-type (zie `lg:w-[...] lg:h-[...]` op de cards zelf).
+        // `flex-nowrap` houdt single-row gegarandeerd, `justify-center`
+        // centreert de rij, `items-center` zorgt dat de hogere
+        // highlight-card symmetrisch boven én onder de normale cards
+        // uitsteekt in plaats van top-aligned.
+        "lg:flex lg:flex-row lg:flex-nowrap lg:justify-center lg:items-center",
+      )}
+    >
       {GEBEDEN.map((gebed) => {
         const isNext = nextPrayerKey === gebed.key;
         return (
@@ -494,8 +512,31 @@ function PrayerSlide({
             key={gebed.key}
             className={cn(
               "rounded-3xl flex flex-col items-center justify-between transition-colors",
-              "p-5 md:p-8 lg:p-10",
-              "min-h-[200px] md:min-h-[280px] lg:min-h-[360px] xl:min-h-[420px]",
+              // Delivery 31: VASTE pixel-afmetingen per card-type op LG+,
+              // in drie groei-stappen. Geen flex-grow / basis-% meer —
+              // expliciet "deze card is W breed en H hoog". Zo blijft
+              // de vorm (rounded rectangle) identiek voor alle cards,
+              // alleen de schaal verschilt.
+              //
+              // Sizing per breakpoint (1366 / 1280-1535 / 1536+ TV's):
+              //   normaal  : 170×280  → 190×320  → 250×360
+              //   highlight: 240×360  → 280×410  → 370×460
+              // Verhoudingen blijven ~1.4× breder voor highlight.
+              //
+              // Veiligheid op 1366×768 (xl-breakpoint actief):
+              //   5×190 + 280 + 5×24 (gap-6) = 1350px < 1366 ✓
+              // Op 1920×1080 (2xl-breakpoint):
+              //   5×250 + 370 + 120 = 1740px in 1800 max-w = ~30px wit
+              //   per kant na justify-center.
+              isNext
+                ? "lg:w-[240px] lg:h-[360px] xl:w-[280px] xl:h-[410px] 2xl:w-[370px] 2xl:h-[460px]"
+                : "lg:w-[170px] lg:h-[280px] xl:w-[190px] xl:h-[320px] 2xl:w-[250px] 2xl:h-[360px]",
+              // Padding (delivery 31): proportioneel bij de nieuwe
+              // fysieke afmetingen. Iets meer ademruimte rondom de
+              // tijd dan delivery 30, maar niet overdreven.
+              isNext
+                ? "p-6 md:p-9 lg:p-7 xl:p-8 2xl:p-9  min-h-[220px] md:min-h-[300px]"
+                : "p-4 md:p-6 lg:p-5 xl:p-5 2xl:p-7  min-h-[170px] md:min-h-[230px]",
               isNext
                 ? "bg-white text-slate-mosque ring-4 ring-white/40 shadow-2xl shadow-black/30"
                 : "bg-white/10 border-2 border-white/20 text-white",
@@ -509,7 +550,13 @@ function PrayerSlide({
               )}
             >
               <gebed.Icon
-                className="w-9 h-9 md:w-12 md:h-12 lg:w-14 lg:h-14 xl:w-16 xl:h-16"
+                className={cn(
+                  // Delivery 31: icons groeien per breakpoint mee met
+                  // de fysieke card-grootte.
+                  isNext
+                    ? "w-9 h-9 md:w-12 md:h-12 lg:w-12 lg:h-12 xl:w-14 xl:h-14 2xl:w-16 2xl:h-16"
+                    : "w-7 h-7 md:w-9  md:h-9  lg:w-10 lg:h-10 xl:w-11 xl:h-11 2xl:w-14 2xl:h-14",
+                )}
                 strokeWidth={1.75}
               />
             </div>
@@ -518,7 +565,10 @@ function PrayerSlide({
             <div
               className={cn(
                 "font-arabic leading-none",
-                "text-2xl md:text-4xl lg:text-5xl xl:text-6xl",
+                // Delivery 31: drie-staps groei mee met card-afmeting.
+                isNext
+                  ? "text-2xl md:text-4xl lg:text-3xl xl:text-4xl 2xl:text-5xl"
+                  : "text-xl  md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-4xl",
                 isNext ? "text-slate-mosque/80" : "text-sand/85",
               )}
               lang="ar"
@@ -531,7 +581,10 @@ function PrayerSlide({
             <div
               className={cn(
                 "font-body uppercase tracking-widest font-medium",
-                "text-sm md:text-lg lg:text-xl xl:text-2xl",
+                // Delivery 31: drie-staps groei.
+                isNext
+                  ? "text-sm md:text-lg lg:text-base xl:text-lg 2xl:text-xl"
+                  : "text-xs md:text-sm lg:text-sm  xl:text-base 2xl:text-lg",
                 isNext ? "text-slate-mosque/70" : "text-sand/80",
               )}
             >
@@ -542,7 +595,12 @@ function PrayerSlide({
             <div
               className={cn(
                 "font-display tabular-nums leading-none",
-                "text-4xl md:text-6xl lg:text-7xl xl:text-8xl",
+                // Delivery 31: drie-staps groei. Op LG conservatief
+                // gehouden om in 170px-brede normale card te passen.
+                // Op 2xl mooi groot voor de TV-doelmaat.
+                isNext
+                  ? "text-4xl md:text-6xl lg:text-5xl xl:text-6xl 2xl:text-7xl"
+                  : "text-3xl md:text-5xl lg:text-4xl xl:text-5xl 2xl:text-6xl",
                 isNext ? "text-slate-mosque" : "text-white",
               )}
             >

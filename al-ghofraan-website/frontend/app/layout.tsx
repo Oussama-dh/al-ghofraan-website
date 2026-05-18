@@ -2,7 +2,7 @@
 
 import type { Metadata } from "next";
 import Script           from "next/script";
-import { Amiri, Outfit } from "next/font/google";
+import localFont        from "next/font/local";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -20,20 +20,45 @@ import { getSiteUrl } from "@/lib/utils";
 
 // In development direct verse data ophalen — wijzigingen in Directus
 // zijn meteen zichtbaar na refresh. In productie weer gewone caching.
-export const dynamic = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
+export const dynamic = "force-dynamic";
 
-const amiri = Amiri({
-  subsets:  ["arabic", "latin"],
-  weight:   ["400", "700"],
+// ─── Fonts (delivery 27) ─────────────────────────────────────────
+// Bogart Arabic is sinds delivery 27 het primaire font voor de hele
+// website, inclusief Latijnse tekst, Arabische tekst, headings en
+// body. Eén variable font-bestand dekt de weight-range 300–800; geen
+// statische weights nodig.
+//
+// Constructie:
+//   Bestaande Tailwind config (locked) verwijst naar twee CSS-variabelen
+//   --font-amiri en --font-outfit. We doen geen Tailwind-refactor maar
+//   laten beide variabelen wijzen naar hetzelfde Bogart-bestand, via
+//   twee aliassen op dezelfde lokale font. Next.js dedupliceert het
+//   binary onder de motorkap, dus het bestand wordt maar één keer
+//   gefetched. Resultaat: `font-display`, `font-body` en `font-arabic`
+//   Tailwind-classes wijzen automatisch naar Bogart Arabic zonder
+//   wijzigingen aan tailwind.config.ts, globals.css of componenten.
+//
+// De variabele-namen heten nog `--font-amiri`/`--font-outfit` om de
+// koppeling met de bestaande Tailwind-config te behouden — dat is
+// cosmetisch raar, maar minimaliseert de impact van deze delivery.
+
+
+// Beide aliassen verwijzen naar hetzelfde bestand; Next.js
+// dedupliceert het binary in de build.
+const bogartAsDisplayAndArabic = localFont({
+  src: "./fonts/bogart-arabic/Bogart-Arabic-Variable-Roman.woff2",
+  weight: "300 800",
+  display: "swap",
   variable: "--font-amiri",
-  display:  "swap",
+  fallback: ["Arial", "sans-serif"],
 });
 
-const outfit = Outfit({
-  subsets:  ["latin"],
-  weight:   ["300", "400", "500", "600", "700"],
+const bogartAsBody = localFont({
+  src: "./fonts/bogart-arabic/Bogart-Arabic-Variable-Roman.woff2",
+  weight: "300 800",
+  display: "swap",
   variable: "--font-outfit",
-  display:  "swap",
+  fallback: ["Arial", "sans-serif"],
 });
 
 // Metadata wordt server-side gegenereerd op basis van site_settings
@@ -109,7 +134,7 @@ export default async function RootLayout({
   return (
     <html
       lang="nl"
-      className={`${amiri.variable} ${outfit.variable}`}
+      className={`${bogartAsDisplayAndArabic.variable} ${bogartAsBody.variable}`}
       // suppressHydrationWarning omdat de pre-hydration script (.dark class
       // + data-theme attribuut) <html> al muteert vóór React hydrateert.
       // React zou anders een mismatch op dit element melden.
