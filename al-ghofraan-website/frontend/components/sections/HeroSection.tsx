@@ -26,7 +26,7 @@ export default function HeroSection({
   title    = "Kennis, geloof en gemeenschap",
   subtitle = "DawahCommissie · Moskee Al-Ghofraan",
   intro    = "De DawahCommissie van moskee Al-Ghofraan organiseert lezingen, activiteiten en programma's om de moslimgemeenschap te verbinden, te versterken en te inspireren.",
-  arabic   = "بسم الله الرحمن الرحيم",
+  arabic   = "بسم الله الرحمـٰن الرحيم",
   backgroundImage,
 }: HeroSectionProps) {
   // Splits titel om de laatste 1-2 woorden visueel uit te lichten
