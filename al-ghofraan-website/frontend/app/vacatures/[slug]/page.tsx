@@ -52,7 +52,8 @@ interface Props {
   params: { slug: string };
 }
 
-export const dynamic = "force-dynamic";
+export const dynamic       = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
+export const revalidate    = 300;
 export const dynamicParams = true;
 
 export async function generateStaticParams() {
@@ -74,7 +75,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     (typeof settings?.default_seo_description === "string" && settings.default_seo_description) ||
     undefined;
 
-  return { title, description };
+  // Vacancy hero_image als og:image. Bij leeg veld valt og:image
+  // terug op de site-brede default uit site_settings.og_image.
+  const imageUrl = getAssetUrl(vacancy.hero_image as never);
+
+  return {
+    title,
+    description,
+    ...(imageUrl && {
+      openGraph: {
+        images: [{ url: imageUrl }],
+      },
+    }),
+  };
 }
 
 // ─── Helper: MetaCard ──────────────────────────────────────────────

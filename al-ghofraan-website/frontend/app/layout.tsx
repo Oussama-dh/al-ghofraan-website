@@ -54,6 +54,13 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description,
     metadataBase: new URL(getSiteUrl()),
+    // "./" resolveert per pagina naar metadataBase + huidige pathname.
+    // Geeft elke pagina automatisch een <link rel="canonical"> in de HTML
+    // head. Detail-pagina's kunnen dit in hun eigen generateMetadata
+    // overschrijven indien nodig.
+    alternates: {
+      canonical: "./",
+    },
     openGraph: {
       siteName,
       locale: "nl_NL",

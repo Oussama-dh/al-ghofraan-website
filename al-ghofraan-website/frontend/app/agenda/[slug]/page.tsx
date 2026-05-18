@@ -15,20 +15,33 @@ import {
   resolveIconKey,
   ICON_KEYS,
 } from "@/lib/directus";
-import { formatDate }     from "@/lib/utils";
+import { formatDate, getSiteUrl } from "@/lib/utils";
 
 interface Props {
   params: { slug: string };
 }
 
-export const dynamic = "force-dynamic";
+export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const activity = await getActivityBySlug(params.slug);
   if (!activity) return { title: "Activiteit niet gevonden" };
+
+  const description = activity.description?.replace(/<[^>]+>/g, "").slice(0, 160);
+  // Activity-image als og:image. getAssetUrl retourneert "" als veld
+  // leeg is — in dat geval valt og:image terug op de site-brede
+  // default uit site_settings.og_image (root layout).
+  const imageUrl = getAssetUrl(activity.image as never);
+
   return {
     title:       activity.title,
-    description: activity.description?.replace(/<[^>]+>/g, "").slice(0, 160),
+    description,
+    ...(imageUrl && {
+      openGraph: {
+        images: [{ url: imageUrl }],
+      },
+    }),
   };
 }
 
@@ -105,8 +118,59 @@ export default async function ActivityDetailPage({ params }: Props) {
   const ageRequiredForForm =
     activity.require_age === true || minimumAge !== null;
 
+  // ─── JSON-LD Event schema (delivery 26) ──────────────────────────
+  // Voor Google's Rich Results en zoekresultaat-cards. Alleen renderen
+  // als de verplichte velden (name, start_date) aanwezig zijn — bij
+  // ontbreken liever géén schema dan een invalide schema.
+  //
+  // location.name is bewust een fallback naar "Moskee El Mouahidin"
+  // wanneer activity.location leeg is — schema.org Event vereist
+  // location. Voor concretere data (street/city) zou de Activity in
+  // Directus zelf gestructureerd moeten zijn; daar is dit veld nu
+  // een vrije string voor.
+  const jsonLd =
+    activity.title && activity.start_date
+      ? {
+          "@context":  "https://schema.org",
+          "@type":     "Event",
+          name:        activity.title,
+          ...(activity.description && {
+            description: activity.description
+              .replace(/<[^>]+>/g, "")
+              .slice(0, 500)
+              .trim(),
+          }),
+          startDate: activity.start_date,
+          ...(activity.end_date && { endDate: activity.end_date }),
+          eventStatus:         "https://schema.org/EventScheduled",
+          eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+          location: {
+            "@type": "Place",
+            name:    activity.location?.trim() || "Moskee El Mouahidin",
+          },
+          ...(imageUrl && { image: [imageUrl] }),
+          url: `${getSiteUrl()}/agenda/${activity.slug}`,
+          organizer: {
+            "@type": "Organization",
+            name:    "Al-Ghofraan — da'wahcommissie van Moskee El Mouahidin",
+            url:     getSiteUrl(),
+          },
+        }
+      : null;
+
   return (
     <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          // JSON.stringify produceert geen </script> sequences, dus
+          // veilig om direct in script-content te zetten. We escapen
+          // toch < voor uiterste zekerheid (defense in depth).
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+          }}
+        />
+      )}
       <section className="relative bg-slate-mosque text-white py-16 overflow-hidden">
         {imageUrl && (
           <div className="absolute inset-0 opacity-20">
