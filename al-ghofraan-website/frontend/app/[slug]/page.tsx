@@ -18,12 +18,14 @@ import {
   getPageSectionsWithItems,
   getIconSettings,
   getSiteSettings,
+  getAssetUrl,
   resolveIconKey,
   ICON_KEYS,
 } from "@/lib/directus";
 import { isReservedSlug } from "@/lib/reservedSlugs";
 
-export const dynamic = "force-dynamic";
+export const dynamic    = process.env.NODE_ENV !== "production" ? "force-dynamic" : "auto";
+export const revalidate = 600;
 export const dynamicParams = true;
 
 interface Props {
@@ -52,9 +54,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!page) return { title: "Pagina niet gevonden" };
 
+  // hero_background_image als og:image (bv. /onze-moskee). Leeg veld
+  // → og:image valt terug op site-brede default uit site_settings.
+  const imageUrl = getAssetUrl(page.hero_background_image as never);
+
   return {
     title:       page.seo_title       || page.title || settings?.default_seo_title || "Pagina",
     description: page.seo_description || page.intro || settings?.default_seo_description || "",
+    ...(imageUrl && {
+      openGraph: {
+        images: [{ url: imageUrl }],
+      },
+    }),
   };
 }
 
@@ -90,6 +101,33 @@ export default async function DynamicPage({ params }: Props) {
         subtitle={subtitle || undefined}
         backgroundImage={page?.hero_background_image}
       />
+
+      {/* Mosque logo — delivery 25.
+          Hardcoded gebonden aan slug=onze-moskee zodat het mosque_logo
+          veld op page_content elders niet per ongeluk getoond wordt.
+          Render via <img> + getAssetUrl(), conform projectregel "geen
+          next/image op Directus-assets" (geen remotePatterns whitelist
+          nodig in next.config.mjs). Fail-soft: lege logo = niets tonen,
+          pagina werkt verder normaal. */}
+      {params.slug === "onze-moskee" && page?.mosque_logo && (() => {
+        const logoUrl = getAssetUrl(page.mosque_logo);
+        if (!logoUrl) return null;
+        return (
+          <section className="bg-sand-50 pt-12 lg:pt-16 pb-4 lg:pb-6">
+            <Container narrow>
+              <div className="flex justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={logoUrl}
+                  alt="Logo Moskee El Mouahidin"
+                  className="max-w-sm h-auto"
+                  loading="lazy"
+                />
+              </div>
+            </Container>
+          </section>
+        );
+      })()}
 
       {/* Page-content body (alleen als gevuld) */}
       {(intro || body) && (

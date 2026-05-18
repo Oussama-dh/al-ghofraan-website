@@ -32,6 +32,7 @@ import { setupVacatures }          from "./steps/29-vacatures.mjs";
 import { setupVacancyRole }        from "./steps/30-vacancy-role.mjs";
 import { setupVacancyStatusColors } from "./steps/31-vacancy-status-colors.mjs";
 import { setupPrayerCalendarHighlights } from "./steps/32-prayer-calendar-highlights.mjs";
+import { setupMosqueLogo }          from "./steps/33-mosque-logo.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -119,6 +120,7 @@ try {
   await setupVacancyRole(client);        // 30. rol + policy "Vacature beheerder" met filter slug=vacatures
   await setupVacancyStatusColors(client); // 31. kleurcodering vacancies.status (delivery 19, bestaande installs)
   await setupPrayerCalendarHighlights(client); // 32. kalender-highlights voor gebedstijden (delivery 21)
+  await setupMosqueLogo(client);         // 33. optioneel mosque_logo veld op page_content (delivery 25)
 
   console.log("");
   console.log("╔══════════════════════════════════════════════════════╗");

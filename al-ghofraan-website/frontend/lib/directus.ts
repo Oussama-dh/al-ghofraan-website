@@ -476,6 +476,72 @@ export async function getAllVacancySlugs(): Promise<string[]> {
   );
 }
 
+// ─── Sitemap helpers (delivery 26) ───────────────────────────
+// Aparte helpers omdat de sitemap andere filters wil dan
+// generateStaticParams. We willen verlopen vacatures NIET in de
+// sitemap (geen SEO-waarde), maar wel als geldige route bereikbaar
+// laten voor Google's gecachte links (404's vermijden).
+
+export interface SitemapEntry {
+  slug: string;
+}
+
+/**
+ * Activity-slugs voor de sitemap. Alle published activities (inclusief
+ * verleden) — Google moet historische archief-pagina's kunnen blijven
+ * tonen voor zoekopdrachten naar specifieke evenementen.
+ */
+export async function getActivitySlugsForSitemap(): Promise<SitemapEntry[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("activities", {
+          filter: { status: { _eq: "published" } } as never,
+          limit:  -1,
+          fields: ["slug"],
+        })
+      );
+      return (result as Array<{ slug: string }>)
+        .filter((r) => r.slug)
+        .map((r) => ({ slug: r.slug }));
+    },
+    "getActivitySlugsForSitemap",
+    []
+  );
+}
+
+/**
+ * Vacancy-slugs voor de sitemap. Alleen vacatures waarvan de deadline
+ * nog niet verstreken is (of waar deadline leeg is). Verlopen vacatures
+ * blijven bereikbaar via directe URL, maar staan niet in de sitemap
+ * zodat Google ze niet meer als "nieuwe content" indexeert.
+ */
+export async function getOpenVacancySlugsForSitemap(): Promise<SitemapEntry[]> {
+  return safe(
+    async () => {
+      const today = new Date().toISOString().split("T")[0];
+      const result = await directusServer.request(
+        readItems("vacancies", {
+          filter: {
+            status: { _eq: "published" },
+            _or: [
+              { deadline: { _null: true } },
+              { deadline: { _gte: today } },
+            ],
+          } as never,
+          limit:  -1,
+          fields: ["slug"],
+        })
+      );
+      return (result as Array<{ slug: string }>)
+        .filter((r) => r.slug)
+        .map((r) => ({ slug: r.slug }));
+    },
+    "getOpenVacancySlugsForSitemap",
+    []
+  );
+}
+
 // ─── Article categories ──────────────────────────────────────
 const ARTICLE_CATEGORY_FIELDS = [
   "id", "status", "name", "slug", "description",

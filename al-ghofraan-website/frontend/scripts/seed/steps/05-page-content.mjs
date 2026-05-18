@@ -95,6 +95,58 @@ export async function seedPageContent(client) {
       seo_description: "Steun de DawahCommissie van moskee Al-Ghofraan met een donatie.",
       status:          "published",
     },
+
+    {
+      // Delivery 25 — pagina voor bezoekers die via elmouahidin.nl
+      // worden geredirect. Belangrijk: Al-Ghofraan is GEEN aparte
+      // moskee; Al-Ghofraan is de da'wahcommissie binnen Moskee
+      // El Mouahidin. De tekst hieronder is bewust zo geformuleerd.
+      slug:     "onze-moskee",
+      title:    "Onze moskee",
+      subtitle: "Moskee El Mouahidin in Den Haag",
+      intro:
+        "Al-Ghofraan is de da'wahcommissie van Moskee El Mouahidin. " +
+        "Deze pagina vertelt over de moskee waar onze gemeenschap " +
+        "samenkomt, en over de rol van Al-Ghofraan in het delen van " +
+        "kennis en het organiseren van activiteiten.",
+      body: `
+        <h2>Moskee El Mouahidin</h2>
+        <p>Moskee El Mouahidin (Stichting El Mouahidin) is een moskee
+        in Den Haag waar moslims uit verschillende achtergronden
+        samenkomen voor het dagelijks gebed, lezingen en
+        gemeenschapsactiviteiten.</p>
+
+        <h2>De rol van Al-Ghofraan</h2>
+        <p>Al-Ghofraan is de da'wahcommissie binnen Moskee El Mouahidin.
+        Wij richten ons op het verspreiden van islamitische kennis, het
+        organiseren van onderwijs en activiteiten, en het verbinden van
+        de moslimgemeenschap in Den Haag en omgeving.</p>
+
+        <h2>Gebed, kennis en gemeenschap</h2>
+        <p>De moskee biedt de vijf dagelijkse gebeden en het
+        vrijdaggebed. Daarnaast organiseert Al-Ghofraan, als
+        da'wahcommissie van Moskee El Mouahidin, lezingen, cursussen
+        en activiteiten voor jong en oud &mdash; gericht op kennis,
+        geloof en gemeenschap.</p>
+
+        <h2>Onderwijs en activiteiten</h2>
+        <p>Vanuit Al-Ghofraan organiseren wij wekelijkse lezingen,
+        islamitische cursussen (Tawheed, Fiqh, Arabisch,
+        Qur'aanrecitatie) en speciale jeugdprogramma's. Een actueel
+        overzicht vindt u op <a href="/agenda">de agenda-pagina</a>
+        en bij <a href="/onderwijs">onderwijs</a>.</p>
+
+        <h2>Locatie en contact</h2>
+        <p>Moskee El Mouahidin bevindt zich in Den Haag. Voor het
+        bezoekadres, openingstijden en contactgegevens verwijzen wij
+        u naar <a href="/contact">onze contactpagina</a>.</p>
+      `.trim(),
+      seo_title:       "Onze moskee — Moskee El Mouahidin",
+      seo_description:
+        "Al-Ghofraan is de da'wahcommissie van Moskee El Mouahidin in Den Haag. " +
+        "Lees meer over onze moskee en gemeenschap.",
+      status:          "published",
+    },
   ];
 
   for (const page of pages) {

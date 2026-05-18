@@ -162,6 +162,9 @@ export interface PageContent {
   icon?: string | null;
   /** Optionele achtergrondafbeelding voor de page-hero (UUID uit directus_files). */
   hero_background_image?: string | { id?: string } | null;
+  /** Optioneel logo van een externe organisatie (UUID uit directus_files).
+   *  Wordt momenteel alleen gerenderd op slug=onze-moskee (logo Moskee El Mouahidin). */
+  mosque_logo?: string | { id?: string } | null;
 }
 
 // ─── faq_items ───────────────────────────────────────────────
