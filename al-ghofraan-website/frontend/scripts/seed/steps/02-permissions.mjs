@@ -26,6 +26,12 @@ const COLLECTIONS = [
   // /gebedstijden/overzicht gelezen. Filter op published; show_on_calendar
   // wordt apart afgedwongen in `getPrayerCalendarHighlights`.
   { collection: "prayer_calendar_highlights", filter: { status: { _eq: "published" } } },
+  // Delivery daily-hadith — public read alleen voor published + active items.
+  // Filter zorgt dat draft of inactive hadiths niet uitlekken.
+  {
+    collection: "daily_hadiths",
+    filter: { _and: [{ status: { _eq: "published" } }, { active: { _eq: true } }] },
+  },
   // BEWUST GEEN public-permissies voor `registrations`, `donations` en
   // `contact_messages`: die routes schrijven server-side via DIRECTUS_TOKEN.
   { collection: "directus_files",     filter: null },

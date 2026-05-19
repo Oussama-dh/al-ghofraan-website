@@ -210,6 +210,11 @@ export interface SiteSettings {
   homepage_whatsapp_cta_description?: string | null;
   homepage_whatsapp_cta_button_label?: string | null;
   homepage_whatsapp_cta_url?: string | null;
+  /** Delivery contact-maps — kaart op contactpagina. Frontend valideert URLs. */
+  contact_maps_enabled?: boolean | null;
+  contact_maps_embed_url?: string | null;
+  contact_maps_place_url?: string | null;
+  contact_address_label?: string | null;
   social_links?: {
     facebook?: string;
     instagram?: string;
@@ -688,6 +693,15 @@ export interface Video {
   show_on_homepage?: boolean | null;
   /** Volgorde op homepage. Lager = eerder. */
   homepage_sort?: number | null;
+  /**
+   * Delivery youtube-import — provenance + dedup-velden.
+   * Worden gevuld door scripts/import-youtube-videos.mjs.
+   * Mogen leeg blijven voor handmatig aangemaakte rijen.
+   */
+  youtube_video_id?: string | null;
+  thumbnail_url?:    string | null;
+  imported_from?:    string | null;
+  imported_at?:      string | null;
 }
 
 // ─── contact_messages ────────────────────────────────────────
@@ -817,6 +831,25 @@ export interface PrayerCalendarHighlight {
   created_at?: string | null;
 }
 
+// ─── daily_hadiths ───────────────────────────────────────────
+export interface DailyHadith {
+  id: number;
+  status: "draft" | "published" | "archived";
+  active: boolean;
+  title: string;
+  arabic_text?: string | null;
+  /** Verplicht voor public-rendering. */
+  translation_nl: string;
+  source?: string | null;
+  /** Authenticiteit, bv. "Sahih", "Hasan". */
+  grade?: string | null;
+  explanation_short?: string | null;
+  /** Optionele datum (alleen ter administratie). */
+  display_date?: string | null;
+  sort?: number | null;
+  created_at?: string | null;
+}
+
 // ─── SDK Schema ──────────────────────────────────────────────
 export interface DirectusSchema {
   activities: Activity[];
@@ -840,6 +873,7 @@ export interface DirectusSchema {
   contact_subjects: ContactSubject[];
   article_categories: ArticleCategory[];
   video_categories: VideoCategory[];
+  daily_hadiths: DailyHadith[];
   education_categories: EducationCategory[];
   vacancies: Vacancy[];
   prayer_calendar_highlights: PrayerCalendarHighlight[];

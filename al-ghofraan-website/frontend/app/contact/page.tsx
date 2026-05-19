@@ -5,6 +5,7 @@ import Container         from "@/components/ui/Container";
 import PageHero          from "@/components/sections/PageHero";
 import { Icon }          from "@/lib/icons";
 import ContactForm       from "@/components/contact/ContactForm";
+import ContactMap        from "@/components/contact/ContactMap";
 import {
   getPageContent,
   getSiteSettings,
@@ -127,6 +128,16 @@ export default async function ContactPage() {
                   Stuur ons een WhatsApp
                 </a>
               )}
+
+              {/* Delivery contact-maps — kaart onder de gegevens.
+                  Self-guarded: rendert niets als enabled=false of
+                  embed_url niet op de whitelist staat. */}
+              <ContactMap
+                enabled={settings?.contact_maps_enabled}
+                embedUrl={settings?.contact_maps_embed_url}
+                placeUrl={settings?.contact_maps_place_url}
+                addressLabel={settings?.contact_address_label}
+              />
             </div>
 
             {/* Rechter kolom — formulier */}

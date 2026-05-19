@@ -5,6 +5,7 @@ import HeroSection           from "@/components/sections/HeroSection";
 import CTASection            from "@/components/sections/CTASection";
 import AyahBlock             from "@/components/sections/AyahBlock";
 import WhatsappCtaBlock      from "@/components/sections/WhatsappCtaBlock";
+import DailyHadithBlock      from "@/components/sections/DailyHadithBlock";
 import SectionTitle          from "@/components/ui/SectionTitle";
 import ActivityCard          from "@/components/ui/ActivityCard";
 import Container             from "@/components/ui/Container";
@@ -21,6 +22,7 @@ import {
   getSiteSettings,
   getPageSectionsWithItems,
   getHomepageVideos,
+  getActiveDailyHadith,
   resolveIconKey,
   ICON_KEYS,
 } from "@/lib/directus";
@@ -73,13 +75,14 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [page, activities, iconMap, sections, homepageVideos, settings] = await Promise.all([
+  const [page, activities, iconMap, sections, homepageVideos, settings, hadith] = await Promise.all([
     getPageContent("home"),
     getUpcomingActivities(6),
     getIconSettings(),
     getPageSectionsWithItems("home"),
     getHomepageVideos(3),
     getSiteSettings(),
+    getActiveDailyHadith(),
   ]);
 
   const dateIcon        = resolveIconKey(iconMap, ICON_KEYS.activityDate);
@@ -140,6 +143,10 @@ export default async function HomePage() {
           </Container>
         </section>
       ) : null}
+
+      {/* Delivery daily-hadith — Hadith van de dag, direct onder de ayah.
+          Self-guarded: rendert niets zonder actieve hadith of vertaling. */}
+      <DailyHadithBlock hadith={hadith} />
 
       {/* Body uit page_content (rich text) */}
       {page?.body && (

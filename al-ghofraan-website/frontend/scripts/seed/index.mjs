@@ -42,6 +42,9 @@ import { setupHomepageCtaContent }  from "./steps/39-homepage-cta-content.mjs";
 import { setupPageSectionsAyahWhatsapp } from "./steps/40-page-sections-ayah-whatsapp.mjs";
 import { setupRecurringActivities }      from "./steps/41-recurring-activities.mjs";
 import { setupOccurrencePickerToggle }   from "./steps/42-occurrence-picker-toggle.mjs";
+import { setupVideoImportFields }        from "./steps/43-video-import-fields.mjs";
+import { setupContactMapsFields }        from "./steps/44-contact-maps-fields.mjs";
+import { setupDailyHadiths }             from "./steps/45-daily-hadiths.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -139,6 +142,9 @@ try {
   await setupPageSectionsAyahWhatsapp(client); // 40. page_sections type-uitbreiding + ayah-velden + voorbeeld-rijen (delivery sections)
   await setupRecurringActivities(client);      // 41. recurring-velden op activities + occurrence-velden op registrations (delivery recurring)
   await setupOccurrencePickerToggle(client);   // 42. show_occurrence_picker boolean toggle op activities (delivery recurring-ux)
+  await setupVideoImportFields(client);        // 43. YouTube-import velden op videos (delivery youtube-import)
+  await setupContactMapsFields(client);        // 44. Maps-velden op site_settings (delivery contact-maps)
+  await setupDailyHadiths(client);             // 45. daily_hadiths collectie + sample (delivery daily-hadith)
 
   console.log("");
   console.log("╔══════════════════════════════════════════════════════╗");

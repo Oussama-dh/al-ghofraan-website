@@ -31,6 +31,7 @@ import type {
   ContactSubject,
   Vacancy,
   PrayerCalendarHighlight,
+  DailyHadith,
 } from "@/types/directus";
 
 const DIRECTUS_INTERNAL_URL =
@@ -677,6 +678,8 @@ const VIDEO_FIELDS = [
   "id", "status", "title", "description", "youtube_url",
   "sort", "featured", "published_at", "created_at",
   "show_on_homepage", "homepage_sort",
+  // Delivery youtube-import — gebruikt door cards voor thumbnails.
+  "youtube_video_id", "thumbnail_url",
   // M2O
   "category_ref.id", "category_ref.name", "category_ref.slug",
   "category_ref.status", "category_ref.active",
@@ -1178,6 +1181,44 @@ export const ICON_FALLBACKS: Record<string, string> = {
 
 export function resolveIconKey(map: Map<string, string>, key: string): string {
   return map.get(key) || ICON_FALLBACKS[key] || "info";
+}
+
+/**
+ * Delivery daily-hadith — haalt de hadith op die op de homepage getoond
+ * moet worden. Returnt de eerste actieve, gepubliceerde rij gesorteerd
+ * op `sort` (lager = eerder). Null als er geen actieve hadith is.
+ *
+ * Public-read permissions worden afgedwongen door Directus zelf
+ * (filter: status=published EN active=true, ingesteld in stap 02).
+ * Deze server-side filter is een extra laag voor het geval permissions
+ * niet zijn uitgevoerd / overschreven.
+ */
+export async function getActiveDailyHadith(): Promise<DailyHadith | null> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("daily_hadiths", {
+          filter: {
+            _and: [
+              { status: { _eq: "published" } },
+              { active: { _eq: true } },
+            ],
+          } as never,
+          sort:  ["sort"],
+          limit: 1,
+          fields: [
+            "id", "status", "active",
+            "title", "arabic_text", "translation_nl",
+            "source", "grade", "explanation_short",
+            "display_date", "sort", "created_at",
+          ],
+        }),
+      );
+      return ((result as DailyHadith[])[0]) ?? null;
+    },
+    "getActiveDailyHadith",
+    null,
+  );
 }
 
 export { readItems, readSingleton };

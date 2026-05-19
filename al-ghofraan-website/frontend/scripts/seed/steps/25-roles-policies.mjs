@@ -48,6 +48,8 @@ const ROLE_DEFS = [
       "activities", "faq_items",
       "page_sections", "page_section_items",
       "navigation_items",
+      // Delivery daily-hadith — content-beheerder mag hadiths beheren.
+      "daily_hadiths",
     ],
     read: [
       "site_settings", "directus_files",
