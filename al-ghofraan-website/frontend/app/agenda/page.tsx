@@ -1,6 +1,8 @@
 // app/agenda/page.tsx
 
 import type { Metadata }  from "next";
+import Link              from "next/link";
+import { CalendarRange } from "lucide-react";
 import PageHero          from "@/components/sections/PageHero";
 import ActivityCard       from "@/components/ui/ActivityCard";
 import Container          from "@/components/ui/Container";
@@ -13,6 +15,11 @@ import {
   ICON_KEYS,
 } from "@/lib/directus";
 import type { Activity }  from "@/types/directus";
+import {
+  isRecurringActivity,
+  getNextActivityOccurrence,
+  describeRecurrence,
+} from "@/lib/recurrence";
 
 export const dynamic = "force-dynamic";
 
@@ -50,8 +57,22 @@ export default async function AgendaPage() {
   const locationIcon = resolveIconKey(iconMap, ICON_KEYS.activityLocation);
 
   const now      = new Date();
-  const upcoming = activities.filter((a) => new Date(a.start_date) >= now);
-  const past     = activities.filter((a) => new Date(a.start_date) <  now);
+
+  // Delivery recurring — een terugkerende activiteit telt als "upcoming"
+  // zolang er nog een occurrence in de toekomst ligt. Niet-recurring valt
+  // terug op het oude criterium (start_date >= now).
+  const upcoming: Activity[] = [];
+  const past:     Activity[] = [];
+  for (const a of activities) {
+    if (isRecurringActivity(a)) {
+      const next = getNextActivityOccurrence(a, now);
+      if (next) upcoming.push(a);
+      else      past.push(a);
+    } else {
+      if (new Date(a.start_date) >= now) upcoming.push(a);
+      else                                past.push(a);
+    }
+  }
 
   return (
     <>
@@ -64,6 +85,18 @@ export default async function AgendaPage() {
 
       <section className="bg-sand-50 py-12 lg:py-16">
         <Container>
+          {/* Delivery recurring — knop naar de nieuwe overzichtspagina,
+              waar bezoekers alle occurrences chronologisch zien. */}
+          <div className="mb-8 flex justify-end">
+            <Link
+              href="/agenda/overzicht"
+              className="inline-flex items-center gap-2 rounded-full border border-sand-300 bg-white px-4 py-2 font-body text-sm text-ink hover:border-slate-mosque hover:text-slate-mosque transition-colors"
+            >
+              <CalendarRange size={16} strokeWidth={2} />
+              Bekijk volledige agenda
+            </Link>
+          </div>
+
           {upcoming.length > 0 ? (
             <div className="mb-16">
               <h2 className="font-display text-2xl text-ink mb-8 flex items-center gap-3">
@@ -71,14 +104,23 @@ export default async function AgendaPage() {
                 Aankomende activiteiten
               </h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {upcoming.map((activity) => (
-                  <ActivityCard
-                    key={activity.id}
-                    activity={activity}
-                    dateIcon={dateIcon}
-                    locationIcon={locationIcon}
-                  />
-                ))}
+                {upcoming.map((activity) => {
+                  // Voor terugkerende activiteiten: toon de eerstvolgende
+                  // occurrence-datum ipv de (vaak verouderde) start_date
+                  // van het hoofdrecord.
+                  const recurring = isRecurringActivity(activity);
+                  const nextOcc   = recurring ? getNextActivityOccurrence(activity, now) : null;
+                  return (
+                    <ActivityCard
+                      key={activity.id}
+                      activity={activity}
+                      dateIcon={dateIcon}
+                      locationIcon={locationIcon}
+                      overrideStart={nextOcc?.start}
+                      recurrenceLabel={recurring ? describeRecurrence(activity) : undefined}
+                    />
+                  );
+                })}
               </div>
             </div>
           ) : (

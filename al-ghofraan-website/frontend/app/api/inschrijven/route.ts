@@ -52,6 +52,7 @@ import {
   notifyEducationRegistrationVisitor,
 } from "@/lib/server/notifications";
 import { getSiteUrl } from "@/lib/utils";
+import { generateActivityOccurrences } from "@/lib/recurrence";
 import type {
   Activity,
   EducationProgram,
@@ -84,6 +85,14 @@ interface ActivityBody {
   phone?:      string;
   age?:        number;
   notes?:      string;
+  /**
+   * Delivery recurring — gekozen occurrence (alleen voor terugkerende
+   * activiteiten). Server valideert dat de waarden overeenkomen met een
+   * gegenereerde occurrence (anti-spoofing).
+   */
+  occurrence_start?: string;
+  occurrence_end?:   string;
+  occurrence_label?: string;
 }
 
 interface EducationStudent {
@@ -187,6 +196,43 @@ function parseActivity(raw: Record<string, unknown>, sourceSlug: string): Parsed
       return { ok: false, error: "Opmerkingen zijn te lang (max 2000 tekens)." };
     }
     out.notes = notes;
+  }
+
+  // Delivery recurring — occurrence-velden (optioneel hier; aanwezigheid
+  // wordt na findSource() afgedwongen voor terugkerende activiteiten).
+  // Parser doet alleen vormvalidatie. Anti-spoofing (match met
+  // gegenereerde occurrence) gebeurt na findSource.
+  const occStart = raw.occurrence_start;
+  const occEnd   = raw.occurrence_end;
+  const occLabel = raw.occurrence_label;
+  const occAnyPresent =
+    (typeof occStart === "string" && occStart.trim()) ||
+    (typeof occEnd   === "string" && occEnd.trim())   ||
+    (typeof occLabel === "string" && occLabel.trim());
+  if (occAnyPresent) {
+    if (typeof occStart !== "string" || typeof occEnd !== "string") {
+      return { ok: false, error: "Onvolledige occurrence-gegevens." };
+    }
+    if (occStart.length > 64 || occEnd.length > 64) {
+      return { ok: false, error: "Ongeldig occurrence-datumformaat." };
+    }
+    const ds = new Date(occStart);
+    const de = new Date(occEnd);
+    if (Number.isNaN(ds.getTime()) || Number.isNaN(de.getTime())) {
+      return { ok: false, error: "Ongeldig occurrence-datumformaat." };
+    }
+    if (de.getTime() <= ds.getTime()) {
+      return { ok: false, error: "Occurrence-einddatum moet na startdatum liggen." };
+    }
+    out.occurrence_start = ds.toISOString();
+    out.occurrence_end   = de.toISOString();
+    if (typeof occLabel === "string" && occLabel.trim()) {
+      const label = occLabel.trim();
+      if (label.length > 200) {
+        return { ok: false, error: "Occurrence-label is te lang." };
+      }
+      out.occurrence_label = label;
+    }
   }
 
   return { ok: true, mode: "activity", data: out };
@@ -334,6 +380,23 @@ interface SourceData {
   maxRegistrations: number | null;
   requireAge:       boolean;
   minimumAge:       number | null;
+  /**
+   * Delivery recurring — alleen ingevuld voor activity-source. Bevat de
+   * recurring-velden zodat de POST-handler na findSource() kan beslissen
+   * of een occurrence verplicht is en kan valideren tegen gegenereerde
+   * occurrences. Voor education-source: null.
+   *
+   * Delivery recurring-ux — bevat ook show_occurrence_picker zodat de
+   * POST-handler weet of de bezoeker een datum had moeten kiezen of
+   * dat de server zelf de eerstvolgende moet picken.
+   */
+  activityRow: Pick<
+    Activity,
+    | "start_date" | "end_date"
+    | "is_recurring" | "recurrence_type"
+    | "recurrence_interval" | "recurrence_until" | "recurrence_weekday"
+    | "show_occurrence_picker"
+  > | null;
 }
 
 async function findSource(
@@ -351,6 +414,12 @@ async function findSource(
             "max_registrations", "require_age",
             // Delivery 20 — minimumleeftijd.
             "minimum_age",
+            // Delivery recurring — voor occurrence-validatie + datums.
+            "start_date", "end_date",
+            "is_recurring", "recurrence_type", "recurrence_interval",
+            "recurrence_until", "recurrence_weekday",
+            // Delivery recurring-ux — picker-toggle.
+            "show_occurrence_picker",
           ],
           limit:  1,
         }),
@@ -386,6 +455,16 @@ async function findSource(
           maxRegistrations:       max,
           requireAge:             row.require_age === true,
           minimumAge:             minAge,
+          activityRow: {
+            start_date:             row.start_date,
+            end_date:               row.end_date ?? null,
+            is_recurring:           row.is_recurring ?? null,
+            recurrence_type:        row.recurrence_type ?? null,
+            recurrence_interval:    row.recurrence_interval ?? null,
+            recurrence_until:       row.recurrence_until ?? null,
+            recurrence_weekday:     row.recurrence_weekday ?? null,
+            show_occurrence_picker: row.show_occurrence_picker ?? null,
+          },
         },
       };
     } else {
@@ -423,6 +502,8 @@ async function findSource(
           requireAge:       false,
           // Delivery 20 — education heeft geen minimum_age.
           minimumAge:       null,
+          // Delivery recurring — education heeft geen recurring-flow.
+          activityRow:      null,
         },
       };
     }
@@ -529,6 +610,85 @@ export async function POST(request: Request) {
       );
     }
 
+    // ─── Delivery recurring — occurrence enforcement ─────────
+    //
+    // Voor terugkerende activiteiten:
+    //   - occurrence_start + occurrence_end zijn VERPLICHT (HTTP 400).
+    //   - de waarden MOETEN matchen met een door de server gegenereerde
+    //     occurrence (anti-spoofing — voorkomt dat iemand zich inschrijft
+    //     voor een willekeurige datum die niet in de serie zit).
+    //   - de occurrence moet in de toekomst liggen (anders zou je je voor
+    //     een al voorbij gegane occurrence kunnen inschrijven).
+    //   - occurrence_label wordt door de server vervangen door het exacte
+    //     gegenereerde label (zo blijft de schrijfwijze consistent in
+    //     mails/admin ongeacht wat de client meegaf).
+    //
+    // Voor eenmalige activiteiten: occurrence-velden worden GENEGEERD —
+    // de DB-rij krijgt null voor de occurrence-kolommen.
+    const isRecurringActivityRecord =
+      src.activityRow?.is_recurring === true &&
+      (src.activityRow?.recurrence_type === "weekly" ||
+       src.activityRow?.recurrence_type === "monthly");
+
+    let validatedOccurrence: { start: string; end: string; label: string } | null = null;
+
+    if (isRecurringActivityRecord) {
+      // Genereer occurrences server-side (bron van waarheid voor zowel
+      // anti-spoof als auto-pick).
+      let serverOccurrences;
+      try {
+        serverOccurrences = generateActivityOccurrences(src.activityRow!, { from: new Date() });
+      } catch (genErr) {
+        console.error("[inschrijven] occurrence-generatie mislukt:", genErr);
+        return NextResponse.json(
+          { error: "Kon de occurrences voor deze activiteit niet bepalen." },
+          { status: 500 },
+        );
+      }
+
+      if (serverOccurrences.length === 0) {
+        return NextResponse.json(
+          { error: "Er zijn geen toekomstige momenten meer voor deze activiteit." },
+          { status: 400 },
+        );
+      }
+
+      const showPicker = src.activityRow?.show_occurrence_picker === true;
+
+      if (body.occurrence_start && body.occurrence_end) {
+        // Bezoeker stuurde een keuze mee → anti-spoof match (geldt voor
+        // zowel show_picker=true als false; als false-modus client toch
+        // een datum meestuurt, valideren we 'm alsnog tegen de serie).
+        const match = serverOccurrences.find((o) => o.start === body.occurrence_start);
+        if (!match) {
+          return NextResponse.json(
+            { error: "De gekozen datum is niet geldig voor deze activiteit." },
+            { status: 400 },
+          );
+        }
+        validatedOccurrence = { start: match.start, end: match.end, label: match.label };
+      } else {
+        // Geen occurrence in body.
+        if (showPicker) {
+          // Picker stond aan — bezoeker had moeten kiezen.
+          return NextResponse.json(
+            { error: "Kies een datum voor deze terugkerende activiteit." },
+            { status: 400 },
+          );
+        }
+        // Delivery recurring-ux — show_occurrence_picker=false:
+        // server pickt de eerstvolgende occurrence automatisch.
+        // Dit is de UX waarbij bezoeker geen datumkeuze ziet maar de
+        // inschrijving wel aan een concrete datum hangt.
+        const firstOccurrence = serverOccurrences[0];
+        validatedOccurrence = {
+          start: firstOccurrence.start,
+          end:   firstOccurrence.end,
+          label: firstOccurrence.label,
+        };
+      }
+    }
+
     // ─── Delivery 19 — Capaciteit-check ─────────────────────
     // Tel het aantal bestaande activity-registraties voor dit specifieke
     // item. Bij `max_registrations === null` slaan we de query over.
@@ -543,13 +703,20 @@ export async function POST(request: Request) {
     // Voor moskee-schaal acceptabel; gedocumenteerd in CHANGES.md.
     if (src.maxRegistrations !== null) {
       try {
+        // Delivery recurring — bij terugkerende activiteit telt
+        // max_registrations PER OCCURRENCE. We filteren dan ook op
+        // occurrence_start zodat elke datum een eigen capaciteit krijgt.
+        const filter: Record<string, unknown> = {
+          type:              { _eq: "activity" },
+          source_collection: { _eq: "activities" },
+          source_id:         { _eq: src.sourceId },
+        };
+        if (validatedOccurrence) {
+          filter.occurrence_start = { _eq: validatedOccurrence.start };
+        }
         const existing = await directusServer.request(
           readItems("registrations", {
-            filter: {
-              type:              { _eq: "activity" },
-              source_collection: { _eq: "activities" },
-              source_id:         { _eq: src.sourceId },
-            } as never,
+            filter: filter as never,
             fields: ["id"],
             limit:  -1,
           }),
@@ -557,7 +724,11 @@ export async function POST(request: Request) {
         const count = (existing as Array<{ id: unknown }>).length;
         if (count >= src.maxRegistrations) {
           return NextResponse.json(
-            { error: "Deze activiteit zit vol. Inschrijven is niet meer mogelijk." },
+            {
+              error: validatedOccurrence
+                ? "Deze datum zit vol. Kies een andere datum."
+                : "Deze activiteit zit vol. Inschrijven is niet meer mogelijk.",
+            },
             { status: 409 },
           );
         }
@@ -592,6 +763,10 @@ export async function POST(request: Request) {
           // QR-1 — Unieke token voor QR-code check-in (alleen activity).
           // Bevat geen persoonsgegevens, alleen lookup-key.
           check_in_token:    checkInToken,
+          // Delivery recurring — occurrence (alleen ingevuld bij terugkerende).
+          occurrence_start:  validatedOccurrence?.start ?? null,
+          occurrence_end:    validatedOccurrence?.end   ?? null,
+          occurrence_label:  validatedOccurrence?.label ?? null,
         } as never),
       );
 
@@ -608,6 +783,7 @@ export async function POST(request: Request) {
           age:           body.age ?? null,
           notes:         body.notes ?? null,
           status:        "new",
+          occurrenceLabel: validatedOccurrence?.label ?? null,
         });
       } catch (notifyErr) {
         console.warn("[inschrijven] activity-notificatie overgeslagen:", notifyErr);
@@ -632,6 +808,7 @@ export async function POST(request: Request) {
           notes:         body.notes ?? null,
           checkInToken,
           siteUrl:       getSiteUrl(),
+          occurrenceLabel: validatedOccurrence?.label ?? null,
         });
       } catch (visitorErr) {
         console.warn("[inschrijven] activity-bezoekersmail overgeslagen:", visitorErr);

@@ -14,6 +14,20 @@ interface ActivityCardProps {
   /** Iconen uit icon_settings — keys: activity_date_icon / activity_location_icon */
   dateIcon?:     string;
   locationIcon?: string;
+  /**
+   * Delivery recurring — toon een occurrence-datum ipv `activity.start_date`.
+   * Wordt gebruikt op de agenda-overzichtspagina waar één terugkerende
+   * activiteit als meerdere kaarten verschijnt (één per toekomstige
+   * occurrence). Format: ISO timestamp.
+   *
+   * Default (undefined): gebruik `activity.start_date` (huidig gedrag).
+   */
+  overrideStart?: string;
+  /**
+   * Delivery recurring — toon een badge ("Wekelijks", "Maandelijks", ...).
+   * Default (leeg/undefined): geen badge.
+   */
+  recurrenceLabel?: string;
 }
 
 export default function ActivityCard({
@@ -22,14 +36,17 @@ export default function ActivityCard({
   className,
   dateIcon     = "calendar",
   locationIcon = "map-pin",
+  overrideStart,
+  recurrenceLabel,
 }: ActivityCardProps) {
 const imageId =
   typeof activity.image === "string" ? activity.image : activity.image?.id;
 
 const imageUrl = imageId ? getAssetUrl(imageId) : null;
-  const startDate = formatDate(activity.start_date, "d MMMM yyyy");
-  const dayNum    = formatDate(activity.start_date, "d");
-  const monthAbbr = formatDate(activity.start_date, "MMM");
+  const displayStart = overrideStart || activity.start_date;
+  const startDate = formatDate(displayStart, "d MMMM yyyy");
+  const dayNum    = formatDate(displayStart, "d");
+  const monthAbbr = formatDate(displayStart, "MMM");
 
   return (
     <Link
@@ -100,6 +117,16 @@ const imageUrl = imageId ? getAssetUrl(imageId) : null;
               title={`Minimumleeftijd: ${activity.minimum_age} jaar`}
             >
               {activity.minimum_age}+
+            </span>
+          )}
+          {/* Delivery recurring — badge voor terugkerende activiteiten.
+              Geen icoon, alleen tekst om de meta-rij rustig te houden. */}
+          {recurrenceLabel && (
+            <span
+              className="inline-flex items-center rounded-md bg-slate-mosque/10 text-slate-mosque px-1.5 py-0.5 text-xs font-medium border border-slate-mosque/20"
+              title="Terugkerende activiteit"
+            >
+              {recurrenceLabel}
             </span>
           )}
         </div>

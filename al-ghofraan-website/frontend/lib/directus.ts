@@ -116,6 +116,9 @@ export async function getActivities(options?: {
             "registration_extra_note",
             // Delivery 21 — minimum_age tonen op /agenda overzichtskaart.
             "minimum_age",
+            // Delivery recurring — voor occurrence-generatie + badges.
+            "is_recurring", "recurrence_type", "recurrence_interval",
+            "recurrence_until", "recurrence_weekday", "show_occurrence_picker",
           ],
         })
       );
@@ -130,11 +133,31 @@ export async function getUpcomingActivities(limit = 6): Promise<Activity[]> {
   return safe(
     async () => {
       const today = new Date().toISOString().split("T")[0];
+      // Delivery recurring — filter combineert twee gevallen:
+      //   (a) eenmalige activiteiten met start_date >= vandaag (huidig gedrag), OF
+      //   (b) terugkerende activiteiten waarvan de serie nog niet voorbij is
+      //       (recurrence_until is leeg → frontend gebruikt 6-maanden-fallback;
+      //        of recurrence_until >= vandaag).
+      // Zonder (b) zou een wekelijkse activiteit met start_date in het
+      // verleden onterecht uit de upcoming-lijst vallen.
       const result = await directusServer.request(
         readItems("activities", {
           filter: {
-            status:     { _eq: "published" },
-            start_date: { _gte: today },
+            status: { _eq: "published" },
+            _or: [
+              { start_date: { _gte: today } },
+              {
+                _and: [
+                  { is_recurring: { _eq: true } },
+                  {
+                    _or: [
+                      { recurrence_until: { _null: true } },
+                      { recurrence_until: { _gte: today } },
+                    ],
+                  },
+                ],
+              },
+            ],
           } as never,
           sort:   ["start_date"],
           limit,
@@ -147,6 +170,9 @@ export async function getUpcomingActivities(limit = 6): Promise<Activity[]> {
             "registration_extra_note",
             // Delivery 21 — minimum_age tonen op homepage upcoming-cards.
             "minimum_age",
+            // Delivery recurring — voor occurrence-generatie + badges.
+            "is_recurring", "recurrence_type", "recurrence_interval",
+            "recurrence_until", "recurrence_weekday", "show_occurrence_picker",
           ],
         })
       );

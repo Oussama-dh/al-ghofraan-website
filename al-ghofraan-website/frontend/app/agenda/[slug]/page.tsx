@@ -18,6 +18,12 @@ import {
 } from "@/lib/directus";
 import { formatDate, getSiteUrl } from "@/lib/utils";
 import { buildGoogleCalendarUrlForActivity } from "@/lib/activityCalendar";
+import {
+  isRecurringActivity,
+  generateActivityOccurrences,
+  describeRecurrence,
+} from "@/lib/recurrence";
+import ActivityOccurrenceSection from "@/components/activity/ActivityOccurrenceSection";
 
 interface Props {
   params: { slug: string };
@@ -120,6 +126,31 @@ export default async function ActivityDetailPage({ params }: Props) {
   const ageRequiredForForm =
     activity.require_age === true || minimumAge !== null;
 
+  // ─── Delivery recurring — occurrences voor terugkerende activiteiten ──
+  //
+  // Voor terugkerende activiteiten genereren we hier server-side de
+  // toekomstige occurrences en geven die door aan een client-component
+  // die occurrence-keuze + agenda-export + inschrijfformulier afhandelt.
+  //
+  // Capaciteit-check voor recurring: maxRegistrations geldt PER OCCURRENCE.
+  // De UI toont voor recurring GEEN "Nog X plekken"-label (zou een fetch
+  // per occurrence vereisen). De server-side check in /api/inschrijven
+  // valideert wel de capaciteit voor de gekozen occurrence bij submit.
+  const recurring        = isRecurringActivity(activity);
+  const occurrences      = recurring
+    ? generateActivityOccurrences(activity, { from: new Date() })
+    : [];
+  const recurrenceLabel  = recurring ? describeRecurrence(activity) : "";
+  // Delivery recurring-ux — picker is alleen relevant voor recurring.
+  // Default behavior is "verbergen" (picker = false) zodat bestaande
+  // activiteiten geen visuele wijziging tonen na deploy.
+  const showOccurrencePicker = recurring && activity.show_occurrence_picker === true;
+  // Eerstvolgende occurrence — gebruikt door beide recurring-takken:
+  //   showPicker=true  → als default-selectie in de picker
+  //   showPicker=false → de occurrence die de pagina presenteert + die
+  //                       de server uiteindelijk vastpint bij inschrijving
+  const firstOccurrence  = recurring && occurrences.length > 0 ? occurrences[0] : null;
+
   // ─── JSON-LD Event schema (delivery 26) ──────────────────────────
   // Voor Google's Rich Results en zoekresultaat-cards. Alleen renderen
   // als de verplichte velden (name, start_date) aanwezig zijn — bij
@@ -197,11 +228,18 @@ export default async function ActivityDetailPage({ params }: Props) {
             <div className="flex flex-wrap gap-4 text-sand/80 text-sm font-body">
               <span className="flex items-center gap-2">
                 <Icon name={dateIcon} className="w-4 h-4" />
-                {formatDate(activity.start_date, "EEEE d MMMM yyyy")}
+                {recurring && occurrences.length > 0
+                  ? `Eerstvolgend: ${occurrences[0].label}`
+                  : formatDate(activity.start_date, "EEEE d MMMM yyyy")}
               </span>
-              {activity.end_date && (
+              {!recurring && activity.end_date && (
                 <span className="flex items-center gap-2">
                   t/m {formatDate(activity.end_date, "d MMMM yyyy")}
+                </span>
+              )}
+              {recurring && recurrenceLabel && (
+                <span className="inline-flex items-center gap-2 rounded-full bg-white/10 text-white px-2.5 py-0.5 text-xs font-medium border border-white/20">
+                  {recurrenceLabel}
                 </span>
               )}
               {activity.location && (
@@ -247,68 +285,212 @@ export default async function ActivityDetailPage({ params }: Props) {
             dangerouslySetInnerHTML={{ __html: activity.description || "" }}
           />
 
-          {/* Agenda-toevoegen knop — boven het inschrijfformulier zodat
-              bezoekers ook zonder inschrijving de datum kunnen wegzetten. */}
-          <div className="mt-6">
-            <AddToCalendarButton
-              slug={activity.slug}
-              googleCalendarUrl={buildGoogleCalendarUrlForActivity(activity)}
-            />
-          </div>
-
-          {activity.registration_enabled && (
-            <div className="mt-10">
-              {isFull ? (
-                // ── Vol-melding (geen formulier) ────────────────────
-                <div
-                  role="status"
-                  className="rounded-2xl border border-sand-200 bg-white p-6 lg:p-8 text-center"
-                >
-                  <h2 className="font-display text-xl text-ink mb-2">
-                    Deze activiteit zit vol
-                  </h2>
-                  <p className="font-body text-sm text-taupe-dark max-w-md mx-auto">
-                    Inschrijven is niet meer mogelijk. Houd onze website in
-                    de gaten voor nieuwe activiteiten.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {/* Pills boven het formulier — meerdere mogelijk, naast
-                      elkaar (capaciteit + minimumleeftijd). */}
-                  {(spotsLeftLabel || minimumAgeLabel) && (
-                    <div className="mb-4 flex flex-wrap gap-2">
-                      {spotsLeftLabel && (
-                        <div className="inline-flex items-center gap-2 rounded-full bg-slate-mosque/10 text-slate-mosque px-3 py-1 text-xs font-medium">
-                          <span aria-hidden>●</span>
-                          {spotsLeftLabel}
-                        </div>
-                      )}
-                      {minimumAgeLabel && (
-                        <div className="inline-flex items-center gap-2 rounded-full bg-taupe/15 text-taupe-dark px-3 py-1 text-xs font-medium">
-                          <span aria-hidden>●</span>
-                          {minimumAgeLabel}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <RegistrationForm
-                    type="activity"
-                    sourceSlug={activity.slug}
-                    sourceTitle={activity.title}
-                    targetGender={activity.target_gender ?? null}
-                    requireAge={ageRequiredForForm}
-                    contentTexts={{
-                      intro_title:     activity.registration_intro_title,
-                      intro_text:      activity.registration_intro_text,
-                      button_text:     activity.registration_button_text,
-                      success_message: activity.registration_success_message,
-                      extra_note:      activity.registration_extra_note,
-                    }}
-                  />
-                </>
-              )}
+          {recurring && showOccurrencePicker ? (
+            // ── Delivery recurring — terugkerende flow MET picker ─
+            //
+            // Eén client-component handelt occurrence-keuze, dynamische
+            // agenda-knop en inschrijfformulier af. We berekenen
+            // `showForm` server-side (registration_enabled + niet vol op
+            // hoofdrecord-niveau). Per-occurrence capaciteit wordt
+            // server-side gecontroleerd bij submit.
+            <div className="mt-6">
+              <ActivityOccurrenceSection
+                activity={{
+                  title:       activity.title,
+                  slug:        activity.slug,
+                  description: activity.description,
+                  location:    activity.location,
+                }}
+                occurrences={occurrences}
+                showForm={Boolean(activity.registration_enabled)}
+                formProps={{
+                  sourceSlug:   activity.slug,
+                  sourceTitle:  activity.title,
+                  targetGender: (activity.target_gender ?? null) as string | null,
+                  requireAge:   ageRequiredForForm,
+                  contentTexts: {
+                    intro_title:     activity.registration_intro_title,
+                    intro_text:      activity.registration_intro_text,
+                    button_text:     activity.registration_button_text,
+                    success_message: activity.registration_success_message,
+                    extra_note:      activity.registration_extra_note,
+                  },
+                }}
+              />
             </div>
+          ) : recurring && !showOccurrencePicker ? (
+            // ── Delivery recurring-ux — terugkerende flow ZONDER picker ─
+            //
+            // Bezoeker ziet geen "Kies een datum"-blok. De eerstvolgende
+            // occurrence wordt voor agenda-export en inschrijving gebruikt.
+            // Server pickt ook server-side de eerstvolgende bij submit
+            // (bron-van-waarheid; client-payload heeft geen occurrence).
+            //
+            // Edge case: geen toekomstige occurrences meer (serie afgelopen)
+            // → toon een nette melding ipv vol/leeg formulier. Inschrijving
+            // wordt onmogelijk gemaakt door agendaknop weg te laten.
+            !firstOccurrence ? (
+              <div className="mt-6 rounded-2xl border border-sand-200 bg-white p-6 lg:p-8 text-center">
+                <h2 className="font-display text-xl text-ink mb-2">
+                  Geen aankomende data gepland
+                </h2>
+                <p className="font-body text-sm text-taupe-dark max-w-md mx-auto">
+                  De serie van deze terugkerende activiteit is afgelopen of er
+                  zijn nog geen toekomstige momenten ingepland.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Agenda-toevoegen knop — voor de eerstvolgende occurrence.
+                    icsHref met query params; Google URL via synthetische
+                    activity-shape met occurrence-datums. */}
+                <div className="mt-6">
+                  <AddToCalendarButton
+                    slug={activity.slug}
+                    googleCalendarUrl={buildGoogleCalendarUrlForActivity({
+                      title:       activity.title,
+                      start_date:  firstOccurrence.start,
+                      end_date:    firstOccurrence.end,
+                      location:    activity.location,
+                      description: activity.description,
+                    })}
+                    icsHref={
+                      `/api/agenda/${encodeURIComponent(activity.slug)}/ics` +
+                      `?start=${encodeURIComponent(firstOccurrence.start)}` +
+                      `&end=${encodeURIComponent(firstOccurrence.end)}`
+                    }
+                  />
+                </div>
+
+                {activity.registration_enabled && (
+                  <div className="mt-10">
+                    {isFull ? (
+                      <div
+                        role="status"
+                        className="rounded-2xl border border-sand-200 bg-white p-6 lg:p-8 text-center"
+                      >
+                        <h2 className="font-display text-xl text-ink mb-2">
+                          Deze activiteit zit vol
+                        </h2>
+                        <p className="font-body text-sm text-taupe-dark max-w-md mx-auto">
+                          Inschrijven is niet meer mogelijk. Houd onze website in
+                          de gaten voor nieuwe activiteiten.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Informatieve banner — maakt zichtbaar voor welke
+                            datum de inschrijving geldt, ook al ziet bezoeker
+                            geen keuzeblok. */}
+                        <div className="mb-4 rounded-xl bg-slate-mosque/5 border border-slate-mosque/20 p-3 text-sm text-slate-mosque font-body">
+                          Uw inschrijving geldt voor de eerstvolgende datum:{" "}
+                          <strong>{firstOccurrence.label}</strong>.
+                        </div>
+
+                        {(spotsLeftLabel || minimumAgeLabel) && (
+                          <div className="mb-4 flex flex-wrap gap-2">
+                            {spotsLeftLabel && (
+                              <div className="inline-flex items-center gap-2 rounded-full bg-slate-mosque/10 text-slate-mosque px-3 py-1 text-xs font-medium">
+                                <span aria-hidden>●</span>
+                                {spotsLeftLabel}
+                              </div>
+                            )}
+                            {minimumAgeLabel && (
+                              <div className="inline-flex items-center gap-2 rounded-full bg-taupe/15 text-taupe-dark px-3 py-1 text-xs font-medium">
+                                <span aria-hidden>●</span>
+                                {minimumAgeLabel}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        <RegistrationForm
+                          type="activity"
+                          sourceSlug={activity.slug}
+                          sourceTitle={activity.title}
+                          targetGender={activity.target_gender ?? null}
+                          requireAge={ageRequiredForForm}
+                          contentTexts={{
+                            intro_title:     activity.registration_intro_title,
+                            intro_text:      activity.registration_intro_text,
+                            button_text:     activity.registration_button_text,
+                            success_message: activity.registration_success_message,
+                            extra_note:      activity.registration_extra_note,
+                          }}
+                          /* Geen occurrence prop — server pickt de eerstvolgende
+                             bij submit. Client kan geen datum spoofen. */
+                        />
+                      </>
+                    )}
+                  </div>
+                )}
+              </>
+            )
+          ) : (
+            <>
+              {/* Agenda-toevoegen knop — boven het inschrijfformulier zodat
+                  bezoekers ook zonder inschrijving de datum kunnen wegzetten. */}
+              <div className="mt-6">
+                <AddToCalendarButton
+                  slug={activity.slug}
+                  googleCalendarUrl={buildGoogleCalendarUrlForActivity(activity)}
+                />
+              </div>
+
+              {activity.registration_enabled && (
+                <div className="mt-10">
+                  {isFull ? (
+                    // ── Vol-melding (geen formulier) ────────────────────
+                    <div
+                      role="status"
+                      className="rounded-2xl border border-sand-200 bg-white p-6 lg:p-8 text-center"
+                    >
+                      <h2 className="font-display text-xl text-ink mb-2">
+                        Deze activiteit zit vol
+                      </h2>
+                      <p className="font-body text-sm text-taupe-dark max-w-md mx-auto">
+                        Inschrijven is niet meer mogelijk. Houd onze website in
+                        de gaten voor nieuwe activiteiten.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Pills boven het formulier — meerdere mogelijk, naast
+                          elkaar (capaciteit + minimumleeftijd). */}
+                      {(spotsLeftLabel || minimumAgeLabel) && (
+                        <div className="mb-4 flex flex-wrap gap-2">
+                          {spotsLeftLabel && (
+                            <div className="inline-flex items-center gap-2 rounded-full bg-slate-mosque/10 text-slate-mosque px-3 py-1 text-xs font-medium">
+                              <span aria-hidden>●</span>
+                              {spotsLeftLabel}
+                            </div>
+                          )}
+                          {minimumAgeLabel && (
+                            <div className="inline-flex items-center gap-2 rounded-full bg-taupe/15 text-taupe-dark px-3 py-1 text-xs font-medium">
+                              <span aria-hidden>●</span>
+                              {minimumAgeLabel}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <RegistrationForm
+                        type="activity"
+                        sourceSlug={activity.slug}
+                        sourceTitle={activity.title}
+                        targetGender={activity.target_gender ?? null}
+                        requireAge={ageRequiredForForm}
+                        contentTexts={{
+                          intro_title:     activity.registration_intro_title,
+                          intro_text:      activity.registration_intro_text,
+                          button_text:     activity.registration_button_text,
+                          success_message: activity.registration_success_message,
+                          extra_note:      activity.registration_extra_note,
+                        }}
+                      />
+                    </>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           <div className="mt-10 pt-6 border-t border-sand-200">

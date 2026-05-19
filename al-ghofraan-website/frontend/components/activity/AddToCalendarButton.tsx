@@ -24,12 +24,20 @@ interface AddToCalendarButtonProps {
   googleCalendarUrl: string;
   /** Optionele extra className voor de outer button (layout). */
   className?:        string;
+  /**
+   * Delivery recurring — optionele override voor de ICS-link. Wordt gebruikt
+   * door ActivityOccurrenceSection om query params (start/end) mee te geven
+   * zodat de ICS-route de gekozen occurrence-datums gebruikt ipv de
+   * hoofdrecord-datum. Default: `/api/agenda/<slug>/ics`.
+   */
+  icsHref?:          string;
 }
 
 export default function AddToCalendarButton({
   slug,
   googleCalendarUrl,
   className,
+  icsHref,
 }: AddToCalendarButtonProps) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -43,7 +51,7 @@ export default function AddToCalendarButton({
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [open]);
 
-  const icsHref = `/api/agenda/${encodeURIComponent(slug)}/ics`;
+  const resolvedIcsHref = icsHref ?? `/api/agenda/${encodeURIComponent(slug)}/ics`;
 
   return (
     <div ref={wrapperRef} className={cn("relative inline-block", className)}>
@@ -83,7 +91,7 @@ export default function AddToCalendarButton({
           Google Agenda
         </a>
         <a
-          href={icsHref}
+          href={resolvedIcsHref}
           role="menuitem"
           className="block px-4 py-2 font-body text-sm text-ink hover:bg-sand hover:text-slate-mosque transition-colors"
           onClick={() => setOpen(false)}

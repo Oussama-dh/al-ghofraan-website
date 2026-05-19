@@ -40,6 +40,8 @@ import { setupNavigationParent }   from "./steps/37-navigation-parent.mjs";
 import { setupEducationCategories } from "./steps/38-education-categories.mjs";
 import { setupHomepageCtaContent }  from "./steps/39-homepage-cta-content.mjs";
 import { setupPageSectionsAyahWhatsapp } from "./steps/40-page-sections-ayah-whatsapp.mjs";
+import { setupRecurringActivities }      from "./steps/41-recurring-activities.mjs";
+import { setupOccurrencePickerToggle }   from "./steps/42-occurrence-picker-toggle.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -135,6 +137,8 @@ try {
   await setupEducationCategories(client); // 38. education_categories collectie + category_ref op education_programs (delivery Dhoel-Edu)
   await setupHomepageCtaContent(client);  // 39. site_settings velden voor homepage/doneren ayah + CTA + WhatsApp (delivery A)
   await setupPageSectionsAyahWhatsapp(client); // 40. page_sections type-uitbreiding + ayah-velden + voorbeeld-rijen (delivery sections)
+  await setupRecurringActivities(client);      // 41. recurring-velden op activities + occurrence-velden op registrations (delivery recurring)
+  await setupOccurrencePickerToggle(client);   // 42. show_occurrence_picker boolean toggle op activities (delivery recurring-ux)
 
   console.log("");
   console.log("╔══════════════════════════════════════════════════════╗");

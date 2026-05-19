@@ -81,6 +81,13 @@ export interface ActivityNotificationData {
   age?:    number | null;
   notes?:  string | null;
   status:  string;
+  /**
+   * Delivery recurring — mensleesbaar label van de gekozen occurrence
+   * (bv. "Vrijdag 22 mei 2026 — 19:00"). NULL voor eenmalige activiteiten.
+   * Wordt prominent in de admin-mail getoond zodat duidelijk is voor
+   * welke datum iemand zich heeft ingeschreven.
+   */
+  occurrenceLabel?: string | null;
 }
 
 // ─── Public API ──────────────────────────────────────────────
@@ -361,9 +368,14 @@ function buildActivityBody(d: ActivityNotificationData): string {
   const lines = [
     `Er is een nieuwe inschrijving binnengekomen voor activiteit "${d.activityTitle}".`,
     "",
-    `Naam       : ${d.name}`,
-    `E-mail     : ${d.email}`,
   ];
+  // Delivery recurring — datum/tijd prominent BOVEN persoonsgegevens
+  // zodat admin direct ziet voor welke occurrence is ingeschreven.
+  if (d.occurrenceLabel) {
+    lines.push(`Datum      : ${d.occurrenceLabel}`);
+  }
+  lines.push(`Naam       : ${d.name}`);
+  lines.push(`E-mail     : ${d.email}`);
   if (d.phone)         lines.push(`Telefoon   : ${d.phone}`);
   if (d.gender)        lines.push(`Geslacht   : ${d.gender}`);
   if (d.age != null)   lines.push(`Leeftijd   : ${d.age}`);
@@ -458,6 +470,13 @@ export interface ActivityVisitorConfirmationData {
    * lib/utils.ts. Leeg/falsy = geen link, ook al is er een token.
    */
   siteUrl?: string | null;
+  /**
+   * Delivery recurring — mensleesbaar label van de gekozen occurrence.
+   * NULL voor eenmalige activiteiten. Wordt prominent in de
+   * bevestigingsmail getoond zodat de bezoeker weet voor welke datum
+   * de inschrijving is.
+   */
+  occurrenceLabel?: string | null;
 }
 
 // ─── Visitor public API ──────────────────────────────────────
@@ -672,6 +691,10 @@ function buildActivityVisitorBody(
   dataLines.push("── Uw inschrijfgegevens ──");
   dataLines.push("");
   dataLines.push(`Activiteit : ${d.activityTitle}`);
+  // Delivery recurring — datum prominent direct onder de activiteittitel.
+  if (d.occurrenceLabel) {
+    dataLines.push(`Datum      : ${d.occurrenceLabel}`);
+  }
   dataLines.push("");
   dataLines.push(`Naam       : ${d.name}`);
   dataLines.push(`E-mail     : ${d.email}`);

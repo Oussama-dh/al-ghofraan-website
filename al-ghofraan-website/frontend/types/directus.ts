@@ -49,6 +49,47 @@ export interface Activity {
   show_registration_limit?: boolean | null;
   require_age?: boolean | null;
   /**
+   * Delivery recurring — terugkerende activiteiten.
+   *
+   * Eén activity-record blijft het hoofdrecord; toekomstige occurrences
+   * worden door de frontend gegenereerd via `lib/recurrence.ts`. Geen
+   * losse records per occurrence in de DB.
+   *
+   *   - is_recurring:        master-toggle. False = exact gedrag van vóór deze delivery.
+   *   - recurrence_type:     "none" | "weekly" | "monthly".
+   *   - recurrence_interval: 1 = elke periode, 2 = elke 2 periodes, ...
+   *   - recurrence_until:    YYYY-MM-DD (date), eindstreep voor generatie.
+   *                          Leeg → fallback van 6 maanden na start_date.
+   *                          Hard cap: max 50 occurrences per serie.
+   *   - recurrence_weekday:  alleen bij weekly relevant; override voor
+   *                          de weekdag uit start_date. Leeg → gebruik
+   *                          de weekdag van start_date zelf.
+   *
+   * max_registrations geldt PER OCCURRENCE — de server-side telling
+   * filtert op source_id + occurrence_start.
+   */
+  is_recurring?: boolean | null;
+  recurrence_type?: "none" | "weekly" | "monthly" | null;
+  recurrence_interval?: number | null;
+  recurrence_until?: string | null;
+  recurrence_weekday?:
+    | "monday" | "tuesday" | "wednesday" | "thursday"
+    | "friday" | "saturday" | "sunday"
+    | null;
+  /**
+   * Delivery recurring-ux — toggle voor zichtbare datumkeuze.
+   *
+   *   false (default): bezoeker ziet géén "Kies een datum"-blok.
+   *     De eerstvolgende occurrence wordt server-side gepicked voor
+   *     inschrijving en agenda-export. Hero toont "Eerstvolgend: …"
+   *     zodat bezoeker weet welke datum gebruikt wordt.
+   *   true: bezoeker ziet de occurrence-picker zoals in delivery
+   *     recurring v1. Gekozen occurrence wordt overal gebruikt.
+   *
+   * Alleen relevant wanneer is_recurring=true.
+   */
+  show_occurrence_picker?: boolean | null;
+  /**
    * Delivery 20 — Minimumleeftijd + docent-info.
    *   - minimum_age:  als positief getal → leeftijd is automatisch verplicht
    *                   (ook bij require_age=false) en wordt server-side
@@ -420,6 +461,13 @@ export interface Registration {
   checked_in_by?: string | null;
   /** Optionele opmerking van de organisator bij de check-in. */
   checked_in_note?: string | null;
+  // ─── Occurrence-velden (delivery recurring) ───────────────
+  /** Begin van de gekozen occurrence bij terugkerende activiteiten. NULL voor eenmalige activiteiten. */
+  occurrence_start?: string | null;
+  /** Einde van de gekozen occurrence bij terugkerende activiteiten. NULL voor eenmalige activiteiten. */
+  occurrence_end?: string | null;
+  /** Mensleesbaar label van de gekozen occurrence (bv. "Vrijdag 22 mei 2026 — 19:00"). NULL voor eenmalige activiteiten. */
+  occurrence_label?: string | null;
   created_at?: string | null;
 }
 

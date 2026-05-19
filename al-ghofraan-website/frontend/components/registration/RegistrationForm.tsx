@@ -77,6 +77,18 @@ interface RegistrationFormProps {
   className?: string;
   /** ID van de form-section voor anchor-links (#inschrijven). */
   anchorId?: string;
+
+  /**
+   * Delivery recurring — gekozen occurrence voor een terugkerende activiteit.
+   * Alleen relevant voor `type === "activity"`. Bij gevuld wordt het meegestuurd
+   * naar /api/inschrijven en getoond in de bevestigingsmails. Eenmalige
+   * activiteiten laten deze prop ongedefinieerd.
+   */
+  occurrence?: {
+    start: string;
+    end:   string;
+    label: string;
+  } | null;
 }
 
 // ─── State types ───────────────────────────────────────────
@@ -172,6 +184,7 @@ export default function RegistrationForm({
   requireAge             = false,
   className,
   anchorId = "inschrijven",
+  occurrence,
 }: RegistrationFormProps) {
   const isEducation = type === "education";
   const genderConfig = resolveGenderConfig(targetGender);
@@ -337,6 +350,14 @@ export default function RegistrationForm({
           gender: students[0].gender,
           notes: students[0].notes.trim() || undefined,
           consent,
+          // Delivery recurring — alleen meegestuurd wanneer caller een
+          // occurrence selecteerde. Server normaliseert/valideert (en
+          // weigert bij recurring activity zonder occurrence).
+          ...(occurrence && {
+            occurrence_start: occurrence.start,
+            occurrence_end:   occurrence.end,
+            occurrence_label: occurrence.label,
+          }),
         };
 
       const resp = await fetch("/api/inschrijven", {
