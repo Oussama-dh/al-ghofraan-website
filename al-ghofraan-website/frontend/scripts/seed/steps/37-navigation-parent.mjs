@@ -218,9 +218,28 @@ export async function setupNavigationParent(client) {
   try {
     parentType = await getFieldType(client, NAV_COLLECTION, "parent");
   } catch (err) {
-    throw new Error(
-      `Kon type van ${NAV_COLLECTION}.parent niet ophalen: ${extractDirectusError(err)}`,
-    );
+    const status = err?.response?.status || err?.status;
+    const body = extractDirectusError(err);
+
+    if (
+      status === 403 ||
+      body.includes("FORBIDDEN") ||
+      body.toLowerCase().includes("permission")
+    ) {
+      console.warn(
+        `  ⚠️  Kon type van ${NAV_COLLECTION}.parent niet ophalen door permissie. ` +
+        `We gaan ervan uit dat het veld al bestaat en slaan de type-check over.`,
+      );
+
+      // Productie kan 403 geven op field-introspectie.
+      // Ga er dan NIET vanuit dat het veld bestaat.
+      // Laat de normale parentType === null flow het veld idempotent aanmaken.
+      parentType = null;
+    } else {
+      throw new Error(
+        `Kon type van ${NAV_COLLECTION}.parent niet ophalen: ${body}`,
+      );
+    }
   }
 
   if (parentType === null) {
