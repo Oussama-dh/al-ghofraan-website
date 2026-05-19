@@ -1042,6 +1042,7 @@ const SECTION_FIELDS = [
   "background_variant",
   "primary_cta_label",    "primary_cta_href",
   "secondary_cta_label",  "secondary_cta_href",
+  "ayah_arabic", "ayah_reference",
   "active", "sort",
 ];
 

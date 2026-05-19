@@ -6,7 +6,14 @@ import Container   from "@/components/ui/Container";
 interface CTASectionProps {
   title:       string;
   subtitle?:   string;
-  primaryCta:  { label: string; href: string };
+  /**
+   * Beide knoppen zijn optioneel — als geen primaryCta is doorgegeven,
+   * wordt geen primaire knop gerenderd. Voor backward-compat met de
+   * homepage-fallback (waar deze altijd is gevuld) verandert er niets.
+   * Toegevoegd voor Delivery A: beheerbare homepage_cta_* via Directus
+   * waar de beheerder primary/secondary leeg mag laten.
+   */
+  primaryCta?:  { label: string; href: string };
   secondaryCta?: { label: string; href: string };
 }
 
@@ -39,10 +46,12 @@ export default function CTASection({
         )}
 
         <div className="flex flex-wrap gap-4 justify-center">
-          <Button href={primaryCta.href} size="lg"
-            className="bg-taupe hover:bg-taupe-dark text-white">
-            {primaryCta.label}
-          </Button>
+          {primaryCta && (
+            <Button href={primaryCta.href} size="lg"
+              className="bg-taupe hover:bg-taupe-dark text-white">
+              {primaryCta.label}
+            </Button>
+          )}
           {secondaryCta && (
             <Button
               href={secondaryCta.href}

@@ -8,6 +8,8 @@ import SplitFeatureSection from "./types/SplitFeatureSection";
 import CardGridSection     from "./types/CardGridSection";
 import SimpleTextSection   from "./types/SimpleTextSection";
 import CtaSection          from "./types/CtaSection";
+import AyahSection         from "./types/AyahSection";
+import WhatsappCtaSection  from "./types/WhatsappCtaSection";
 
 type SectionWithItems = PageSection & { items: PageSectionItem[] };
 
@@ -21,6 +23,8 @@ export default function PageSectionRenderer({ section }: PageSectionRendererProp
     case "card_grid":     return <CardGridSection     section={section} />;
     case "simple_text":   return <SimpleTextSection   section={section} />;
     case "cta":           return <CtaSection          section={section} />;
+    case "ayah":          return <AyahSection         section={section} />;
+    case "whatsapp_cta":  return <WhatsappCtaSection  section={section} />;
     default:
       // Onbekend type — stil renderen niets
       if (process.env.NODE_ENV !== "production") {

@@ -3,6 +3,8 @@
 import type { Metadata }     from "next";
 import HeroSection           from "@/components/sections/HeroSection";
 import CTASection            from "@/components/sections/CTASection";
+import AyahBlock             from "@/components/sections/AyahBlock";
+import WhatsappCtaBlock      from "@/components/sections/WhatsappCtaBlock";
 import SectionTitle          from "@/components/ui/SectionTitle";
 import ActivityCard          from "@/components/ui/ActivityCard";
 import Container             from "@/components/ui/Container";
@@ -10,6 +12,8 @@ import Button                from "@/components/ui/Button";
 import { Icon }              from "@/lib/icons";
 import { PageSectionsList }  from "@/components/sections/PageSectionRenderer";
 import SplitFeatureSection   from "@/components/sections/types/SplitFeatureSection";
+import AyahSection           from "@/components/sections/types/AyahSection";
+import WhatsappCtaSection    from "@/components/sections/types/WhatsappCtaSection";
 import {
   getUpcomingActivities,
   getPageContent,
@@ -69,12 +73,13 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [page, activities, iconMap, sections, homepageVideos] = await Promise.all([
+  const [page, activities, iconMap, sections, homepageVideos, settings] = await Promise.all([
     getPageContent("home"),
     getUpcomingActivities(6),
     getIconSettings(),
     getPageSectionsWithItems("home"),
     getHomepageVideos(3),
+    getSiteSettings(),
   ]);
 
   const dateIcon        = resolveIconKey(iconMap, ICON_KEYS.activityDate);
@@ -88,12 +93,21 @@ export default async function HomePage() {
   const shown     = [...featured, ...remaining].slice(0, 6);
 
   // Splits sections in: missie (boven activiteiten), overige (onder),
-  // en cta (helemaal onderaan vlak voor de footer).
-  const missionSection = sections.find((s) => s.key === "mission" && s.type === "split_feature");
-  const otherSections  = sections.filter(
-    (s) => s.key !== "mission" && s.type !== "cta"
+  // en specifieke types die hun eigen plek hebben:
+  //   - ayah          → vlak onder de hero
+  //   - whatsapp_cta  → tussen video's en gebedstijden-banner
+  //   - cta           → helemaal onderaan vlak voor de footer
+  const missionSection  = sections.find((s) => s.key === "mission" && s.type === "split_feature");
+  const ayahSection     = sections.find((s) => s.type === "ayah");
+  const whatsappSection = sections.find((s) => s.type === "whatsapp_cta");
+  const otherSections   = sections.filter(
+    (s) =>
+      s.key !== "mission" &&
+      s.type !== "cta" &&
+      s.type !== "ayah" &&
+      s.type !== "whatsapp_cta"
   );
-  const ctaSections    = sections.filter((s) => s.type === "cta");
+  const ctaSections     = sections.filter((s) => s.type === "cta");
 
   // Als er geen missie-sectie in Directus staat, val terug op hardcoded versie
   const missionToShow = missionSection ?? FALLBACK_MISSION_SECTION;
@@ -107,6 +121,25 @@ export default async function HomePage() {
         arabic={page?.arabic_title || undefined}
         backgroundImage={page?.hero_background_image}
       />
+
+      {/* Ayah-blok — prioriteit (delivery sections):
+          1. page_sections type=ayah op slug=home   → beheerbaar via secties
+          2. site_settings.home_ayah_enabled        → legacy site_settings (delivery A)
+          3. niets                                  → geen ayah getoond */}
+      {ayahSection ? (
+        <AyahSection section={ayahSection} />
+      ) : settings?.home_ayah_enabled && settings.home_ayah_arabic?.trim() ? (
+        <section className="bg-sand-50 pt-12 pb-2">
+          <Container narrow>
+            <AyahBlock
+              enabled={settings.home_ayah_enabled}
+              arabic={settings.home_ayah_arabic}
+              translation={settings.home_ayah_translation}
+              reference={settings.home_ayah_reference}
+            />
+          </Container>
+        </section>
+      ) : null}
 
       {/* Body uit page_content (rich text) */}
       {page?.body && (
@@ -220,6 +253,22 @@ export default async function HomePage() {
         );
       })()}
 
+      {/* WhatsApp CTA — prioriteit (delivery sections):
+          1. page_sections type=whatsapp_cta op slug=home → beheerbaar via secties
+          2. site_settings.homepage_whatsapp_cta_enabled  → legacy site_settings (delivery A)
+          3. niets                                        → geen WhatsApp CTA */}
+      {whatsappSection ? (
+        <WhatsappCtaSection section={whatsappSection} />
+      ) : (
+        <WhatsappCtaBlock
+          enabled={settings?.homepage_whatsapp_cta_enabled}
+          title={settings?.homepage_whatsapp_cta_title}
+          description={settings?.homepage_whatsapp_cta_description}
+          buttonLabel={settings?.homepage_whatsapp_cta_button_label}
+          url={settings?.homepage_whatsapp_cta_url}
+        />
+      )}
+
       {/* Gebedstijden-banner */}
       <section className="bg-sand py-12">
         <Container>
@@ -242,9 +291,36 @@ export default async function HomePage() {
         </Container>
       </section>
 
-      {/* CTA-secties uit Directus, anders fallback CTA */}
+      {/* CTA — prioriteit (delivery sections):
+          1. Directus page_sections type=cta op slug=home → beheerbaar via secties (PRIMAIR)
+          2. site_settings.homepage_cta_enabled            → legacy site_settings (delivery A)
+          3. Hardcoded fallback "Doneer hier"              → werkt zonder Directus
+      */}
       {ctaSections.length > 0 ? (
         <PageSectionsList sections={ctaSections} />
+      ) : settings?.homepage_cta_enabled ? (
+        <CTASection
+          title={settings.homepage_cta_title || ""}
+          subtitle={settings.homepage_cta_description || undefined}
+          primaryCta={
+            settings.homepage_cta_primary_label?.trim() &&
+            settings.homepage_cta_primary_url?.trim()
+              ? {
+                  label: settings.homepage_cta_primary_label.trim(),
+                  href:  settings.homepage_cta_primary_url.trim(),
+                }
+              : undefined
+          }
+          secondaryCta={
+            settings.homepage_cta_secondary_label?.trim() &&
+            settings.homepage_cta_secondary_url?.trim()
+              ? {
+                  label: settings.homepage_cta_secondary_label.trim(),
+                  href:  settings.homepage_cta_secondary_url.trim(),
+                }
+              : undefined
+          }
+        />
       ) : (
         <CTASection
           title="Steun het werk van de DawahCommissie"

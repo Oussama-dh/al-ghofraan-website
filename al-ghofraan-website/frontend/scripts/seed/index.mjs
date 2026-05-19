@@ -38,6 +38,8 @@ import { setupVisitorConfirmationFields } from "./steps/35-visitor-confirmation-
 import { setupCheckInSettings }    from "./steps/36-check-in-settings.mjs";
 import { setupNavigationParent }   from "./steps/37-navigation-parent.mjs";
 import { setupEducationCategories } from "./steps/38-education-categories.mjs";
+import { setupHomepageCtaContent }  from "./steps/39-homepage-cta-content.mjs";
+import { setupPageSectionsAyahWhatsapp } from "./steps/40-page-sections-ayah-whatsapp.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -131,6 +133,8 @@ try {
   await setupCheckInSettings(client);    // 36. organisator-code + sessieduur op site_settings (delivery QR-Organizer)
   await setupNavigationParent(client);   // 37. parent veld op navigation_items + 'Onze moskee' onder 'Over ons' (delivery Quatro)
   await setupEducationCategories(client); // 38. education_categories collectie + category_ref op education_programs (delivery Dhoel-Edu)
+  await setupHomepageCtaContent(client);  // 39. site_settings velden voor homepage/doneren ayah + CTA + WhatsApp (delivery A)
+  await setupPageSectionsAyahWhatsapp(client); // 40. page_sections type-uitbreiding + ayah-velden + voorbeeld-rijen (delivery sections)
 
   console.log("");
   console.log("╔══════════════════════════════════════════════════════╗");

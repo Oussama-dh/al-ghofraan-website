@@ -86,7 +86,15 @@ export default function HeroSection({
           </p>
 
           <div className="flex flex-wrap gap-4 animate-slide-up animation-delay-400">
-            <Button href="/agenda" size="lg">
+            {/* Beide knoppen gebruiken dezelfde wit/transparant outline-stijl
+                voor visuele gelijkheid binnen de donkere hero. Wens uit
+                delivery A (klant koos optie B). */}
+            <Button
+              href="/agenda"
+              variant="outline"
+              size="lg"
+              className="border-white/40 text-white hover:bg-white hover:text-slate-mosque"
+            >
               Bekijk de agenda
             </Button>
             <Button

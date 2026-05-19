@@ -144,6 +144,31 @@ export interface SiteSettings {
   check_in_organizer_code?: string | null;
   /** Hoe lang een organisator-cookie geldig is (uren). Fallback 4 bij leeg/ongeldig. */
   check_in_session_duration_hours?: number | null;
+  // ─── Beheerbare homepage / doneren blokken (Delivery A) ──
+  /** Aya boven body op homepage tonen. Alle home_ayah_* alleen relevant als enabled=true. */
+  home_ayah_enabled?: boolean | null;
+  home_ayah_arabic?: string | null;
+  home_ayah_translation?: string | null;
+  home_ayah_reference?: string | null;
+  /** Override voor de hardcoded Al-Baqara 2:272 ayah op /doneren. Bij UIT blijft hardcoded vers staan. */
+  donation_ayah_enabled?: boolean | null;
+  donation_ayah_arabic?: string | null;
+  donation_ayah_translation?: string | null;
+  donation_ayah_reference?: string | null;
+  /** Beheerbaar CTA-blok onderaan homepage. Overschrijft Directus page_sections en hardcoded fallback wanneer enabled. */
+  homepage_cta_enabled?: boolean | null;
+  homepage_cta_title?: string | null;
+  homepage_cta_description?: string | null;
+  homepage_cta_primary_label?: string | null;
+  homepage_cta_primary_url?: string | null;
+  homepage_cta_secondary_label?: string | null;
+  homepage_cta_secondary_url?: string | null;
+  /** WhatsApp-kanaal CTA op homepage. Verschijnt alleen als enabled=true en url niet leeg. */
+  homepage_whatsapp_cta_enabled?: boolean | null;
+  homepage_whatsapp_cta_title?: string | null;
+  homepage_whatsapp_cta_description?: string | null;
+  homepage_whatsapp_cta_button_label?: string | null;
+  homepage_whatsapp_cta_url?: string | null;
   social_links?: {
     facebook?: string;
     instagram?: string;
@@ -214,7 +239,7 @@ export interface IconSetting {
 }
 
 // ─── page_sections ───────────────────────────────────────────
-export type PageSectionType = "split_feature" | "card_grid" | "simple_text" | "cta";
+export type PageSectionType = "split_feature" | "card_grid" | "simple_text" | "cta" | "ayah" | "whatsapp_cta";
 
 export type SectionBackgroundVariant =
   | "default"        // sand-50 (warm beige)
@@ -260,6 +285,10 @@ export interface PageSection {
   primary_cta_href?:  string | null;
   secondary_cta_label?: string | null;
   secondary_cta_href?:  string | null;
+  /** Voor ayah type: Arabische tekst van het vers (RTL). Vertaling staat in `intro`. */
+  ayah_arabic?: string | null;
+  /** Voor ayah type: bronvermelding, bv. "Soera Al-Baqara 2:272". */
+  ayah_reference?: string | null;
   active: boolean;
   sort?: number | null;
 }
