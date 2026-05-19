@@ -40,8 +40,20 @@ import type { Registration, SiteSettings } from "@/types/directus";
 // ─── Constants ───────────────────────────────────────────────
 
 export const ORGANIZER_COOKIE_NAME    = "ag_organizer_session";
-/** Verbreed t.o.v. vorige delivery zodat ook /check-in/* pages de cookie zien. */
-export const ORGANIZER_COOKIE_PATH    = "/check-in";
+/**
+ * Cookie-path = "/" — de cookie moet zowel naar page-routes
+ * (/check-in/*) ALS naar API-routes (/api/check-in/*) worden
+ * meegestuurd. Een meer-beperkend pad als "/check-in" werkt NIET
+ * voor /api/check-in/* (verschillende prefix), met als gevolg
+ * dat de POST-handler de cookie niet ziet en de organisator bij
+ * elke check-in opnieuw om de code wordt gevraagd.
+ *
+ * Veiligheid van path="/" is acceptabel hier: de cookie is
+ * HttpOnly + Secure (in prod) + SameSite=Lax + signed met HMAC.
+ * Andere routes zien hem dus wel binnenkomen maar kunnen er niks
+ * mee — alleen de check-in code-paden valideren de signature.
+ */
+export const ORGANIZER_COOKIE_PATH    = "/";
 export const DEFAULT_SESSION_HOURS    = 4;
 /** Veiligheidsgrens — geen sessies langer dan 7 dagen, ook al staat dat in Directus. */
 const MAX_SESSION_HOURS               = 24 * 7;
