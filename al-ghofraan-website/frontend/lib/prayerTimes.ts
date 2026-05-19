@@ -370,9 +370,9 @@ export const PRAYER_LABELS_NL: Record<PrayerKey, string> = {
   fajr:     "Fajr",
   shoeroeq: "Shoeroeq",
   dhoehr:   "Dhoehr",
-  asr:      "Asr",
+  asr:      "'Asr",
   maghrib:  "Maghrib",
-  ishaa:    "Ishaa",
+  ishaa:    "'Ishaa",
 };
 
 /**

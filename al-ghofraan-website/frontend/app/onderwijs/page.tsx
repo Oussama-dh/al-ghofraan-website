@@ -15,6 +15,8 @@ import Container         from "@/components/ui/Container";
 import PageHero          from "@/components/sections/PageHero";
 import {
   getEducationPrograms,
+  getEducationCategories,
+  getEffectiveEducationCategorySlug,
   getPageContent,
   getSiteSettings,
   getAssetUrl,
@@ -45,11 +47,45 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function OnderwijsOverviewPage() {
-  const [programs, page] = await Promise.all([
+interface OnderwijsPageProps {
+  searchParams?: { category?: string };
+}
+
+export default async function OnderwijsOverviewPage({ searchParams }: OnderwijsPageProps) {
+  const [programs, categories, page] = await Promise.all([
     getEducationPrograms() as Promise<EducationProgram[]>,
+    getEducationCategories(),
     getPageContent("onderwijs"),
   ]);
+
+  // ─── Filter: category_ref (M2O naar education_categories) ─
+  // Bron: de Directus-collectie education_categories (beheerbaar).
+  // We tonen alleen categorieën die daadwerkelijk gebruikt worden
+  // door één of meer gepubliceerde programma's — voorkomt lege
+  // filterpills. Zelfde patroon als /videos en /artikelen.
+  //
+  // Programma's zonder category_ref blijven zichtbaar bij "Alle"
+  // (geen filter), maar verschijnen niet onder een specifieke
+  // categorie-filter. Beheerder kan via Directus een categorie
+  // koppelen aan oude programma's wanneer gewenst.
+
+  const usedSlugs = new Set<string>();
+  for (const p of programs) {
+    const slug = getEffectiveEducationCategorySlug(p);
+    if (slug) usedSlugs.add(slug);
+  }
+  // Behoud Directus-volgorde (al gesorteerd op sort, name in getter).
+  const availableCategories = categories.filter((c) => usedSlugs.has(c.slug));
+
+  const requested = (searchParams?.category ?? "").trim().toLowerCase();
+  const activeCategory =
+    availableCategories.find((c) => c.slug === requested) ?? null;
+
+  const visible = activeCategory
+    ? programs.filter(
+        (p) => getEffectiveEducationCategorySlug(p) === activeCategory.slug,
+      )
+    : programs;
 
   return (
     <>
@@ -62,9 +98,28 @@ export default async function OnderwijsOverviewPage() {
 
       <section className="bg-sand-50 py-12 lg:py-16">
         <Container>
-          {programs.length > 0 ? (
+          {/* Filterknoppen — zelfde stijl als videos/artikelen.
+              Alleen tonen als er meer dan één relevante categorie is. */}
+          {availableCategories.length > 0 && (
+            <div className="mb-8 flex flex-wrap gap-2">
+              <FilterPill href="/onderwijs" active={activeCategory === null}>
+                Alle
+              </FilterPill>
+              {availableCategories.map((cat) => (
+                <FilterPill
+                  key={cat.slug}
+                  href={`/onderwijs?category=${encodeURIComponent(cat.slug)}`}
+                  active={activeCategory?.slug === cat.slug}
+                >
+                  {cat.name}
+                </FilterPill>
+              ))}
+            </div>
+          )}
+
+          {visible.length > 0 ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {programs.map((program) => (
+              {visible.map((program) => (
                 <ProgramCard key={program.id} program={program} />
               ))}
             </div>
@@ -72,16 +127,49 @@ export default async function OnderwijsOverviewPage() {
             <div className="text-center py-20">
               <GraduationCap className="w-12 h-12 text-taupe/40 mx-auto mb-4" strokeWidth={1.5} />
               <h3 className="font-display text-2xl text-ink mb-2">
-                Momenteel geen lopende programma&apos;s
+                {activeCategory
+                  ? "Geen programma's in deze categorie"
+                  : "Momenteel geen lopende programma's"}
               </h3>
               <p className="font-body text-taupe-dark">
-                Houd onze pagina in de gaten voor nieuwe cursussen en lessen.
+                {activeCategory
+                  ? "Probeer een andere categorie of bekijk alle programma's."
+                  : "Houd onze pagina in de gaten voor nieuwe cursussen en lessen."}
               </p>
             </div>
           )}
         </Container>
       </section>
     </>
+  );
+}
+
+// ─── FilterPill — zelfde stijl als videos/artikelen ──────────
+// Bewust een lokale kopie i.p.v. een shared component: videos en
+// artikelen hebben elk hun eigen lokale FilterPill, en consolidatie
+// in een gedeeld component zou drie pagina's tegelijk raken. Houd
+// klein-en-veilig; dedupliceer in een latere delivery als gewenst.
+function FilterPill({
+  href,
+  active,
+  children,
+}: {
+  href:     string;
+  active:   boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "rounded-full px-4 py-1.5 text-sm font-body border transition-colors",
+        active
+          ? "bg-slate-mosque text-white border-slate-mosque"
+          : "bg-white text-taupe-dark border-sand-200 hover:border-slate-mosque hover:text-slate-mosque",
+      )}
+    >
+      {children}
+    </Link>
   );
 }
 

@@ -1,11 +1,11 @@
 // components/layout/Header.tsx
 "use client";
 
-import Link             from "next/link";
-import { useState }     from "react";
-import { Menu, X }      from "lucide-react";
-import { cn }           from "@/lib/utils";
-import ThemeToggle      from "@/components/theme/ThemeToggle";
+import Link               from "next/link";
+import { useState, useRef, useEffect } from "react";
+import { Menu, X, ChevronDown }        from "lucide-react";
+import { cn }             from "@/lib/utils";
+import ThemeToggle        from "@/components/theme/ThemeToggle";
 import type { NavigationItem, SiteSettings } from "@/types/directus";
 
 interface HeaderProps {
@@ -22,14 +22,52 @@ const FALLBACK_NAV: NavigationItem[] = [
   { id: "f5", label: "Doneren",      href: "/doneren",        sort: 50, highlight: true,  external: false, active: true },
 ];
 
+/**
+ * Bouw een tree-structuur van de flat lijst: top-level items en hun
+ * children. Eén niveau diep — een child kan niet zelf weer children
+ * tonen (defensief).
+ */
+interface NavNode {
+  item:     NavigationItem;
+  children: NavigationItem[];
+}
+
+function buildNavTree(items: NavigationItem[]): NavNode[] {
+  const sorted = items.slice().sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+  const byId   = new Map(sorted.map((i) => [i.id, i]));
+
+  const topLevel: NavNode[] = [];
+  const childrenByParent = new Map<string, NavigationItem[]>();
+
+  for (const item of sorted) {
+    const parentId = item.parent;
+    if (parentId && byId.has(parentId)) {
+      const arr = childrenByParent.get(parentId) || [];
+      arr.push(item);
+      childrenByParent.set(parentId, arr);
+    } else {
+      topLevel.push({ item, children: [] });
+    }
+  }
+
+  for (const node of topLevel) {
+    node.children = childrenByParent.get(node.item.id) || [];
+  }
+
+  return topLevel;
+}
+
 export default function Header({ settings, navItems, logoUrl }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const siteName = settings?.site_name || "Al-Ghofraan";
   const subtitle = settings?.site_subtitle || "DawahCommissie";
-  const items = (navItems && navItems.length > 0 ? navItems : FALLBACK_NAV)
-    .slice()
-    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+
+  const tree = buildNavTree(
+    navItems && navItems.length > 0 ? navItems : FALLBACK_NAV,
+  );
+
+  const closeMenu = () => setMenuOpen(false);
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-sand-200">
@@ -39,13 +77,9 @@ export default function Header({ settings, navItems, logoUrl }: HeaderProps) {
           <Link
             href="/"
             className="flex items-center gap-3 group"
-            onClick={() => setMenuOpen(false)}
+            onClick={closeMenu}
           >
             {logoUrl ? (
-              // Vaste hoogte 40px (md: 48px), breedte schaalt mee met aspect ratio.
-              // Gebruik next/image met width/height=auto via intrinsic sizing zou
-              // layout-shift geven; daarom een gewone <img> met explicit height en
-              // max-width voor mobile.
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={logoUrl}
@@ -75,7 +109,18 @@ export default function Header({ settings, navItems, logoUrl }: HeaderProps) {
 
           {/* Desktop navigatie */}
           <nav className="hidden md:flex items-center gap-1">
-            {items.map((item) => renderNavLink(item, false, () => setMenuOpen(false)))}
+            {tree.map((node) =>
+              node.children.length > 0 ? (
+                <DesktopDropdown
+                  key={node.item.id}
+                  parent={node.item}
+                  childItems={node.children}
+                  onNavigate={closeMenu}
+                />
+              ) : (
+                renderNavLink(node.item, false, closeMenu)
+              ),
+            )}
             <ThemeToggle className="ml-2" />
           </nav>
 
@@ -95,16 +140,7 @@ export default function Header({ settings, navItems, logoUrl }: HeaderProps) {
         </div>
       </div>
 
-      {/* Mobiel menu
-          - `max-h-[28rem]` (en bij open `max-h-[calc(100vh-4rem)]`) zorgt dat
-            het menu nooit voorbij de viewport groeit; de header zelf is 4rem
-            (h-16) hoog op mobiel, dus we trekken die af.
-          - `overflow-y-auto` activeert verticale scroll binnen het menu zodra
-            de inhoud te lang is — alle items blijven bereikbaar.
-          - `overscroll-contain` voorkomt dat de body meeschuift als de
-            bezoeker voorbij het einde van het menu door-scrollt.
-          - In gesloten staat blijft `max-h-0 + overflow-hidden` zodat de
-            collapse-animatie zachtjes blijft werken zoals voorheen. */}
+      {/* Mobiel menu */}
       <div
         className={cn(
           "md:hidden transition-[max-height] duration-300 ease-in-out",
@@ -114,12 +150,219 @@ export default function Header({ settings, navItems, logoUrl }: HeaderProps) {
         )}
       >
         <nav className="px-4 py-3 pb-6 flex flex-col gap-1">
-          {items.map((item) => renderNavLink(item, true, () => setMenuOpen(false)))}
+          {tree.map((node) =>
+            node.children.length > 0 ? (
+              <MobileDropdown
+                key={node.item.id}
+                parent={node.item}
+                childItems={node.children}
+                onNavigate={closeMenu}
+              />
+            ) : (
+              renderNavLink(node.item, true, closeMenu)
+            ),
+          )}
         </nav>
       </div>
     </header>
   );
 }
+
+// ─── Desktop dropdown ────────────────────────────────────────
+// Parent-link blijft volledige link (klik gaat naar parent.href).
+// Een aparte chevron-button ernaast toggelt de dropdown. Hover op
+// de hele wrapper opent ook. Outside-click sluit.
+
+function DesktopDropdown({
+  parent,
+  childItems,
+  onNavigate,
+}: {
+  parent:     NavigationItem;
+  childItems: NavigationItem[];
+  onNavigate: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Outside-click sluit
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e: MouseEvent) {
+      if (!wrapperRef.current?.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+
+  const desktopBase = "px-4 py-2 text-sm font-body rounded-lg transition-colors";
+
+  return (
+    <div
+      ref={wrapperRef}
+      className="relative"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <div className="flex items-center">
+        {/* Parent-link blijft klikbaar */}
+        <Link
+          href={parent.href}
+          className={cn(desktopBase, "text-ink hover:text-slate-mosque hover:bg-sand pr-2")}
+          onClick={() => {
+            onNavigate();
+            setOpen(false);
+          }}
+        >
+          {parent.label}
+        </Link>
+        {/* Chevron-button toggelt dropdown apart van de link */}
+        <button
+          type="button"
+          className={cn(
+            "px-1 py-2 rounded-lg text-ink hover:text-slate-mosque hover:bg-sand transition-colors",
+            open && "text-slate-mosque",
+          )}
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-haspopup="true"
+          aria-label={`${parent.label} submenu ${open ? "sluiten" : "openen"}`}
+        >
+          <ChevronDown
+            size={16}
+            className={cn("transition-transform", open && "rotate-180")}
+          />
+        </button>
+      </div>
+
+      {/* Dropdown panel */}
+      <div
+        className={cn(
+          "absolute left-0 top-full mt-1 min-w-[200px] bg-white rounded-xl border border-sand-200 shadow-lg py-1.5 z-50",
+          open ? "block" : "hidden",
+        )}
+        role="menu"
+      >
+        {childItems.map((child) =>
+          child.external ? (
+            <a
+              key={child.id}
+              href={child.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              role="menuitem"
+              className="block px-4 py-2 text-sm font-body text-ink hover:bg-sand hover:text-slate-mosque transition-colors"
+              onClick={() => {
+                onNavigate();
+                setOpen(false);
+              }}
+            >
+              {child.label}
+            </a>
+          ) : (
+            <Link
+              key={child.id}
+              href={child.href}
+              role="menuitem"
+              className="block px-4 py-2 text-sm font-body text-ink hover:bg-sand hover:text-slate-mosque transition-colors"
+              onClick={() => {
+                onNavigate();
+                setOpen(false);
+              }}
+            >
+              {child.label}
+            </Link>
+          ),
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Mobile dropdown ─────────────────────────────────────────
+// Parent-link is volledige tap-target naar parent.href. Aparte
+// chevron-knop ernaast toggelt de children-collapse. Beide bereikbaar.
+
+function MobileDropdown({
+  parent,
+  childItems,
+  onNavigate,
+}: {
+  parent:     NavigationItem;
+  childItems: NavigationItem[];
+  onNavigate: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const mobileBase = "px-4 py-3 rounded-xl font-body text-base transition-colors";
+
+  return (
+    <div className="flex flex-col">
+      <div className="flex items-center">
+        {/* Parent-link — vult de meeste rij-breedte */}
+        <Link
+          href={parent.href}
+          className={cn(
+            mobileBase,
+            "flex-1 text-ink hover:bg-sand hover:text-slate-mosque",
+          )}
+          onClick={onNavigate}
+        >
+          {parent.label}
+        </Link>
+        {/* Chevron-knop voor uitklap — los van de link */}
+        <button
+          type="button"
+          className="p-3 ml-1 rounded-xl text-ink hover:bg-sand transition-colors"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-label={`Submenu van ${parent.label} ${open ? "sluiten" : "openen"}`}
+        >
+          <ChevronDown
+            size={20}
+            className={cn("transition-transform", open && "rotate-180")}
+          />
+        </button>
+      </div>
+
+      {/* Children — inset onder de parent */}
+      <div
+        className={cn(
+          "transition-[max-height] duration-200 ease-in-out overflow-hidden",
+          open ? "max-h-96" : "max-h-0",
+        )}
+      >
+        <div className="pl-4 flex flex-col gap-1 mt-1">
+          {childItems.map((child) =>
+            child.external ? (
+              <a
+                key={child.id}
+                href={child.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(mobileBase, "text-ink hover:bg-sand hover:text-slate-mosque text-sm")}
+                onClick={onNavigate}
+              >
+                {child.label}
+              </a>
+            ) : (
+              <Link
+                key={child.id}
+                href={child.href}
+                className={cn(mobileBase, "text-ink hover:bg-sand hover:text-slate-mosque text-sm")}
+                onClick={onNavigate}
+              >
+                {child.label}
+              </Link>
+            ),
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Plain nav link (geen children) — ongewijzigd uit vorige versie ─
 
 function renderNavLink(
   item: NavigationItem,

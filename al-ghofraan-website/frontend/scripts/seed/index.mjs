@@ -36,6 +36,8 @@ import { setupMosqueLogo }          from "./steps/33-mosque-logo.mjs";
 import { setupCheckInFields }       from "./steps/34-check-in-fields.mjs";
 import { setupVisitorConfirmationFields } from "./steps/35-visitor-confirmation-fields.mjs";
 import { setupCheckInSettings }    from "./steps/36-check-in-settings.mjs";
+import { setupNavigationParent }   from "./steps/37-navigation-parent.mjs";
+import { setupEducationCategories } from "./steps/38-education-categories.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -127,6 +129,8 @@ try {
   await setupCheckInFields(client);      // 34. check-in velden op registrations voor QR-code check-in (delivery QR-1)
   await setupVisitorConfirmationFields(client); // 35. bezoeker-bevestigingsmail velden op site_settings (delivery QR-Visitor-Mail)
   await setupCheckInSettings(client);    // 36. organisator-code + sessieduur op site_settings (delivery QR-Organizer)
+  await setupNavigationParent(client);   // 37. parent veld op navigation_items + 'Onze moskee' onder 'Over ons' (delivery Quatro)
+  await setupEducationCategories(client); // 38. education_categories collectie + category_ref op education_programs (delivery Dhoel-Edu)
 
   console.log("");
   console.log("╔══════════════════════════════════════════════════════╗");

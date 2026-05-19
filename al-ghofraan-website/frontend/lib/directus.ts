@@ -20,6 +20,7 @@ import type {
   PageSection,
   PageSectionItem,
   EducationProgram,
+  EducationCategory,
   DonationCampaign,
   Article,
   ArticleCategory,
@@ -230,6 +231,10 @@ const EDUCATION_FIELDS = [
   "show_registration_form_immediately",
   "require_terms_acceptance",
   "allow_multiple_students",
+  // M2O — vraag de gerelateerde categorie-velden mee voor filter-rendering
+  // op /onderwijs. Alleen velden die de frontend daadwerkelijk gebruikt.
+  "category_ref.id", "category_ref.name", "category_ref.slug",
+  "category_ref.status", "category_ref.active",
 ];
 
 export async function getEducationPrograms(): Promise<EducationProgram[]> {
@@ -240,7 +245,7 @@ export async function getEducationPrograms(): Promise<EducationProgram[]> {
           filter: { status: { _eq: "published" } } as never,
           sort:   ["sort", "title"],
           limit:  -1,
-          fields: EDUCATION_FIELDS,
+          fields: EDUCATION_FIELDS as never,
         })
       );
       return result as unknown as EducationProgram[];
@@ -259,7 +264,7 @@ export async function getEducationProgramBySlug(
         readItems("education_programs", {
           filter: { slug: { _eq: slug }, status: { _eq: "published" } } as never,
           limit:  1,
-          fields: EDUCATION_FIELDS,
+          fields: EDUCATION_FIELDS as never,
         })
       );
       return ((result as unknown as EducationProgram[])[0]) ?? null;
@@ -284,6 +289,46 @@ export async function getAllEducationProgramSlugs(): Promise<string[]> {
     "getAllEducationProgramSlugs",
     []
   );
+}
+
+// ─── Education categories (M2O target voor education_programs) ─
+const EDUCATION_CATEGORY_FIELDS = [
+  "id", "status", "name", "slug", "description",
+  "sort", "active", "created_at",
+];
+
+export async function getEducationCategories(): Promise<EducationCategory[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("education_categories", {
+          filter: { status: { _eq: "published" }, active: { _eq: true } } as never,
+          sort:   ["sort", "name"],
+          limit:  -1,
+          fields: EDUCATION_CATEGORY_FIELDS,
+        })
+      );
+      return (result as unknown as EducationCategory[]) ?? [];
+    },
+    "getEducationCategories",
+    []
+  );
+}
+
+/**
+ * Effectieve categorie-slug voor een onderwijsprogramma. Pakt
+ * category_ref.slug als de M2O is gepopuleerd; anders null.
+ * Programma's zonder categorie zijn alleen zichtbaar bij "Alle".
+ */
+export function getEffectiveEducationCategorySlug(
+  program: EducationProgram,
+): string | null {
+  const ref = program.category_ref;
+  if (ref && typeof ref === "object" && ref !== null && "slug" in ref) {
+    const slug = (ref as EducationCategory).slug;
+    if (typeof slug === "string" && slug.trim()) return slug.trim();
+  }
+  return null;
 }
 
 // ─── Donation campaigns ──────────────────────────────────────
@@ -895,7 +940,7 @@ export async function getNavigationItems(
           filter: { active: { _eq: true } } as never,
           sort:   ["sort"],
           limit:  -1,
-          fields: ["id", "label", "href", "sort", "highlight", "external", "active", "location"],
+          fields: ["id", "label", "href", "sort", "highlight", "external", "active", "location", "parent"],
         })
       );
       const items = result as NavigationItem[];
