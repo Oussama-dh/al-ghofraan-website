@@ -184,12 +184,44 @@ function DesktopDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  // Close-delay voorkomt flikkering tijdens de muis-overgang van
+  // parent → panel. ~150ms voelt natuurlijk: lang genoeg om een gap
+  // of een schuine muisbeweging te overbruggen, kort genoeg om geen
+  // "blijft hangen"-gevoel te geven.
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Outside-click sluit
+  const clearCloseTimer = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+
+  const scheduleClose = () => {
+    clearCloseTimer();
+    closeTimerRef.current = setTimeout(() => {
+      setOpen(false);
+      closeTimerRef.current = null;
+    }, 150);
+  };
+
+  const openNow = () => {
+    clearCloseTimer();
+    setOpen(true);
+  };
+
+  // Cleanup pending timer bij unmount — voorkomt setState-op-unmounted.
+  useEffect(() => () => clearCloseTimer(), []);
+
+  // Outside-click sluit (klik buiten wrapper). Geen interactie met
+  // de hover-timer nodig: outside-click sluit direct.
   useEffect(() => {
     if (!open) return;
     function onDocClick(e: MouseEvent) {
-      if (!wrapperRef.current?.contains(e.target as Node)) setOpen(false);
+      if (!wrapperRef.current?.contains(e.target as Node)) {
+        clearCloseTimer();
+        setOpen(false);
+      }
     }
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
@@ -201,8 +233,8 @@ function DesktopDropdown({
     <div
       ref={wrapperRef}
       className="relative"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      onMouseEnter={openNow}
+      onMouseLeave={scheduleClose}
     >
       <div className="flex items-center">
         {/* Parent-link blijft klikbaar */}
@@ -211,6 +243,7 @@ function DesktopDropdown({
           className={cn(desktopBase, "text-ink hover:text-slate-mosque hover:bg-sand pr-2")}
           onClick={() => {
             onNavigate();
+            clearCloseTimer();
             setOpen(false);
           }}
         >
@@ -223,7 +256,10 @@ function DesktopDropdown({
             "px-1 py-2 rounded-lg text-ink hover:text-slate-mosque hover:bg-sand transition-colors",
             open && "text-slate-mosque",
           )}
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => {
+            clearCloseTimer();
+            setOpen((v) => !v);
+          }}
           aria-expanded={open}
           aria-haspopup="true"
           aria-label={`${parent.label} submenu ${open ? "sluiten" : "openen"}`}
@@ -235,45 +271,67 @@ function DesktopDropdown({
         </button>
       </div>
 
-      {/* Dropdown panel */}
+      {/*
+        Dropdown panel.
+
+        Gap-overbrugging: visueel laten we ~4px lucht onder de parent,
+        maar we plaatsen het panel direct aan de wrapper (top-full,
+        geen margin) en gebruiken een padding-top zodat de hover-area
+        van de wrapper aansluit op het panel. Geen "dode strook"
+        tussen parent en panel meer waar onMouseLeave kan vuren.
+
+        We renderen het panel met visibility/opacity ipv hidden zodat
+        de hover-tracking niet wordt onderbroken door layout-jumps,
+        maar pointer-events-none zorgt dat de gesloten staat niet per
+        ongeluk klikken vangt.
+      */}
       <div
         className={cn(
-          "absolute left-0 top-full mt-1 min-w-[200px] bg-white rounded-xl border border-sand-200 shadow-lg py-1.5 z-50",
-          open ? "block" : "hidden",
+          "absolute left-0 top-full pt-1 min-w-[200px] z-50 transition-opacity",
+          open
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none",
         )}
         role="menu"
+        aria-hidden={!open}
+        onMouseEnter={openNow}
+        onMouseLeave={scheduleClose}
       >
-        {childItems.map((child) =>
-          child.external ? (
-            <a
-              key={child.id}
-              href={child.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              role="menuitem"
-              className="block px-4 py-2 text-sm font-body text-ink hover:bg-sand hover:text-slate-mosque transition-colors"
-              onClick={() => {
-                onNavigate();
-                setOpen(false);
-              }}
-            >
-              {child.label}
-            </a>
-          ) : (
-            <Link
-              key={child.id}
-              href={child.href}
-              role="menuitem"
-              className="block px-4 py-2 text-sm font-body text-ink hover:bg-sand hover:text-slate-mosque transition-colors"
-              onClick={() => {
-                onNavigate();
-                setOpen(false);
-              }}
-            >
-              {child.label}
-            </Link>
-          ),
-        )}
+        <div className="bg-white rounded-xl border border-sand-200 shadow-lg py-1.5">
+          {childItems.map((child) =>
+            child.external ? (
+              <a
+                key={child.id}
+                href={child.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                role="menuitem"
+                className="block px-4 py-2 text-sm font-body text-ink hover:bg-sand hover:text-slate-mosque transition-colors"
+                onClick={() => {
+                  onNavigate();
+                  clearCloseTimer();
+                  setOpen(false);
+                }}
+              >
+                {child.label}
+              </a>
+            ) : (
+              <Link
+                key={child.id}
+                href={child.href}
+                role="menuitem"
+                className="block px-4 py-2 text-sm font-body text-ink hover:bg-sand hover:text-slate-mosque transition-colors"
+                onClick={() => {
+                  onNavigate();
+                  clearCloseTimer();
+                  setOpen(false);
+                }}
+              >
+                {child.label}
+              </Link>
+            ),
+          )}
+        </div>
       </div>
     </div>
   );
