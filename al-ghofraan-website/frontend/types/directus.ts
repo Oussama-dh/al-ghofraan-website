@@ -126,6 +126,24 @@ export interface SiteSettings {
   notification_email_education?: string | null;
   notification_email_activities?: string | null;
   notification_email_donations?: string | null;
+  // ─── Bezoeker-bevestigingsmail (QR-Visitor-Mail) ──────────
+  // Per afdeling beheerbaar in Directus. Vereist dat ook de master
+  // `email_notifications_enabled` true is. Standaard alle _enabled
+  // velden false — beheerder zet aan na het controleren van de
+  // intro/footer-teksten.
+  education_confirmation_email_enabled?: boolean | null;
+  education_confirmation_email_subject?: string | null;
+  education_confirmation_email_intro?: string | null;
+  education_confirmation_email_footer?: string | null;
+  activities_confirmation_email_enabled?: boolean | null;
+  activities_confirmation_email_subject?: string | null;
+  activities_confirmation_email_intro?: string | null;
+  activities_confirmation_email_footer?: string | null;
+  // ─── Check-in organisator-autorisatie (QR-Organizer) ──────
+  /** Geheime code waarmee organisatoren zich autoriseren op /check-in/organizer. Leeg = feature uit. */
+  check_in_organizer_code?: string | null;
+  /** Hoe lang een organisator-cookie geldig is (uren). Fallback 4 bij leeg/ongeldig. */
+  check_in_session_duration_hours?: number | null;
   social_links?: {
     facebook?: string;
     instagram?: string;
@@ -329,6 +347,15 @@ export interface Registration {
   parent_phone?: string | null;
   /** UUID per inzending — kinderen van één indiening delen deze id. */
   registration_group_id?: string | null;
+  // ─── Check-in velden (QR-1) ───────────────────────────────
+  /** UUID v4 token voor QR-code check-in. Alleen aanwezig op activity-inschrijvingen vanaf QR-1. */
+  check_in_token?: string | null;
+  /** Timestamp wanneer de organisator de aanwezigheid heeft bevestigd. Leeg = nog niet ingecheckt. */
+  checked_in_at?: string | null;
+  /** Naam of initialen van de organisator die heeft ingecheckt. */
+  checked_in_by?: string | null;
+  /** Optionele opmerking van de organisator bij de check-in. */
+  checked_in_note?: string | null;
   created_at?: string | null;
 }
 

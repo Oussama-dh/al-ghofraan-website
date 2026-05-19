@@ -48,7 +48,10 @@ import { generateStudentNumbers } from "@/lib/studentNumber";
 import {
   notifyActivityRegistration,
   notifyEducationRegistration,
+  notifyActivityRegistrationVisitor,
+  notifyEducationRegistrationVisitor,
 } from "@/lib/server/notifications";
+import { getSiteUrl } from "@/lib/utils";
 import type {
   Activity,
   EducationProgram,
@@ -568,6 +571,10 @@ export async function POST(request: Request) {
     }
 
     try {
+      // QR-1 — Token vooraf genereren zodat we hem ook kunnen meegeven
+      // aan de visitor-confirmatiemail (check-in link).
+      const checkInToken = randomUUID();
+
       await directusServer.request(
         createItem("registrations", {
           type:              body.type,
@@ -582,6 +589,9 @@ export async function POST(request: Request) {
           gender:            body.gender,
           notes:             body.notes ?? null,
           status:            "new",
+          // QR-1 — Unieke token voor QR-code check-in (alleen activity).
+          // Bevat geen persoonsgegevens, alleen lookup-key.
+          check_in_token:    checkInToken,
         } as never),
       );
 
@@ -601,6 +611,30 @@ export async function POST(request: Request) {
         });
       } catch (notifyErr) {
         console.warn("[inschrijven] activity-notificatie overgeslagen:", notifyErr);
+      }
+
+      // ─── Bezoeker-bevestigingsmail (QR-Visitor-Mail) ─────────
+      // Onafhankelijk van admin-notify. Eigen try/catch, eigen
+      // getSiteSettings-fetch (admin-tak kan gefaald zijn voordat
+      // settings beschikbaar was). Fail-soft per contract van
+      // notifyActivityRegistrationVisitor — mag inschrijving niet
+      // blokkeren.
+      try {
+        const settingsForVisitor = await getSiteSettings();
+        await notifyActivityRegistrationVisitor(settingsForVisitor, {
+          activityTitle: src.sourceTitle,
+          visitorEmail:  body.email,
+          name:          body.name,
+          email:         body.email,
+          phone:         body.phone ?? null,
+          gender:        body.gender,
+          age:           body.age ?? null,
+          notes:         body.notes ?? null,
+          checkInToken,
+          siteUrl:       getSiteUrl(),
+        });
+      } catch (visitorErr) {
+        console.warn("[inschrijven] activity-bezoekersmail overgeslagen:", visitorErr);
       }
 
       return NextResponse.json({ ok: true });
@@ -721,6 +755,28 @@ export async function POST(request: Request) {
       });
     } catch (notifyErr) {
       console.warn("[inschrijven] education-notificatie overgeslagen:", notifyErr);
+    }
+
+    // ─── Bezoeker-bevestigingsmail (QR-Visitor-Mail) ─────────
+    // Onderwijs krijgt GEEN check-in link (geen token). Eigen
+    // try/catch, eigen getSiteSettings-fetch. Fail-soft per
+    // contract — mag inschrijving niet blokkeren.
+    try {
+      const settingsForVisitor = await getSiteSettings();
+      await notifyEducationRegistrationVisitor(settingsForVisitor, {
+        programTitle: src.sourceTitle,
+        visitorEmail: body.parent.email,
+        parent:       body.parent,
+        students:     body.students.map((s, i) => ({
+          name:          s.name,
+          gender:        s.gender,
+          age:           s.age ?? null,
+          notes:         s.notes ?? null,
+          studentNumber: studentNumbers[i],
+        })),
+      });
+    } catch (visitorErr) {
+      console.warn("[inschrijven] education-bezoekersmail overgeslagen:", visitorErr);
     }
 
     return NextResponse.json({
