@@ -33,6 +33,9 @@ import { setupVacancyRole }        from "./steps/30-vacancy-role.mjs";
 import { setupVacancyStatusColors } from "./steps/31-vacancy-status-colors.mjs";
 import { setupPrayerCalendarHighlights } from "./steps/32-prayer-calendar-highlights.mjs";
 import { setupMosqueLogo }          from "./steps/33-mosque-logo.mjs";
+import { setupCheckInFields }       from "./steps/34-check-in-fields.mjs";
+import { setupVisitorConfirmationFields } from "./steps/35-visitor-confirmation-fields.mjs";
+import { setupCheckInSettings }    from "./steps/36-check-in-settings.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -121,6 +124,9 @@ try {
   await setupVacancyStatusColors(client); // 31. kleurcodering vacancies.status (delivery 19, bestaande installs)
   await setupPrayerCalendarHighlights(client); // 32. kalender-highlights voor gebedstijden (delivery 21)
   await setupMosqueLogo(client);         // 33. optioneel mosque_logo veld op page_content (delivery 25)
+  await setupCheckInFields(client);      // 34. check-in velden op registrations voor QR-code check-in (delivery QR-1)
+  await setupVisitorConfirmationFields(client); // 35. bezoeker-bevestigingsmail velden op site_settings (delivery QR-Visitor-Mail)
+  await setupCheckInSettings(client);    // 36. organisator-code + sessieduur op site_settings (delivery QR-Organizer)
 
   console.log("");
   console.log("╔══════════════════════════════════════════════════════╗");
