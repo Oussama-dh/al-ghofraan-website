@@ -61,6 +61,10 @@ export default function Footer({
 
   const items = (navItems && navItems.length > 0 ? navItems : FALLBACK_NAV)
     .slice()
+    // Footer toont alleen top-level items. Children (parent != null) zijn
+    // beschikbaar via de header-dropdown. Hier flat tonen zou de relatie
+    // verbergen ("Onze moskee" als losse link tussen andere top-levels).
+    .filter((item) => !item.parent)
     .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
 
   return (

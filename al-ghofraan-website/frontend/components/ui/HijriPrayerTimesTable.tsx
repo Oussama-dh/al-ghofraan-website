@@ -28,9 +28,9 @@ const GEBEDEN: ReadonlyArray<{
   { key: "fajr",     label: "Fajr",     arabic: "الفجر",   Icon: MoonStar },
   { key: "shoeroeq", label: "Shoeroeq", arabic: "الشروق",  Icon: Sunrise  },
   { key: "dhoehr",   label: "Dhoehr",   arabic: "الظهر",   Icon: Sun      },
-  { key: "asr",      label: "Asr",      arabic: "العصر",   Icon: CloudSun },
+  { key: "asr",      label: "'Asr",     arabic: "العصر",   Icon: CloudSun },
   { key: "maghrib",  label: "Maghrib",  arabic: "المغرب",  Icon: Sunset   },
-  { key: "ishaa",    label: "Ishaa",    arabic: "العشاء",  Icon: Moon     },
+  { key: "ishaa",    label: "'Ishaa",   arabic: "العشاء",  Icon: Moon     },
 ];
 
 const NL_WEEKDAYS = [
@@ -96,7 +96,7 @@ export default function HijriPrayerTimesTable({
       <table className="w-full text-sm font-body">
         <thead>
           <tr className="bg-slate-mosque text-white">
-            <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Hidjri</th>
+            <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Hijri</th>
             <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Gregor.</th>
             <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Dag</th>
             {GEBEDEN.map((g) => (

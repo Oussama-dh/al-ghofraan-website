@@ -19,7 +19,7 @@ interface PrayerTimesTableProps {
   showDayColumn?: boolean;
   /**
    * Mapping van CSV-datum (`row.datum`) naar geformatteerde Hijri-string
-   * (bv. "21 Dhul-Qi'dah 1447"). Als aanwezig en niet-leeg → er verschijnt
+   * (bv. "21 Dhoel-Qi'dah 1447"). Als aanwezig en niet-leeg → er verschijnt
    * rechts een Hijri-kolom. Rijen zonder mapping krijgen "—".
    */
   hijriByDatum?:  Record<string, string>;
@@ -40,9 +40,9 @@ const GEBEDEN: ReadonlyArray<{
   { key: "fajr",     label: "Fajr",     arabic: "الفجر",   Icon: MoonStar },
   { key: "shoeroeq", label: "Shoeroeq", arabic: "الشروق",  Icon: Sunrise  },
   { key: "dhoehr",   label: "Dhoehr",   arabic: "الظهر",   Icon: Sun      },
-  { key: "asr",      label: "Asr",      arabic: "العصر",   Icon: CloudSun },
+  { key: "asr",      label: "'Asr",     arabic: "العصر",   Icon: CloudSun },
   { key: "maghrib",  label: "Maghrib",  arabic: "المغرب",  Icon: Sunset   },
-  { key: "ishaa",    label: "Ishaa",    arabic: "العشاء",  Icon: Moon     },
+  { key: "ishaa",    label: "'Ishaa",   arabic: "العشاء",  Icon: Moon     },
 ];
 
 interface TodayCardProps {
@@ -146,7 +146,7 @@ export default function PrayerTimesTable({
               </th>
             ))}
             {showHijriColumn && (
-              <th className="px-4 py-3 text-right font-medium whitespace-nowrap">Hidjri</th>
+              <th className="px-4 py-3 text-right font-medium whitespace-nowrap">Hijri</th>
             )}
           </tr>
         </thead>

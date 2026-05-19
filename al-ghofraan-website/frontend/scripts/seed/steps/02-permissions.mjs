@@ -20,6 +20,7 @@ const COLLECTIONS = [
   { collection: "contact_subjects",   filter: { status:    { _eq: "published" } } },
   { collection: "article_categories", filter: { status:    { _eq: "published" } } },
   { collection: "video_categories",   filter: { status:    { _eq: "published" } } },
+  { collection: "education_categories", filter: { status:  { _eq: "published" } } },
   { collection: "vacancies",          filter: { status:    { _eq: "published" } } },
   // Delivery 21 — kalender-highlights worden door /gebedstijden en
   // /gebedstijden/overzicht gelezen. Filter op published; show_on_calendar

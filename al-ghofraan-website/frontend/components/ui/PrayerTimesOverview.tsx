@@ -55,7 +55,7 @@ const NL_MONTH_NAMES = [
 
 export default function PrayerTimesOverview({ rows, hijriOverrides, highlights }: PrayerTimesOverviewProps) {
   // ─── Calendar mode toggle ─────────────────────────────────
-  // Default = "gregorian" (Nederlandse maand-weergave is de
+  // Default = "gregorian" (Gregoriaanse kalender-weergave is de
   // herkenbaarste voor de meeste bezoekers). De toggle hieronder
   // laat de bezoeker omschakelen naar "hijri" voor de Islamitische
   // maand-weergave.
@@ -276,7 +276,7 @@ const todayDatum = useMemo(() => {
                   : "text-taupe-dark hover:bg-sand-50",
               )}
             >
-              Islamitische maand
+              Hijri kalender
             </button>
             <button
               type="button"
@@ -290,7 +290,7 @@ const todayDatum = useMemo(() => {
                   : "text-taupe-dark hover:bg-sand-50",
               )}
             >
-              Nederlandse maand
+              Gregoriaanse kalender
             </button>
           </div>
         </div>
@@ -306,7 +306,7 @@ const todayDatum = useMemo(() => {
                   htmlFor="hijri-month-select"
                   className="block font-body text-xs uppercase tracking-widest text-taupe-dark mb-1.5 font-semibold"
                 >
-                  Islamitische maand
+                  Hijri kalender
                 </label>
                 <select
                   id="hijri-month-select"

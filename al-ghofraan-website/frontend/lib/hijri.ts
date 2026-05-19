@@ -19,12 +19,12 @@ const HIJRI_MONTHS_NL: Record<number, { nl: string; ar: string }> = {
   4:  { nl: "Rabi' ath-Thaani", ar: "ربيع الآخر"     },
   5:  { nl: "Joemaada al-Oela", ar: "جمادى الأولى"   },
   6:  { nl: "Joemaada ath-Thaaniya", ar: "جمادى الآخرة" },
-  7:  { nl: "Radjab",           ar: "رجب"           },
+  7:  { nl: "Rajjab",           ar: "رجب"           },
   8:  { nl: "Sha'baan",         ar: "شعبان"         },
   9:  { nl: "Ramadan",          ar: "رمضان"         },
   10: { nl: "Shawwaal",         ar: "شوال"          },
-  11: { nl: "Dhul-Qi'dah",      ar: "ذو القعدة"      },
-  12: { nl: "Dhul-Hijjah",      ar: "ذو الحجة"       },
+  11: { nl: "Dhoel-Qi'dah",     ar: "ذو القعدة"      },
+  12: { nl: "Dhoel-Hijjah",     ar: "ذو الحجة"       },
 };
 
 export interface HijriDate {
@@ -172,7 +172,7 @@ export function parseGregorianDate(input: string): Date | null {
 }
 
 /**
- * Format een HijriDate als korte Nederlandse string: "21 Dhul-Qi'dah 1447"
+ * Format een HijriDate als korte Nederlandse string: "21 Dhoel-Qi'dah 1447"
  */
 export function formatHijriShortNl(h: HijriDate): string {
   return `${h.day} ${h.monthNameNl} ${h.year}`;

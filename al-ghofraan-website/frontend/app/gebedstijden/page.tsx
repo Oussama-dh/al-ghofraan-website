@@ -226,7 +226,7 @@ export default async function GebedstijdenPage() {
 
           <div className="mb-12">
             <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
-              {/* Heading: "22 Dhul-Qi'dah 1447 — Vandaag" (Hijri vóór het
+              {/* Heading: "22 Dhoel-Qi'dah 1447 — Vandaag" (Hijri vóór het
                   woord Vandaag). Als de Hijri-datum niet kon worden bepaald
                   (bv. Node zonder ICU), valt het label terug op alleen
                   "Vandaag" zodat de pagina nooit blanco kop heeft. De

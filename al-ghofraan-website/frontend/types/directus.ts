@@ -162,6 +162,14 @@ export interface NavigationItem {
   external: boolean;
   active: boolean;
   location?: "header" | "footer" | "both" | null;
+  /**
+   * Optionele M2O self-reference. Indien gevuld, is dit item een
+   * child onder dat parent-item in de navigatie. Eén niveau van
+   * nesting — children worden zelf niet als dropdown-parent gerenderd.
+   * Directus retourneert een UUID-string; client-side mapping naar
+   * de parent-record gebeurt in Header.tsx.
+   */
+  parent?: string | null;
 }
 
 // ─── page_content ────────────────────────────────────────────
@@ -294,6 +302,33 @@ export interface EducationProgram {
   show_registration_form_immediately?: boolean | null;
   require_terms_acceptance?: boolean | null;
   allow_multiple_students?: boolean | null;
+  /**
+   * Optionele M2O naar education_categories. Indien gevuld door de
+   * beheerder, verschijnt dit programma onder de bijbehorende
+   * filterknop op /onderwijs. Bij Directus M2O-fetches wordt dit
+   * uitgepakt tot een nested object met id/name/slug/status/active.
+   * `target_group` (vrije tekst) blijft daarnaast als badge zichtbaar.
+   */
+  category_ref?: number | EducationCategory | null;
+}
+
+// ─── education_categories ────────────────────────────────────
+/**
+ * Categorieën voor onderwijsprogramma's. Beheerder maakt deze zelf aan
+ * via Directus admin. Wordt via M2O gekoppeld aan
+ * `education_programs.category_ref`.
+ *
+ * Zelfde patroon als article_categories en video_categories.
+ */
+export interface EducationCategory {
+  id: number;
+  status: "draft" | "published" | "archived";
+  name: string;
+  slug: string;
+  description?: string | null;
+  sort?: number | null;
+  active: boolean;
+  created_at?: string | null;
 }
 
 // ─── registrations ───────────────────────────────────────────
@@ -728,6 +763,7 @@ export interface DirectusSchema {
   contact_subjects: ContactSubject[];
   article_categories: ArticleCategory[];
   video_categories: VideoCategory[];
+  education_categories: EducationCategory[];
   vacancies: Vacancy[];
   prayer_calendar_highlights: PrayerCalendarHighlight[];
 }

@@ -7,6 +7,7 @@ import Button             from "@/components/ui/Button";
 import { Icon }           from "@/lib/icons";
 import { User }           from "lucide-react";
 import RegistrationForm   from "@/components/registration/RegistrationForm";
+import AddToCalendarButton from "@/components/activity/AddToCalendarButton";
 import {
   getActivityBySlug,
   getActivityRegistrationCount,
@@ -16,6 +17,7 @@ import {
   ICON_KEYS,
 } from "@/lib/directus";
 import { formatDate, getSiteUrl } from "@/lib/utils";
+import { buildGoogleCalendarUrlForActivity } from "@/lib/activityCalendar";
 
 interface Props {
   params: { slug: string };
@@ -244,6 +246,15 @@ export default async function ActivityDetailPage({ params }: Props) {
             className="rich-text max-w-none"
             dangerouslySetInnerHTML={{ __html: activity.description || "" }}
           />
+
+          {/* Agenda-toevoegen knop — boven het inschrijfformulier zodat
+              bezoekers ook zonder inschrijving de datum kunnen wegzetten. */}
+          <div className="mt-6">
+            <AddToCalendarButton
+              slug={activity.slug}
+              googleCalendarUrl={buildGoogleCalendarUrlForActivity(activity)}
+            />
+          </div>
 
           {activity.registration_enabled && (
             <div className="mt-10">
