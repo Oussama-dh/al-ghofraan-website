@@ -1184,19 +1184,39 @@ export function resolveIconKey(map: Map<string, string>, key: string): string {
 }
 
 /**
- * Delivery daily-hadith — haalt de hadith op die op de homepage getoond
- * moet worden. Returnt de eerste actieve, gepubliceerde rij gesorteerd
- * op `sort` (lager = eerder). Null als er geen actieve hadith is.
+ * Delivery daily-hadith + hadith-rotation —
  *
- * Public-read permissions worden afgedwongen door Directus zelf
- * (filter: status=published EN active=true, ingesteld in stap 02).
- * Deze server-side filter is een extra laag voor het geval permissions
- * niet zijn uitgevoerd / overschreven.
+ * Geeft de hadith terug die op DEZE DAG getoond moet worden op de
+ * homepage. Twee paden:
+ *
+ *   1. force_show override (admin pin'd een specifieke hadith):
+ *      - Alle actieve+published hadiths waar force_show=true EN
+ *        (force_show_until leeg OF force_show_until >= vandaag UTC).
+ *      - Bij meerdere matches: laagste sort ASC, dan laagste id ASC.
+ *      - Geen console.warn bij meerdere — wel zichtbaar voor admin
+ *        in Directus dat er meerdere force_show=true rijen staan.
+ *
+ *   2. Dagelijkse rotatie (default):
+ *      - dayNumber = floor(Date.now() / 86400000) — UTC dagen sinds epoch.
+ *      - index = dayNumber % hadiths.length
+ *      - Sortering stabiel: sort ASC, dan id ASC.
+ *      - Iedereen wereldwijd ziet op dezelfde UTC-dag dezelfde hadith.
+ *      - Wisseling vindt plaats om 00:00 UTC (= 01:00 NL winter, 02:00 NL zomer).
+ *        Acceptabel: voorspelbaar, cache-vriendelijk, geen tijdzone-deps.
+ *
+ * Edge cases:
+ *   - 0 hadiths       → null (homepage rendert niets).
+ *   - 1 hadith        → die ene, rotatie irrelevant (index 0).
+ *   - draft/inactive  → uitgesloten door Directus filter ÉN runtime check.
+ *
+ * Public-read permissions (status=published AND active=true) zijn in
+ * stap 02 ingesteld. De runtime filter hier is een extra laag voor de
+ * server-side fetch (DIRECTUS_TOKEN of public-policy).
  */
-export async function getActiveDailyHadith(): Promise<DailyHadith | null> {
+export async function getDailyHadithForToday(): Promise<DailyHadith | null> {
   return safe(
     async () => {
-      const result = await directusServer.request(
+      const all = (await directusServer.request(
         readItems("daily_hadiths", {
           filter: {
             _and: [
@@ -1204,21 +1224,69 @@ export async function getActiveDailyHadith(): Promise<DailyHadith | null> {
               { active: { _eq: true } },
             ],
           } as never,
-          sort:  ["sort"],
-          limit: 1,
+          // Stabiele server-sortering — fallback voor het geval Directus
+          // de array in een andere volgorde geeft per request.
+          sort:  ["sort", "id"],
+          limit: -1,
           fields: [
             "id", "status", "active",
             "title", "arabic_text", "translation_nl",
             "source", "grade", "explanation_short",
             "display_date", "sort", "created_at",
+            "force_show", "force_show_until",
           ],
         }),
-      );
-      return ((result as DailyHadith[])[0]) ?? null;
+      )) as DailyHadith[];
+
+      if (!all.length) return null;
+
+      // Defensieve client-side resort (sort ASC, dan id ASC) — onafhankelijk
+      // van wat Directus exact teruggeeft, deterministisch.
+      const sorted = [...all].sort((a, b) => {
+        const sa = typeof a.sort === "number" ? a.sort : Number.MAX_SAFE_INTEGER;
+        const sb = typeof b.sort === "number" ? b.sort : Number.MAX_SAFE_INTEGER;
+        if (sa !== sb) return sa - sb;
+        return Number(a.id) - Number(b.id);
+      });
+
+      // ─── Pad 1: force_show override ─────────────────────────
+      const todayUtcMs = startOfUtcDay(Date.now());
+      const forced = sorted.filter((h) => {
+        if (h.force_show !== true) return false;
+        // force_show_until = einddatum (inclusief die dag). Leeg = altijd geldig.
+        if (!h.force_show_until) return true;
+        const untilMs = startOfUtcDay(Date.parse(h.force_show_until));
+        if (!Number.isFinite(untilMs)) return true; // ongeldig veld → behandel als onbeperkt
+        return todayUtcMs <= untilMs;
+      });
+      if (forced.length > 0) {
+        return forced[0]; // sorted volgens sort ASC, id ASC
+      }
+
+      // ─── Pad 2: dagelijkse rotatie ─────────────────────────
+      const dayNumber = Math.floor(todayUtcMs / 86_400_000);
+      const index     = ((dayNumber % sorted.length) + sorted.length) % sorted.length;
+      return sorted[index] ?? null;
     },
-    "getActiveDailyHadith",
+    "getDailyHadithForToday",
     null,
   );
+}
+
+/**
+ * Backward-compatible alias. Bestaande callers hoeven niet aangepast
+ * te worden; nieuwe code gebruikt getDailyHadithForToday.
+ */
+export const getActiveDailyHadith = getDailyHadithForToday;
+
+/**
+ * Helper: epoch-ms van het begin van de UTC-dag voor een gegeven timestamp.
+ * Gebruikt om datums te vergelijken zonder tijd-component.
+ */
+function startOfUtcDay(ms: number): number {
+  if (!Number.isFinite(ms)) return NaN;
+  const d = new Date(ms);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
 
 export { readItems, readSingleton };

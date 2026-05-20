@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Link              from "next/link";
 import Container         from "@/components/ui/Container";
 import PageHero          from "@/components/sections/PageHero";
+import SortDropdown      from "@/components/videos/SortDropdown";
 import {
   getVideos,
   getVideoCategories,
@@ -38,7 +39,100 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 interface VideosPageProps {
-  searchParams?: { category?: string };
+  searchParams?: { category?: string; sort?: string };
+}
+
+// Delivery video-sort — sorteer-opties als constante array zodat de
+// dropdown, de URL-parser en de sort-functie één bron van waarheid
+// delen.
+type SortKey = "newest" | "oldest" | "az" | "featured";
+
+const SORT_OPTIONS: ReadonlyArray<{ value: SortKey; label: string }> = [
+  { value: "newest",   label: "Nieuwste eerst" },
+  { value: "oldest",   label: "Oudste eerst"   },
+  { value: "az",       label: "A-Z"            },
+  { value: "featured", label: "Uitgelicht eerst" },
+];
+
+const DEFAULT_SORT: SortKey = "newest";
+
+function resolveSort(raw: string | undefined): SortKey {
+  if (!raw) return DEFAULT_SORT;
+  return SORT_OPTIONS.some((o) => o.value === raw) ? (raw as SortKey) : DEFAULT_SORT;
+}
+
+/**
+ * Stabiele compare-functies. Bij gelijke primair-sleutel valt elke
+ * sort terug op published_at desc → id desc om een deterministische
+ * order te garanderen (anders kan de grid 'springen' bij gelijke
+ * waarden).
+ *
+ * Tip voor de lezer: we sorteren een mutable copy van de valid-array,
+ * niet de originele. `entry.video.published_at` etc. zijn allemaal
+ * optioneel; we vangen null/undefined af zonder NaN.
+ */
+function timestampOf(value: string | null | undefined): number {
+  if (!value) return 0;
+  const n = Date.parse(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+type Entry = {
+  video:    { id: number; title: string; published_at?: string | null; featured?: boolean };
+  videoId:  string;
+  thumb:    string | null;
+  watchUrl: string;
+};
+
+function sortVideos<T extends Entry>(entries: T[], key: SortKey): T[] {
+  const sorted = [...entries];
+  switch (key) {
+    case "newest":
+      sorted.sort((a, b) => {
+        const diff = timestampOf(b.video.published_at) - timestampOf(a.video.published_at);
+        if (diff !== 0) return diff;
+        return b.video.id - a.video.id; // fallback wanneer published_at gelijk/leeg
+      });
+      break;
+    case "oldest":
+      sorted.sort((a, b) => {
+        const diff = timestampOf(a.video.published_at) - timestampOf(b.video.published_at);
+        if (diff !== 0) return diff;
+        return a.video.id - b.video.id;
+      });
+      break;
+    case "az":
+      sorted.sort((a, b) => {
+        const diff = a.video.title.localeCompare(b.video.title, "nl", { sensitivity: "base" });
+        if (diff !== 0) return diff;
+        return a.video.id - b.video.id;
+      });
+      break;
+    case "featured":
+      sorted.sort((a, b) => {
+        const fa = a.video.featured ? 1 : 0;
+        const fb = b.video.featured ? 1 : 0;
+        if (fa !== fb) return fb - fa; // featured eerst
+        // Daarna nieuwste eerst.
+        const diff = timestampOf(b.video.published_at) - timestampOf(a.video.published_at);
+        if (diff !== 0) return diff;
+        return b.video.id - a.video.id;
+      });
+      break;
+  }
+  return sorted;
+}
+
+/**
+ * Bouw een href met behoud van sort (en optioneel category). De
+ * default sort (`newest`) laten we uit de URL om hem schoon te houden.
+ */
+function buildVideosHref(opts: { category?: string | null; sort?: SortKey }): string {
+  const params = new URLSearchParams();
+  if (opts.category) params.set("category", opts.category);
+  if (opts.sort && opts.sort !== DEFAULT_SORT) params.set("sort", opts.sort);
+  const qs = params.toString();
+  return qs ? `/videos?${qs}` : "/videos";
 }
 
 export default async function VideosPage({ searchParams }: VideosPageProps) {
@@ -80,11 +174,17 @@ export default async function VideosPage({ searchParams }: VideosPageProps) {
   const activeCategory =
     requested ? availableCategories.find((c) => c.slug.toLowerCase() === requested) ?? null : null;
 
+  // Delivery video-sort — bezoeker-keuze; default newest. Sort blijft
+  // bewaard bij wisselen van categorie via buildVideosHref.
+  const activeSort = resolveSort(searchParams?.sort);
+
   // Toon geselecteerde categorie of alle (in alle gevallen blijft de array
   // dezelfde shape: {video, videoId, thumb, watchUrl}).
-  const visible = activeCategory
+  const filtered = activeCategory
     ? valid.filter(({ video }) => getEffectiveVideoCategorySlug(video) === activeCategory.slug)
     : valid;
+
+  const visible = sortVideos(filtered, activeSort);
 
   return (
     <>
@@ -97,23 +197,42 @@ export default async function VideosPage({ searchParams }: VideosPageProps) {
 
       <section className="bg-sand-50 py-12 lg:py-16">
         <Container>
-          {/* Categorie-filter — alleen tonen als er meer dan één relevante categorie is */}
-          {availableCategories.length > 0 && (
-            <div className="mb-8 flex flex-wrap gap-2">
-              <FilterPill href="/videos" active={activeCategory === null}>
-                Alle
-              </FilterPill>
-              {availableCategories.map((cat) => (
+          {/* Categorie + sortering — beide bewaren elkaars query param.
+              Op mobiel stacken ze; op sm+ staan ze naast elkaar. */}
+          <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            {availableCategories.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
                 <FilterPill
-                  key={cat.slug}
-                  href={`/videos?category=${encodeURIComponent(cat.slug)}`}
-                  active={activeCategory?.slug === cat.slug}
+                  href={buildVideosHref({ category: null, sort: activeSort })}
+                  active={activeCategory === null}
                 >
-                  {cat.name}
+                  Alle
                 </FilterPill>
-              ))}
-            </div>
-          )}
+                {availableCategories.map((cat) => (
+                  <FilterPill
+                    key={cat.slug}
+                    href={buildVideosHref({ category: cat.slug, sort: activeSort })}
+                    active={activeCategory?.slug === cat.slug}
+                  >
+                    {cat.name}
+                  </FilterPill>
+                ))}
+              </div>
+            ) : (
+              // Spacer zodat de dropdown rechts uitlijnt ook zonder filters.
+              <span aria-hidden />
+            )}
+
+            {/* Sorteer-dropdown — client-component, auto-navigate
+                onChange. Behoudt categorie en houdt URL schoon door
+                de default-sort niet als query op te nemen. */}
+            <SortDropdown
+              options={SORT_OPTIONS}
+              defaultValue={activeSort}
+              categorySlug={activeCategory?.slug ?? null}
+              defaultSortValue={DEFAULT_SORT}
+            />
+          </div>
 
           {visible.length === 0 ? (
             <div className="text-center py-20">

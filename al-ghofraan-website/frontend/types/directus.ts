@@ -847,6 +847,18 @@ export interface DailyHadith {
   /** Optionele datum (alleen ter administratie). */
   display_date?: string | null;
   sort?: number | null;
+  /**
+   * Delivery hadith-rotation — override-velden.
+   *
+   *   force_show       = true: deze hadith wordt altijd getoond ipv
+   *                      de dagelijkse rotatie (mits status=published
+   *                      EN active=true).
+   *   force_show_until = einddatum voor de override (YYYY-MM-DD).
+   *                      Leeg = onbeperkt. Datum verstreken =
+   *                      override genegeerd; rotatie neemt het over.
+   */
+  force_show?: boolean | null;
+  force_show_until?: string | null;
   created_at?: string | null;
 }
 

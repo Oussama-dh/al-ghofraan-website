@@ -22,7 +22,7 @@ import {
   getSiteSettings,
   getPageSectionsWithItems,
   getHomepageVideos,
-  getActiveDailyHadith,
+  getDailyHadithForToday,
   resolveIconKey,
   ICON_KEYS,
 } from "@/lib/directus";
@@ -82,7 +82,7 @@ export default async function HomePage() {
     getPageSectionsWithItems("home"),
     getHomepageVideos(3),
     getSiteSettings(),
-    getActiveDailyHadith(),
+    getDailyHadithForToday(),
   ]);
 
   const dateIcon        = resolveIconKey(iconMap, ICON_KEYS.activityDate);

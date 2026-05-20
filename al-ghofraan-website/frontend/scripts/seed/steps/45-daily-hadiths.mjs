@@ -43,6 +43,7 @@ const SAMPLE_HADITH = {
   grade:             "Sahih (overgeleverd door Al-Bukhari en Muslim)",
   explanation_short: "De eerste hadith uit Sahih Al-Bukhari onderstreept het belang van de intentie achter elke handeling.",
   sort:              1,
+  force_show:        false,
 };
 
 function isEmpty(v) {
@@ -214,6 +215,49 @@ export async function setupDailyHadiths(client) {
       note:      "Lager = eerder. Bij meerdere actieve hadiths kiest de homepage de laagste sort.",
     },
     schema: { default_value: 1 },
+  });
+
+  // ─── Delivery hadith-rotation — override-velden ────────────
+  //
+  // Standaardgedrag: dagelijkse rotatie over alle actieve hadiths
+  // (deterministisch op datum; iedereen ziet dezelfde hadith op dezelfde dag).
+  //
+  // Override:
+  //   force_show=true        → die hadith wordt altijd getoond
+  //                            (mits status=published EN active=true).
+  //   force_show_until       → optionele einddatum voor de override.
+  //                            Leeg = onbeperkt geldig.
+  //                            Datum verstreken = override genegeerd,
+  //                            rotatie pakt het over.
+  //
+  // Bij meerdere force_show=true: laagste sort ASC, dan laagste id ASC.
+
+  await ensureField(client, COLLECTION, {
+    field: "force_show",
+    type:  "boolean",
+    meta: {
+      width:     "half",
+      interface: "boolean",
+      note:
+        "Override: bij true wordt deze hadith altijd getoond ipv de dagelijkse " +
+        "rotatie (mits status=published en active=true). Bij meerdere actieve " +
+        "force_show=true wint de laagste sort, daarna laagste id.",
+    },
+    schema: { default_value: false, is_nullable: false },
+  });
+
+  await ensureField(client, COLLECTION, {
+    field: "force_show_until",
+    type:  "date",
+    meta: {
+      width:     "half",
+      interface: "datetime",
+      note:
+        "Optionele einddatum voor force_show. Leeg = onbeperkt geldig. " +
+        "Datum verstreken = override genegeerd; rotatie neemt het over. " +
+        "Datum gelijk aan vandaag = nog steeds actief.",
+    },
+    schema: {},
   });
 
   await ensureField(client, COLLECTION, {
