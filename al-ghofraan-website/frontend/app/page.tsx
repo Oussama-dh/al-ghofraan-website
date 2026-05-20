@@ -144,8 +144,8 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      {/* Delivery daily-hadith — Hadith van de dag, direct onder de ayah.
-          Self-guarded: rendert niets zonder actieve hadith of vertaling. */}
+      {/* Delivery daily-hadith — Hadieth van de dag, direct onder de ayah.
+          Self-guarded: rendert niets zonder actieve hadieth of vertaling. */}
       <DailyHadithBlock hadith={hadith} />
 
       {/* Body uit page_content (rich text) */}

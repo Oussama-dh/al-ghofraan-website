@@ -1,7 +1,7 @@
 // components/sections/DailyHadithBlock.tsx
 //
-// Server-component voor de "Hadith van de dag"-blok op de homepage.
-// Self-guarded: rendert niets zonder hadith of zonder vertaling.
+// Server-component voor de "Hadieth van de dag"-blok op de homepage.
+// Self-guarded: rendert niets zonder hadieth of zonder vertaling.
 //
 // Design-conventies (consistent met AyahBlock):
 //   - zand-achtergrond, narrow container, gecentreerd
@@ -19,7 +19,7 @@ interface DailyHadithBlockProps {
 }
 
 export default function DailyHadithBlock({ hadith }: DailyHadithBlockProps) {
-  // Self-guard: zonder hadith of zonder vertaling renderen we niets.
+  // Self-guard: zonder hadieth of zonder vertaling renderen we niets.
   // (Vertaling is verplicht in de seed-validatie, maar defensief check.)
   if (!hadith) return null;
   const translation = hadith.translation_nl?.trim();
@@ -41,7 +41,7 @@ export default function DailyHadithBlock({ hadith }: DailyHadithBlockProps) {
               id="hadith-of-the-day-heading"
               className="font-display text-lg text-slate-mosque"
             >
-              Hadith van de dag
+              Hadieth van de dag
             </h2>
           </div>
 

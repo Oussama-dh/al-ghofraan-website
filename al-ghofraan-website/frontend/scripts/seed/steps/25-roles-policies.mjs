@@ -48,7 +48,7 @@ const ROLE_DEFS = [
       "activities", "faq_items",
       "page_sections", "page_section_items",
       "navigation_items",
-      // Delivery daily-hadith — content-beheerder mag hadiths beheren.
+      // Delivery daily-hadith — content-beheerder mag ahadieth beheren.
       "daily_hadiths",
     ],
     read: [
@@ -130,7 +130,7 @@ const ROLE_DEFS = [
   {
     role: {
       name:        "TV beheerder",
-      description: "TV-aankondigingen (mededelingen, ahadith, reminders).",
+      description: "TV-aankondigingen (mededelingen, ahadieth, reminders).",
       icon:        "live_tv",
     },
     manage: [

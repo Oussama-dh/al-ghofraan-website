@@ -1,16 +1,16 @@
 // scripts/seed/steps/45-daily-hadiths.mjs
 //
-// Nieuwe collectie `daily_hadiths` voor de "Hadith van de dag"-blok op
-// de homepage. Volledig CMS-beheerd; GEEN externe hadith-API.
+// Nieuwe collectie `daily_hadiths` voor de "Hadieth van de dag"-blok op
+// de homepage. Volledig CMS-beheerd; GEEN externe hadieth-API.
 //
 // Velden:
 //   - id              (auto, integer)
 //   - status          (string, draft|published|archived)  — Directus standaard
 //   - active          (boolean) — alleen rijen met status=published EN active=true zijn publiekelijk leesbaar
-//   - title           (string) — bv. "Hadith van de dag"
+//   - title           (string) — bv. "Hadieth van de dag"
 //   - arabic_text     (text)
 //   - translation_nl  (text)   — vereist; zonder vertaling renderen we niets
-//   - source          (string) — bv. "Sahih Al-Bukhari, hadith 1"
+//   - source          (string) — bv. "Sahih Al-Bukhari, hadieth 1"
 //   - grade           (string) — authenticiteit, bv. "Sahih"
 //   - explanation_short (text)
 //   - display_date    (date)   — optioneel, alleen ter info voor admin
@@ -41,7 +41,7 @@ const SAMPLE_HADITH = {
   translation_nl:    "Voorwaar, de daden worden slechts beoordeeld op intenties, en voorwaar, voor iedere persoon geldt wat hij heeft beoogd.",
   source:            "Sahih Al-Bukhari 1, Sahih Muslim 1907",
   grade:             "Sahih (overgeleverd door Al-Bukhari en Muslim)",
-  explanation_short: "De eerste hadith uit Sahih Al-Bukhari onderstreept het belang van de intentie achter elke handeling.",
+  explanation_short: "De eerste hadieth uit Sahih Al-Bukhari onderstreept het belang van de intentie achter elke handeling.",
   sort:              1,
   force_show:        false,
 };
@@ -82,7 +82,7 @@ export async function setupDailyHadiths(client) {
     collection: COLLECTION,
     meta: {
       icon:             "menu_book",
-      note:             "Hadiths beheerd voor de 'Hadith van de dag'-blok op de homepage.",
+      note:             "Ahadieth beheerd voor de 'Hadieth van de dag'-blok op de homepage.",
       display_template: "{{title}} — {{source}}",
       sort_field:       "sort",
       archive_field:    "status",
@@ -121,7 +121,7 @@ export async function setupDailyHadiths(client) {
       interface: "boolean",
       note:
         "Alleen rijen met status=published EN active=true verschijnen op de homepage. " +
-        "Slechts één actieve hadith tegelijk; bij meerdere actieve rijen toont de homepage " +
+        "Slechts één actieve hadieth tegelijk; bij meerdere actieve rijen toont de homepage " +
         "de rij met laagste 'sort' waarde.",
     },
     schema: { default_value: false, is_nullable: false },
@@ -134,7 +134,7 @@ export async function setupDailyHadiths(client) {
       width:     "full",
       interface: "input",
       required:  true,
-      note:      "Werktitel voor admin (niet zichtbaar op homepage — daar staat altijd 'Hadith van de dag').",
+      note:      "Werktitel voor admin (niet zichtbaar op homepage — daar staat altijd 'Hadieth van de dag').",
     },
     schema: { is_nullable: false },
   });
@@ -145,7 +145,7 @@ export async function setupDailyHadiths(client) {
     meta: {
       width:     "full",
       interface: "input-multiline",
-      note:      "Arabische tekst van de hadith (RTL). Mag leeg blijven als alleen vertaling getoond wordt.",
+      note:      "Arabische tekst van de hadieth (RTL). Mag leeg blijven als alleen vertaling getoond wordt.",
     },
     schema: {},
   });
@@ -157,7 +157,7 @@ export async function setupDailyHadiths(client) {
       width:     "full",
       interface: "input-multiline",
       required:  true,
-      note:      "Nederlandse vertaling. Verplicht — zonder vertaling rendert de homepage geen hadith.",
+      note:      "Nederlandse vertaling. Verplicht — zonder vertaling rendert de homepage geen hadieth.",
     },
     schema: { is_nullable: false },
   });
@@ -201,7 +201,7 @@ export async function setupDailyHadiths(client) {
     meta: {
       width:     "half",
       interface: "datetime",
-      note:      "Optioneel — alleen ter eigen administratie wanneer deze hadith is/wordt getoond.",
+      note:      "Optioneel — alleen ter eigen administratie wanneer deze hadieth is/wordt getoond.",
     },
     schema: {},
   });
@@ -212,18 +212,18 @@ export async function setupDailyHadiths(client) {
     meta: {
       width:     "half",
       interface: "input",
-      note:      "Lager = eerder. Bij meerdere actieve hadiths kiest de homepage de laagste sort.",
+      note:      "Lager = eerder. Bij meerdere actieve ahadieth kiest de homepage de laagste sort.",
     },
     schema: { default_value: 1 },
   });
 
   // ─── Delivery hadith-rotation — override-velden ────────────
   //
-  // Standaardgedrag: dagelijkse rotatie over alle actieve hadiths
-  // (deterministisch op datum; iedereen ziet dezelfde hadith op dezelfde dag).
+  // Standaardgedrag: dagelijkse rotatie over alle actieve ahadieth
+  // (deterministisch op datum; iedereen ziet dezelfde hadieth op dezelfde dag).
   //
   // Override:
-  //   force_show=true        → die hadith wordt altijd getoond
+  //   force_show=true        → die hadieth wordt altijd getoond
   //                            (mits status=published EN active=true).
   //   force_show_until       → optionele einddatum voor de override.
   //                            Leeg = onbeperkt geldig.
@@ -239,7 +239,7 @@ export async function setupDailyHadiths(client) {
       width:     "half",
       interface: "boolean",
       note:
-        "Override: bij true wordt deze hadith altijd getoond ipv de dagelijkse " +
+        "Override: bij true wordt deze hadieth altijd getoond ipv de dagelijkse " +
         "rotatie (mits status=published en active=true). Bij meerdere actieve " +
         "force_show=true wint de laagste sort, daarna laagste id.",
     },

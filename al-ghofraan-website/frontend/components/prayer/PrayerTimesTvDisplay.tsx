@@ -11,7 +11,7 @@
 //   │                                                            │
 //   │           ROTERENDE SLIDE-CONTENT (midden)                 │   ← prayer / item
 //   │           - prayer_times slide (25s)                       │
-//   │           - announcement / hadith / reminder ... (15s)     │
+//   │           - announcement / hadieth / reminder ... (15s)     │
 //   │                                                            │
 //   ├───────────────────────────────────────────────────────────┤
 //   │ BottomBar:  Volgend gebed: Maghrib over 37 minuten         │   ← altijd zichtbaar
@@ -620,10 +620,10 @@ function PrayerSlide({
   );
 }
 
-// ─── Item-slide (announcement / hadith / reminder / event / donation) ─
+// ─── Item-slide (announcement / hadieth / reminder / event / donation) ─
 // Layout-keuzes:
 //   - Type-label is groot en gekleurd zodat het van afstand leesbaar is
-//   - Voor hadith: Arabisch is bewust de grootste tekst, vertaling eronder kleiner
+//   - Voor hadieth: Arabisch is bewust de grootste tekst, vertaling eronder kleiner
 //   - Bron/referentie/grade onderaan, klein en cursief
 //   - Voor andere types: titel is leidend, body daaronder
 //   - Line-clamp + max-width voorkomen overflow
@@ -653,7 +653,7 @@ function ItemSlide({ item }: { item: TvAnnouncement }) {
 
       {isHadith ? (
         <>
-          {/* Voor hadith staat Arabisch BOVENAAN en is leidend */}
+          {/* Voor hadieth staat Arabisch BOVENAAN en is leidend */}
           {item.arabic_text && (
             <div
               className={cn(
@@ -766,7 +766,7 @@ const META_BY_TYPE: Record<
   { label: string; badge: string; dot: string }
 > = {
   hadith: {
-    label: "Hadith",
+    label: "Hadieth",
     badge: "bg-white/10 border-sand/40 text-sand/95",
     dot:   "bg-sand",
   },

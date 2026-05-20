@@ -38,7 +38,7 @@ export async function setupTvSettings(client) {
       width:     "third",
       interface: "input",
       note:
-        "Hoe lang elke mededeling/hadith/reminder te zien is op /gebedstijden/tv. " +
+        "Hoe lang elke mededeling/hadieth/reminder te zien is op /gebedstijden/tv. " +
         "Standaard 15 seconden. Leeg = standaardwaarde.",
     },
     schema: { default_value: 15 },

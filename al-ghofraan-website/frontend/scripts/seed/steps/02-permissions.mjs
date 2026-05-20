@@ -27,7 +27,7 @@ const COLLECTIONS = [
   // wordt apart afgedwongen in `getPrayerCalendarHighlights`.
   { collection: "prayer_calendar_highlights", filter: { status: { _eq: "published" } } },
   // Delivery daily-hadith — public read alleen voor published + active items.
-  // Filter zorgt dat draft of inactive hadiths niet uitlekken.
+  // Filter zorgt dat draft of inactive ahadieth niet uitlekken.
   {
     collection: "daily_hadiths",
     filter: { _and: [{ status: { _eq: "published" } }, { active: { _eq: true } }] },

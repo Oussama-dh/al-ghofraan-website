@@ -8,7 +8,7 @@
 // (zie COLLECTIONS-array daar). Verdere zichtbaarheidsfilter (active,
 // show_on_tv, display_from/until) gebeurt server-side in lib/directus.ts.
 //
-// BEWUST géén automatische religieuze content / hadith API. De ene
+// BEWUST géén automatische religieuze content / hadieth API. De ene
 // soft-create draft hieronder dient puur als template-voorbeeld voor de
 // admin — wordt nooit overschreven en is niet gepubliceerd.
 
@@ -22,7 +22,7 @@ export async function setupTvAnnouncements(client) {
     meta: {
       icon:             "campaign",
       note:
-        "Mededelingen, ahadith en reminders die roteren op /gebedstijden/tv. " +
+        "Mededelingen, ahadieth en reminders die roteren op /gebedstijden/tv. " +
         "Beheer handmatig — er is geen automatische import. Bron + grade altijd zelf invullen.",
       display_template: "{{title}} ({{type}})",
       sort_field:       "sort",
@@ -68,7 +68,7 @@ export async function setupTvAnnouncements(client) {
       options: {
         choices: [
           { text: "Mededeling",   value: "announcement" },
-          { text: "Hadith",        value: "hadith"       },
+          { text: "Hadieth",        value: "hadith"       },
           { text: "Reminder",      value: "reminder"     },
           { text: "Evenement",     value: "event"        },
           { text: "Donatie-oproep", value: "donation"    },
@@ -78,7 +78,7 @@ export async function setupTvAnnouncements(client) {
       display_options: {
         choices: [
           { text: "Mededeling",    value: "announcement", foreground: "#FFFFFF", background: "#3A6F8F" },
-          { text: "Hadith",         value: "hadith",       foreground: "#FFFFFF", background: "#7E5A3A" },
+          { text: "Hadieth",         value: "hadith",       foreground: "#FFFFFF", background: "#7E5A3A" },
           { text: "Reminder",       value: "reminder",     foreground: "#18222F", background: "#E0C77A" },
           { text: "Evenement",      value: "event",        foreground: "#FFFFFF", background: "#2ECDA7" },
           { text: "Donatie-oproep", value: "donation",     foreground: "#FFFFFF", background: "#A2B5CD" },
@@ -86,7 +86,7 @@ export async function setupTvAnnouncements(client) {
       },
       note:
         "Type bepaalt subtiele visuele variatie op het tv-scherm. " +
-        "Voor 'hadith' wordt extra ruimte gemaakt voor bron/referentie/grade.",
+        "Voor 'Hadieth' wordt extra ruimte gemaakt voor bron/referentie/grade.",
     },
     schema: { default_value: "announcement", is_nullable: false },
   });
@@ -115,7 +115,7 @@ export async function setupTvAnnouncements(client) {
     meta:  {
       width:     "full",
       interface: "input-multiline",
-      note:      "Optionele Arabische tekst (bv. de oorspronkelijke hadith-tekst).",
+      note:      "Optionele Arabische tekst (bv. de oorspronkelijke hadieth-tekst).",
     },
     schema: {},
   });
@@ -137,7 +137,7 @@ export async function setupTvAnnouncements(client) {
     meta:  {
       width:     "half",
       interface: "input",
-      note:      "Bv. 'Sahieh al-Boekhari' of 'Riyad as-Salihien'. Verplicht bij hadith.",
+      note:      "Bv. 'Sahieh al-Boekhari' of 'Riyad as-Salihien'. Verplicht bij hadieth.",
     },
     schema: {},
   });
@@ -148,7 +148,7 @@ export async function setupTvAnnouncements(client) {
     meta:  {
       width:     "half",
       interface: "input",
-      note:      "Hadith-nummer of referentie, bv. '6018' of 'boek 2, nr. 13'.",
+      note:      "Hadieth-nummer of referentie, bv. '6018' of 'boek 2, nr. 13'.",
     },
     schema: {},
   });
@@ -159,7 +159,7 @@ export async function setupTvAnnouncements(client) {
     meta:  {
       width:     "half",
       interface: "input",
-      note:      "Hadith-status, bv. 'Sahieh', 'Hasan' of 'Mutawatir'.",
+      note:      "Hadieth-status, bv. 'Sahieh', 'Hasan' of 'Mutawatir'.",
     },
     schema: {},
   });
