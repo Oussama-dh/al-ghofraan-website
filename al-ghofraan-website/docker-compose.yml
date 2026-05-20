@@ -47,6 +47,20 @@ services:
       STORAGE_LOCAL_ROOT: /directus/uploads
       EXTENSIONS_PATH: /directus/extensions
       MAX_PAYLOAD_SIZE: 50mb
+      # ─── Email / password reset ────────────────────────────────
+      # Vereist voor "Wachtwoord vergeten" op de Directus login.
+      # Hergebruikt dezelfde cPanel SMTP-credentials als de frontend
+      # (SMTP_*). Reset-mails worden verstuurd vanaf EMAIL_FROM en
+      # bevatten een link terug naar PUBLIC_URL (= Data Studio).
+      # Als één van deze env-vars ontbreekt: Directus start zonder
+      # mail-functionaliteit (geen crash, maar reset werkt niet).
+      EMAIL_TRANSPORT: ${EMAIL_TRANSPORT:-smtp}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_SMTP_HOST: ${SMTP_HOST:-}
+      EMAIL_SMTP_PORT: ${SMTP_PORT:-}
+      EMAIL_SMTP_USER: ${SMTP_USER:-}
+      EMAIL_SMTP_PASSWORD: ${SMTP_PASS:-}
+      EMAIL_SMTP_SECURE: ${SMTP_SECURE:-}
     volumes:
       - directus_uploads:/directus/uploads
       - directus_extensions:/directus/extensions

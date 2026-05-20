@@ -148,6 +148,18 @@ DIRECTUS_TOKEN=  # vul aan na eerste opstart
 
 # CORS
 CORS_ORIGIN=https://al-ghofraan.com,https://www.al-ghofraan.com
+
+# SMTP (cPanel) — gebruikt door zowel frontend (admin-notificaties)
+# als Directus (password reset). Zie docs/PASSWORD_RESET.md.
+SMTP_HOST=mail.al-ghofraan.nl
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=noreply@al-ghofraan.nl
+SMTP_PASS=CPANEL_MAILBOX_WACHTWOORD
+
+# Directus password-reset afzender
+EMAIL_FROM=Al-Ghofraan CMS <noreply@al-ghofraan.nl>
+EMAIL_TRANSPORT=smtp
 ```
 
 > 💡 Genereer een `DIRECTUS_SECRET` met:

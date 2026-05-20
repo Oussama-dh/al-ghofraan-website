@@ -215,7 +215,7 @@ export default function Footer({
 
         <div className="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-sand/50 font-body">
           <span>{copyright}</span>
-          <span className="font-arabic text-sm" lang="ar">بسم الله الرحمن الرحيم</span>
+          <span className="font-arabic text-sm" lang="ar">بسم الله الرحمـٰن الرحيم</span>
         </div>
       </div>
     </footer>

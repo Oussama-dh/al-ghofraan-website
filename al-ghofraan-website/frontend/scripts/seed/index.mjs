@@ -70,6 +70,7 @@ import { setupOccurrencePickerToggle }   from "./steps/42-occurrence-picker-togg
 import { setupVideoImportFields }        from "./steps/43-video-import-fields.mjs";
 import { setupContactMapsFields }        from "./steps/44-contact-maps-fields.mjs";
 import { setupDailyHadiths }             from "./steps/45-daily-hadiths.mjs";
+import { setupAhadiethRole }             from "./steps/46-ahadieth-role.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -165,6 +166,7 @@ const STEPS = [
   { id: "43",  label: "YouTube-import velden op videos",                        run: setupVideoImportFields },
   { id: "44",  label: "Maps-velden op site_settings",                           run: setupContactMapsFields },
   { id: "45",  label: "daily_hadiths collectie + sample",                       run: setupDailyHadiths },
+  { id: "46",  label: "Rol 'Ahadieth beheerder' (daily_hadiths + TV-hadieth)",  run: setupAhadiethRole },
 ];
 
 // ─── CLI-argument parsing ──────────────────────────────────────

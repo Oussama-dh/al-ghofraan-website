@@ -46,9 +46,9 @@ Gebruiker  →  heeft 1 hoofdrol      →  die rol heeft 1+ policies
 twee policies waarin elk een andere collectie staat? Dan kan hij beide
 beheren. Policies trekken nooit rechten af van elkaar.
 
-### Onze huidige inrichting (uit seed-stap 25)
+### Onze huidige inrichting (uit seed-stap 25 + 46)
 
-Er zijn 7 afdelingsrollen, elk met een gelijknamige policy:
+Er zijn 8 afdelingsrollen, elk met een gelijknamige policy:
 
 | Rol | Policy | Wat de policy doet |
 |---|---|---|
@@ -57,8 +57,9 @@ Er zijn 7 afdelingsrollen, elk met een gelijknamige policy:
 | Activiteiten beheerder | Activiteiten beheerder | Activiteiten + activiteit-inschrijvingen (filter `type=activity`) |
 | Contact beheerder | Contact beheerder | Contactberichten en contact-onderwerpen |
 | Donatie beheerder | Donatie beheerder | Donatiecampagnes beheren, donaties **read-only** |
-| TV beheerder | TV beheerder | TV-aankondigingen |
+| TV beheerder | TV beheerder | TV-aankondigingen (alle types) |
 | Gebedstijden beheerder | Gebedstijden beheerder | Gebedstijden-bestanden en handmatige Hijri-overrides |
+| Ahadieth beheerder | Ahadieth beheerder | "Hadieth van de dag"-collectie + TV-aankondigingen alleen met `type=hadith` (filter) |
 
 Elke policy heeft `app_access: true` (mag inloggen op de admin UI) en
 `admin_access: false` (geen admin-rechten). **Geen** delete-rechten op
@@ -341,8 +342,13 @@ overdraagbaar.
 2. **User status is niet "Active".** Settings → Access Control →
    Users → gebruiker openen → Status checken. "Suspended" /
    "Draft" / "Invited" geven verschillende blocks.
-3. **Wachtwoord verkeerd of expired.** Reset het wachtwoord vanuit
-   admin (User openen → Reset Password).
+3. **Wachtwoord verkeerd of expired.** Twee opties:
+   - **Self-service** (sinds delivery `admin-password-reset-and-ahadieth-role`):
+     gebruiker klikt zelf op "Wachtwoord vergeten?" op de Directus
+     login en ontvangt een reset-mail. Zie
+     [`PASSWORD_RESET.md`](PASSWORD_RESET.md) voor configuratie.
+   - **Admin reset** (bestaande optie): admin opent User → Reset
+     Password en geeft het tijdelijke wachtwoord persoonlijk door.
 
 ### "De gebruiker ziet een collectie niet in het menu"
 
