@@ -86,14 +86,14 @@ export default function HeroSection({
           </p>
 
           <div className="flex flex-wrap gap-4 animate-slide-up animation-delay-400">
-            {/* Beide knoppen gebruiken dezelfde wit/transparant outline-stijl
-                voor visuele gelijkheid binnen de donkere hero. Wens uit
-                delivery A (klant koos optie B). */}
+            {/* "Bekijk de agenda" gebruikt nu de secondary-variant van Button
+                (bg-taupe + witte tekst) zodat hij visueel gelijk is aan de
+                "Doneer hier"-knop in de CTA-sectie. "Over ons" blijft outline
+                als secundaire actie binnen de donkere hero. */}
             <Button
               href="/agenda"
-              variant="outline"
+              variant="secondary"
               size="lg"
-              className="border-white/40 text-white hover:bg-white hover:text-slate-mosque"
             >
               Bekijk de agenda
             </Button>

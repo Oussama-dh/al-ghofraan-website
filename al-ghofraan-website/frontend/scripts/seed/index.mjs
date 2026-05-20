@@ -71,6 +71,7 @@ import { setupVideoImportFields }        from "./steps/43-video-import-fields.mj
 import { setupContactMapsFields }        from "./steps/44-contact-maps-fields.mjs";
 import { setupDailyHadiths }             from "./steps/45-daily-hadiths.mjs";
 import { setupAhadiethRole }             from "./steps/46-ahadieth-role.mjs";
+import { setupCtaAyahReferenceTranslation } from "./steps/47-cta-ayah-reference-translation.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -167,6 +168,7 @@ const STEPS = [
   { id: "44",  label: "Maps-velden op site_settings",                           run: setupContactMapsFields },
   { id: "45",  label: "daily_hadiths collectie + sample",                       run: setupDailyHadiths },
   { id: "46",  label: "Rol 'Ahadieth beheerder' (daily_hadiths + TV-hadieth)",  run: setupAhadiethRole },
+  { id: "47",  label: "CTA-ayah: vertaling-veld op page_sections",              run: setupCtaAyahReferenceTranslation },
 ];
 
 // ─── CLI-argument parsing ──────────────────────────────────────

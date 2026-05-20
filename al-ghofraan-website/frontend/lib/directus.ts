@@ -1072,6 +1072,9 @@ const SECTION_FIELDS = [
   "primary_cta_label",    "primary_cta_href",
   "secondary_cta_label",  "secondary_cta_href",
   "ayah_arabic", "ayah_reference",
+  // Delivery agenda-button-and-cta-ayah — vertaling onder eyebrow_ar
+  // voor type=cta sections. Self-guarded in CtaSection.tsx.
+  "eyebrow_translation_nl",
   "active", "sort",
 ];
 
@@ -1186,11 +1189,11 @@ export function resolveIconKey(map: Map<string, string>, key: string): string {
 /**
  * Delivery daily-hadith + hadith-rotation —
  *
- * Geeft de hadieth terug die op DEZE DAG getoond moet worden op de
+ * Geeft de hadith terug die op DEZE DAG getoond moet worden op de
  * homepage. Twee paden:
  *
- *   1. force_show override (admin pin'd een specifieke hadieth):
- *      - Alle actieve+published ahadieth waar force_show=true EN
+ *   1. force_show override (admin pin'd een specifieke hadith):
+ *      - Alle actieve+published hadiths waar force_show=true EN
  *        (force_show_until leeg OF force_show_until >= vandaag UTC).
  *      - Bij meerdere matches: laagste sort ASC, dan laagste id ASC.
  *      - Geen console.warn bij meerdere — wel zichtbaar voor admin
@@ -1198,15 +1201,15 @@ export function resolveIconKey(map: Map<string, string>, key: string): string {
  *
  *   2. Dagelijkse rotatie (default):
  *      - dayNumber = floor(Date.now() / 86400000) — UTC dagen sinds epoch.
- *      - index = dayNumber % ahadieth.length
+ *      - index = dayNumber % hadiths.length
  *      - Sortering stabiel: sort ASC, dan id ASC.
- *      - Iedereen wereldwijd ziet op dezelfde UTC-dag dezelfde hadieth.
+ *      - Iedereen wereldwijd ziet op dezelfde UTC-dag dezelfde hadith.
  *      - Wisseling vindt plaats om 00:00 UTC (= 01:00 NL winter, 02:00 NL zomer).
  *        Acceptabel: voorspelbaar, cache-vriendelijk, geen tijdzone-deps.
  *
  * Edge cases:
- *   - 0 ahadieth      → null (homepage rendert niets).
- *   - 1 hadieth       → die ene, rotatie irrelevant (index 0).
+ *   - 0 hadiths       → null (homepage rendert niets).
+ *   - 1 hadith        → die ene, rotatie irrelevant (index 0).
  *   - draft/inactive  → uitgesloten door Directus filter ÉN runtime check.
  *
  * Public-read permissions (status=published AND active=true) zijn in

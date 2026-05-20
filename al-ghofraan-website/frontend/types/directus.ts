@@ -335,6 +335,13 @@ export interface PageSection {
   ayah_arabic?: string | null;
   /** Voor ayah type: bronvermelding, bv. "Soera Al-Baqara 2:272". */
   ayah_reference?: string | null;
+  /**
+   * Optionele Nederlandse vertaling die hoort bij `eyebrow_ar` (Arabische
+   * tekst boven de titel). Primair gebruikt door type='cta' om de ayah
+   * uit te breiden met vertaling onder de Arabische tekst. Andere types
+   * mogen dit veld ook gebruiken; leeg laten = niet renderen.
+   */
+  eyebrow_translation_nl?: string | null;
   active: boolean;
   sort?: number | null;
 }

@@ -25,6 +25,8 @@ export default function CtaSection({ section }: { section: SectionWithItems }) {
     button_url,
     secondary_button_text,
     secondary_button_url,
+    ayah_reference,
+    eyebrow_translation_nl,
   } = section;
 
   // Vallen terug op button_text/url als de cta-specifieke velden niet zijn ingevuld.
@@ -33,6 +35,15 @@ export default function CtaSection({ section }: { section: SectionWithItems }) {
   const primaryHref  = primary_cta_href    || button_url           || "";
   const secLabel     = secondary_cta_label || secondary_button_text || "";
   const secHref      = secondary_cta_href  || secondary_button_url  || "";
+
+  // Ayah-uitbreiding voor type=cta:
+  //   - eyebrow_ar             → Arabische ayah (al bestaand)
+  //   - eyebrow_translation_nl → Nederlandse vertaling (nieuw, seed 47)
+  //   - ayah_reference         → bronvermelding (bestaand veld, hergebruikt)
+  // Self-guarded: leeg veld = niet renderen. Geen lege containers.
+  const ayahArabic      = eyebrow_ar?.trim()             || "";
+  const ayahTranslation = eyebrow_translation_nl?.trim() || "";
+  const ayahRef         = ayah_reference?.trim()         || "";
 
   return (
     <section className="bg-slate-mosque py-16 lg:py-20 relative overflow-hidden">
@@ -47,9 +58,21 @@ export default function CtaSection({ section }: { section: SectionWithItems }) {
           </div>
         )}
 
-        {eyebrow_ar && (
-          <p className="font-arabic text-2xl text-taupe-light mb-4" lang="ar">
-            {eyebrow_ar}
+        {ayahArabic && (
+          <p className="font-arabic text-2xl text-taupe-light mb-2" lang="ar" dir="rtl">
+            {ayahArabic}
+          </p>
+        )}
+
+        {ayahTranslation && (
+          <p className="font-body text-sand/80 italic text-base sm:text-lg max-w-2xl mx-auto mb-1 leading-relaxed">
+            &ldquo;{ayahTranslation}&rdquo;
+          </p>
+        )}
+
+        {ayahRef && (
+          <p className="font-body text-sand/60 text-xs sm:text-sm mb-4">
+            {ayahRef}
           </p>
         )}
 
