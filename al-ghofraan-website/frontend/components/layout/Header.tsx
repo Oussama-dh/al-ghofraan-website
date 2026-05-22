@@ -5,6 +5,7 @@ import Link               from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { Menu, X, ChevronDown }        from "lucide-react";
 import { cn }             from "@/lib/utils";
+import { trackEvent }     from "@/lib/analytics";
 import ThemeToggle        from "@/components/theme/ThemeToggle";
 import type { NavigationItem, SiteSettings } from "@/types/directus";
 
@@ -438,6 +439,21 @@ function renderNavLink(
         ? `${mobileBase} text-ink hover:bg-sand hover:text-slate-mosque`
         : `${desktopBase} text-ink hover:text-slate-mosque hover:bg-sand`);
 
+  // GA4 events op klik. We koppelen aan het href ipv aan een prop, zodat
+  // ook Directus-beheerde nav-items automatisch getrackt worden zonder
+  // de NavigationItem-shape uit te breiden. Privacy-safe: alleen
+  // button_label (de menu-tekst) en source meegegeven.
+  const handleClick = () => {
+    if (item.href === "/doneren") {
+      trackEvent("donate_click", { button_label: item.label, source: "header" });
+    } else if (item.href === "/contact") {
+      trackEvent("contact_click", { button_label: item.label, source: "header" });
+    } else if (item.href === "/agenda" || item.href.startsWith("/agenda/")) {
+      trackEvent("agenda_click", { button_label: item.label, source: "header" });
+    }
+    onClick();
+  };
+
   if (item.external) {
     return (
       <a
@@ -446,7 +462,7 @@ function renderNavLink(
         target="_blank"
         rel="noopener noreferrer"
         className={className}
-        onClick={onClick}
+        onClick={handleClick}
       >
         {item.label}
       </a>
@@ -454,7 +470,7 @@ function renderNavLink(
   }
 
   return (
-    <Link key={item.id} href={item.href} className={className} onClick={onClick}>
+    <Link key={item.id} href={item.href} className={className} onClick={handleClick}>
       {item.label}
     </Link>
   );

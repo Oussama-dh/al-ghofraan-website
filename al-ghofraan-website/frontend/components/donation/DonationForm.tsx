@@ -4,6 +4,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+import { trackEvent } from "@/lib/analytics";
 import type { DonationCampaign, DonationType } from "@/types/directus";
 
 interface DonationFormProps {
@@ -170,6 +171,13 @@ export default function DonationForm({ campaigns = [], className }: DonationForm
 
     setStatus("submitting");
 
+    // GA4 event — donation_start vlak voor de Stripe-redirect. Privacy:
+    // alleen donation_type wordt meegestuurd, géén naam/e-mail/bedrag.
+    trackEvent("donation_start", {
+      donation_type: type,
+      source:        selectedCampaign.slug || "algemeen",
+    });
+
     try {
       const resp = await fetch("/api/doneren/checkout", {
         method:  "POST",
@@ -289,6 +297,10 @@ export default function DonationForm({ campaigns = [], className }: DonationForm
             // eigen checkout: bezoeker keert na betaling terug via de URL die
             // de admin in Stripe Dashboard heeft ingesteld als success_url.
             className="inline-flex items-center justify-center w-full py-3 px-4 rounded-lg bg-slate-mosque text-white font-body font-medium text-base hover:bg-slate-dark transition-colors"
+            onClick={() => trackEvent("donation_start", {
+              donation_type: type,
+              source:        selectedCampaign.slug || "stripe_payment_link",
+            })}
           >
             Doorgaan naar Stripe
           </a>

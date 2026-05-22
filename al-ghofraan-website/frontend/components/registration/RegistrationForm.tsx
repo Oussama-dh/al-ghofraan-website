@@ -4,6 +4,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+import { trackEvent } from "@/lib/analytics";
 import type {
   Gender,
   RegistrationType,
@@ -377,6 +378,12 @@ export default function RegistrationForm({
 
       setStatus("success");
       setMessage(text.successText);
+      // GA4 event — activity_signup_complete na succesvolle inschrijving.
+      // Privacy: alleen activity_slug en type (geen naam/e-mail/telefoon).
+      trackEvent("activity_signup_complete", {
+        activity_slug: sourceSlug,
+        category:      type, // "activity" | "education"
+      });
       // Reset
       setParent(DEFAULT_PARENT);
       setStudents([newStudent(genderConfig.initialValue)]);

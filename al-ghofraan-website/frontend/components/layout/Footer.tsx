@@ -2,6 +2,7 @@
 
 import Link  from "next/link";
 import { Icon } from "@/lib/icons";
+import TrackedLink from "@/components/analytics/TrackedLink";
 import type { NavigationItem, SiteSettings } from "@/types/directus";
 
 interface FooterProps {
@@ -138,14 +139,17 @@ export default function Footer({
                   </Link>
                 )}
                 {social.whatsapp && (
-                  <Link
+                  <TrackedLink
                     href={social.whatsapp}
+                    event="contact_click"
+                    params={{ source: "footer", button_label: "WhatsApp" }}
+                    external
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-bluegray transition-colors"
                   >
                     WhatsApp
-                  </Link>
+                  </TrackedLink>
                 )}
               </div>
             )}
@@ -157,27 +161,60 @@ export default function Footer({
               Navigatie
             </h3>
             <ul className="flex flex-col gap-2">
-              {items.map((item) => (
-                <li key={item.id}>
-                  {item.external ? (
-                    <a
-                      href={item.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-body text-sm text-sand/70 hover:text-white transition-colors"
-                    >
-                      {item.label}
-                    </a>
-                  ) : (
-                    <Link
-                      href={item.href}
-                      className="font-body text-sm text-sand/70 hover:text-white transition-colors"
-                    >
-                      {item.label}
-                    </Link>
-                  )}
-                </li>
-              ))}
+              {items.map((item) => {
+                // GA4 events: donate_click voor /doneren, contact_click
+                // voor /contact, agenda_click voor /agenda*. Andere nav-
+                // items renderen als gewone Link/anchor zonder tracking.
+                const eventName =
+                  item.href === "/doneren"
+                    ? ("donate_click" as const)
+                    : item.href === "/contact"
+                    ? ("contact_click" as const)
+                    : item.href === "/agenda" || item.href.startsWith("/agenda/")
+                    ? ("agenda_click" as const)
+                    : null;
+
+                const linkClass =
+                  "font-body text-sm text-sand/70 hover:text-white transition-colors";
+
+                if (eventName) {
+                  return (
+                    <li key={item.id}>
+                      <TrackedLink
+                        href={item.href}
+                        event={eventName}
+                        params={{ source: "footer", button_label: item.label }}
+                        external={item.external}
+                        {...(item.external
+                          ? { target: "_blank", rel: "noopener noreferrer" }
+                          : {})}
+                        className={linkClass}
+                      >
+                        {item.label}
+                      </TrackedLink>
+                    </li>
+                  );
+                }
+
+                return (
+                  <li key={item.id}>
+                    {item.external ? (
+                      <a
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={linkClass}
+                      >
+                        {item.label}
+                      </a>
+                    ) : (
+                      <Link href={item.href} className={linkClass}>
+                        {item.label}
+                      </Link>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
@@ -196,17 +233,29 @@ export default function Footer({
               {email && (
                 <li className="flex items-center gap-2 text-sm text-sand/70">
                   <Icon name={emailIcon} className="w-4 h-4 shrink-0" />
-                  <a href={`mailto:${email}`} className="hover:text-white transition-colors">
+                  <TrackedLink
+                    href={`mailto:${email}`}
+                    event="contact_click"
+                    params={{ source: "footer", button_label: "email" }}
+                    external
+                    className="hover:text-white transition-colors"
+                  >
                     {email}
-                  </a>
+                  </TrackedLink>
                 </li>
               )}
               {phone && (
                 <li className="flex items-center gap-2 text-sm text-sand/70">
                   <Icon name={phoneIcon} className="w-4 h-4 shrink-0" />
-                  <a href={`tel:${phone}`} className="hover:text-white transition-colors">
+                  <TrackedLink
+                    href={`tel:${phone}`}
+                    event="contact_click"
+                    params={{ source: "footer", button_label: "phone" }}
+                    external
+                    className="hover:text-white transition-colors"
+                  >
                     {phone}
-                  </a>
+                  </TrackedLink>
                 </li>
               )}
             </ul>
@@ -215,7 +264,7 @@ export default function Footer({
 
         <div className="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-sand/50 font-body">
           <span>{copyright}</span>
-          <span className="font-arabic text-sm" lang="ar">بسم الله الرحمـٰن الرحيم</span>
+          <span className="font-arabic text-sm" lang="ar">بسم الله الرحمن الرحيم</span>
         </div>
       </div>
     </footer>

@@ -8,6 +8,7 @@ import { Icon }           from "@/lib/icons";
 import { User }           from "lucide-react";
 import RegistrationForm   from "@/components/registration/RegistrationForm";
 import AddToCalendarButton from "@/components/activity/AddToCalendarButton";
+import TrackOnMount       from "@/components/analytics/TrackOnMount";
 import {
   getActivityBySlug,
   getActivityRegistrationCount,
@@ -193,6 +194,9 @@ export default async function ActivityDetailPage({ params }: Props) {
 
   return (
     <>
+      {/* GA4 event — activity_view bij elke load van de activity-detail.
+          Privacy: alleen activity_slug, geen titel of beschrijving. */}
+      <TrackOnMount event="activity_view" params={{ activity_slug: activity.slug }} />
       {jsonLd && (
         <script
           type="application/ld+json"

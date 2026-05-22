@@ -205,6 +205,7 @@ export default async function EducationProgramDetailPage({ params }: Props) {
                 <RegistrationFormReveal
                   buttonLabel={inschrijfButtonText}
                   anchorId="inschrijven"
+                  slug={program.slug}
                 >
                   {formNode}
                 </RegistrationFormReveal>

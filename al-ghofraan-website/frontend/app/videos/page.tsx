@@ -5,6 +5,7 @@ import Link              from "next/link";
 import Container         from "@/components/ui/Container";
 import PageHero          from "@/components/sections/PageHero";
 import SortDropdown      from "@/components/videos/SortDropdown";
+import TrackedLink       from "@/components/analytics/TrackedLink";
 import {
   getVideos,
   getVideoCategories,
@@ -331,13 +332,23 @@ function VideoCard({
   watchUrl: string;
   className?: string;
 }) {
-  const catName = getEffectiveVideoCategoryName(video);
+  const catName  = getEffectiveVideoCategoryName(video);
+  const videoSlug =
+    video.youtube_video_id || extractYouTubeId(video.youtube_url) || "";
   return (
     // Hele card is een externe link naar YouTube. target=_blank +
     // rel=noopener voorkomt window.opener-toegang. Geen iframe op
     // overzichtspagina — gebruiker krijgt thumbnail, klikt naar YouTube.
-    <a
+    // TrackedLink schiet een GA4 video_click event af bij klik.
+    <TrackedLink
       href={watchUrl}
+      event="video_click"
+      params={{
+        video_slug: videoSlug,
+        category:   catName || undefined,
+        source:     "videos_page",
+      }}
+      external
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
@@ -394,6 +405,6 @@ function VideoCard({
           </span>
         )}
       </div>
-    </a>
+    </TrackedLink>
   );
 }

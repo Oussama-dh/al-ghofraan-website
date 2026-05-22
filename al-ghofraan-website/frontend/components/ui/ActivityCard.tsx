@@ -1,11 +1,11 @@
 // components/ui/ActivityCard.tsx
 
-import Link  from "next/link";
 import { ArrowRight, Star } from "lucide-react";
 import type { Activity } from "@/types/directus";
 import { formatDate, formatDateShort, cn } from "@/lib/utils";
 import { getAssetUrl } from "@/lib/directus";
 import { Icon } from "@/lib/icons";
+import TrackedLink from "@/components/analytics/TrackedLink";
 
 interface ActivityCardProps {
   activity:   Activity;
@@ -49,8 +49,10 @@ const imageUrl = imageId ? getAssetUrl(imageId) : null;
   const monthAbbr = formatDate(displayStart, "MMM");
 
   return (
-    <Link
+    <TrackedLink
       href={`/agenda/${activity.slug}`}
+      event="agenda_click"
+      params={{ activity_slug: activity.slug, source: "activity_card" }}
       className={cn(
         "group flex flex-col bg-white rounded-2xl overflow-hidden",
         "border border-sand-200 hover:border-taupe/50",
@@ -151,6 +153,6 @@ const imageUrl = imageId ? getAssetUrl(imageId) : null;
           <ArrowRight className="ml-1 w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </div>
       </div>
-    </Link>
+    </TrackedLink>
   );
 }

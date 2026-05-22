@@ -9,6 +9,7 @@ import type { Metadata } from "next";
 import Link              from "next/link";
 import Container         from "@/components/ui/Container";
 import { CheckCircle }   from "lucide-react";
+import TrackOnMount      from "@/components/analytics/TrackOnMount";
 
 export const metadata: Metadata = {
   title:       "Bedankt voor uw donatie",
@@ -21,6 +22,9 @@ export const dynamic = "force-dynamic";
 export default function DonatieSuccesPage() {
   return (
     <section className="bg-sand-50 py-20 min-h-[60vh] flex items-center">
+      {/* GA4 event — donation_success bij elke load van de succes-pagina.
+          Privacy: géén bedrag, géén Stripe session_id, géén donor-info. */}
+      <TrackOnMount event="donation_success" />
       <Container narrow>
         <div className="bg-white rounded-3xl border border-sand-200 shadow-sm p-8 sm:p-12 text-center">
           <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 mx-auto mb-6">

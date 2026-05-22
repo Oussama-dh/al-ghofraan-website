@@ -19,12 +19,19 @@
 
 import { useState, useRef, type ReactNode } from "react";
 import Button from "@/components/ui/Button";
+import { trackEvent } from "@/lib/analytics";
 
 interface Props {
   /** Tekst op de "Inschrijven"-knop. */
   buttonLabel: string;
   /** ID van het ankerpunt waar naartoe gescrolld wordt na onthullen. */
   anchorId?: string;
+  /**
+   * Slug van het onderwijsprogramma / activiteit — wordt meegestuurd
+   * met het GA4 `activity_signup_start`-event bij klik. Privacy-safe
+   * (slug is een publieke identifier, geen persoonsgegeven).
+   */
+  slug?: string;
   /** Het inschrijfformulier (server-rendered, lui geactiveerd). */
   children: ReactNode;
 }
@@ -32,6 +39,7 @@ interface Props {
 export default function RegistrationFormReveal({
   buttonLabel,
   anchorId = "inschrijven",
+  slug,
   children,
 }: Props) {
   const [revealed, setRevealed] = useState(false);
@@ -39,6 +47,11 @@ export default function RegistrationFormReveal({
 
   function handleReveal() {
     setRevealed(true);
+    // GA4 event — activity_signup_start zodra bezoeker formulier opent.
+    trackEvent("activity_signup_start", {
+      activity_slug: slug,
+      category:      "education",
+    });
     // Zachtjes scrollen naar het formulier zodra het in de DOM staat.
     // requestAnimationFrame zorgt dat we wachten op de re-render.
     requestAnimationFrame(() => {

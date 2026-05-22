@@ -1,11 +1,11 @@
 // app/layout.tsx
 
 import type { Metadata } from "next";
-import Script           from "next/script";
 import localFont        from "next/font/local";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import ThemeScript     from "@/components/theme/ThemeScript";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import {
@@ -164,32 +164,16 @@ export default async function RootLayout({
           )}
         </ThemeProvider>
 
-        {/* Google Analytics (GA4) — delivery 22.
-            Plaatsing in server-rendered layout zodat de <script>-tags
-            zichtbaar zijn in de initiële HTML (view-source). gtag.js
-            wordt geladen via next/script met strategy="afterInteractive"
-            zodat het de paint niet blokkeert.
-
-            TV-route uitsluiting: gtag('config', ...) wordt alleen
-            uitgevoerd als de pathname NIET met /gebedstijden/tv begint.
-            Het externe gtag.js wordt op de TV-route nog wel opgehaald,
-            maar zonder config-call registreert het geen pageview en
-            vervuilt het de analytics-data niet. */}
-        <Script
-          id="ga-loader"
-          src="https://www.googletagmanager.com/gtag/js?id=G-K19YMZJ71R"
-          strategy="afterInteractive"
-        />
-        <Script id="ga-init" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            if (!window.location.pathname.startsWith('/gebedstijden/tv')) {
-              gtag('config', 'G-K19YMZJ71R', { anonymize_ip: true });
-            }
-          `}
-        </Script>
+        {/* Google Analytics (GA4) — delivery seo-analytics.
+            Verplaatst van inline scripts in layout.tsx naar het
+            `GoogleAnalytics`-component. Voordelen:
+              - Measurement ID via NEXT_PUBLIC_GA_MEASUREMENT_ID
+                (met hardcoded fallback voor productie-continuïteit)
+              - TV-route (/gebedstijden/tv) krijgt helemaal geen GA-
+                scripts geladen (i.p.v. alleen config skippen)
+              - `window.gtag` wordt correct exposed, zodat de
+                `trackEvent` helper in lib/analytics.ts werkt */}
+        <GoogleAnalytics />
       </body>
     </html>
   );

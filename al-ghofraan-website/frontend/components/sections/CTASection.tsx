@@ -2,6 +2,8 @@
 
 import Button      from "@/components/ui/Button";
 import Container   from "@/components/ui/Container";
+import TrackedLink from "@/components/analytics/TrackedLink";
+import type { AnalyticsEventName, AnalyticsEventParams } from "@/lib/analytics";
 
 interface CTASectionProps {
   title:       string;
@@ -17,12 +19,24 @@ interface CTASectionProps {
   secondaryCta?: { label: string; href: string };
 }
 
+// Mapt knop-href naar het juiste GA4-event. Houdt CTASection
+// privacy-safe: alleen button_label + source worden meegestuurd, géén
+// vrije tekst uit Directus.
+function eventForHref(href: string): AnalyticsEventName | null {
+  if (href === "/doneren")                                    return "donate_click";
+  if (href === "/contact")                                    return "contact_click";
+  if (href === "/agenda" || href.startsWith("/agenda/"))      return "agenda_click";
+  return null;
+}
+
 export default function CTASection({
   title,
   subtitle,
   primaryCta,
   secondaryCta,
 }: CTASectionProps) {
+  const primaryEvent   = primaryCta   ? eventForHref(primaryCta.href)   : null;
+  const secondaryEvent = secondaryCta ? eventForHref(secondaryCta.href) : null;
   return (
     <section className="bg-slate-mosque py-16 lg:py-20 relative overflow-hidden">
       <div className="absolute inset-0 pattern-overlay opacity-50" />
@@ -47,20 +61,52 @@ export default function CTASection({
 
         <div className="flex flex-wrap gap-4 justify-center">
           {primaryCta && (
-            <Button href={primaryCta.href} size="lg"
-              className="bg-taupe hover:bg-taupe-dark text-white">
-              {primaryCta.label}
-            </Button>
+            primaryEvent ? (
+              <TrackedLink
+                href={primaryCta.href}
+                event={primaryEvent}
+                params={
+                  {
+                    source:       "homepage_cta",
+                    button_label: primaryCta.label,
+                  } as AnalyticsEventParams
+                }
+                className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-taupe hover:bg-taupe-dark text-white font-body font-medium text-base shadow-sm hover:shadow-md transition-all"
+              >
+                {primaryCta.label}
+              </TrackedLink>
+            ) : (
+              <Button href={primaryCta.href} size="lg"
+                className="bg-taupe hover:bg-taupe-dark text-white">
+                {primaryCta.label}
+              </Button>
+            )
           )}
           {secondaryCta && (
-            <Button
-              href={secondaryCta.href}
-              variant="outline"
-              size="lg"
-              className="border-white/30 text-white hover:bg-white hover:text-slate-mosque"
-            >
-              {secondaryCta.label}
-            </Button>
+            secondaryEvent ? (
+              <TrackedLink
+                href={secondaryCta.href}
+                event={secondaryEvent}
+                params={
+                  {
+                    source:       "homepage_cta",
+                    button_label: secondaryCta.label,
+                  } as AnalyticsEventParams
+                }
+                className="inline-flex items-center justify-center px-6 py-3 rounded-full border border-white/30 text-white hover:bg-white hover:text-slate-mosque font-body font-medium text-base transition-all"
+              >
+                {secondaryCta.label}
+              </TrackedLink>
+            ) : (
+              <Button
+                href={secondaryCta.href}
+                variant="outline"
+                size="lg"
+                className="border-white/30 text-white hover:bg-white hover:text-slate-mosque"
+              >
+                {secondaryCta.label}
+              </Button>
+            )
           )}
         </div>
       </Container>
