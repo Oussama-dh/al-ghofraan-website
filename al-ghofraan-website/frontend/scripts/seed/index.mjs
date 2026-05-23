@@ -72,6 +72,11 @@ import { setupContactMapsFields }        from "./steps/44-contact-maps-fields.mj
 import { setupDailyHadiths }             from "./steps/45-daily-hadiths.mjs";
 import { setupAhadiethRole }             from "./steps/46-ahadieth-role.mjs";
 import { setupCtaAyahReferenceTranslation } from "./steps/47-cta-ayah-reference-translation.mjs";
+import { setupAdminCleanup }                from "./steps/49-admin-cleanup.mjs";
+import { setupDonationCampaignProgress }    from "./steps/50-donation-campaign-progress.mjs";
+import { setupDonationCampaignProgressV2 }  from "./steps/51-donation-campaign-progress-v2.mjs";
+import { setupDonationCampaignPublicFields } from "./steps/52-donation-campaign-public-fields.mjs";
+import { setupDonationCampaignUx }           from "./steps/53-donation-campaign-ux.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -169,6 +174,11 @@ const STEPS = [
   { id: "45",  label: "daily_hadiths collectie + sample",                       run: setupDailyHadiths },
   { id: "46",  label: "Rol 'Ahadieth beheerder' (daily_hadiths + TV-hadieth)",  run: setupAhadiethRole },
   { id: "47",  label: "CTA-ayah: vertaling-veld op page_sections",              run: setupCtaAyahReferenceTranslation },
+  { id: "49",  label: "Admin cleanup (UTM weg + Ahadieth fix + field-notes)",   run: setupAdminCleanup },
+  { id: "50",  label: "Donatiecampagne voortgang-velden",                       run: setupDonationCampaignProgress },
+  { id: "51",  label: "Donatiecampagne v2 (euro's + legacy hidden)",            run: setupDonationCampaignProgressV2 },
+  { id: "52",  label: "Public read whitelist donation_campaigns (manual_raised_note uitsluiten)", run: setupDonationCampaignPublicFields },
+  { id: "53",  label: "Donatiecampagne UX (homepage-teksten + progress_default_open semantiek)", run: setupDonationCampaignUx },
 ];
 
 // ─── CLI-argument parsing ──────────────────────────────────────

@@ -7,6 +7,7 @@ import AyahBlock         from "@/components/sections/AyahBlock";
 import { Icon }          from "@/lib/icons";
 import { PageSectionsList } from "@/components/sections/PageSectionRenderer";
 import DonationForm      from "@/components/donation/DonationForm";
+import { getCampaignProgressBatch } from "@/lib/donations";
 import {
   getPageContent,
   getIconSettings,
@@ -26,7 +27,7 @@ const DONATIE_DOELEN = [
 ];
 
 interface Props {
-  searchParams?: { geannuleerd?: string };
+  searchParams?: { geannuleerd?: string; campaign?: string };
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -64,7 +65,48 @@ export default async function DonerenPage({ searchParams }: Props) {
     (s) => s.type !== "cta" && s.type !== "ayah"
   );
 
-  const cancelled = searchParams?.geannuleerd === "1";
+  // Delivery donation-campaign-progress-v2 + ux — server-side aggregeer
+  // voor elke campagne met show_progress=true het automatisch
+  // opgehaalde bedrag (one_time/paid) + aantal maandelijkse
+  // abonnees (monthly/active). Gebeurt parallel; fail-soft.
+  //
+  // We berekenen hier alvast goalCents, manualCents en de samengevoegde
+  // monthlyDonorCount, zodat DonationForm de complete CampaignProgressEntry
+  // per campagne kan opzoeken op campaign.id.
+  const progressCampaigns = campaigns.filter((c) => c.show_progress);
+  const aggregates = await getCampaignProgressBatch(
+    progressCampaigns.map((c) => c.id),
+  );
+
+  const campaignProgress: Record<number, {
+    autoRaisedCents:   number;
+    monthlyDonorCount: number;
+    manualRaisedCents: number;
+    goalCents:         number;
+  }> = {};
+  for (const c of progressCampaigns) {
+    // goalCents: voorkeur euro-veld; legacy cents als fallback
+    const goalCents =
+      typeof c.goal_amount_eur === "number" && c.goal_amount_eur > 0
+        ? Math.round(c.goal_amount_eur * 100)
+        : (c.goal_amount ?? 0);
+    if (goalCents <= 0) continue;
+
+    const manualCents = Math.round((c.manual_raised_amount_eur ?? 0) * 100);
+    const auto = aggregates.get(c.id) ?? {
+      autoRaisedCents:   0,
+      monthlyDonorCount: 0,
+    };
+    campaignProgress[c.id] = {
+      autoRaisedCents:   auto.autoRaisedCents,
+      monthlyDonorCount: auto.monthlyDonorCount + (c.manual_monthly_donor_count ?? 0),
+      manualRaisedCents: manualCents,
+      goalCents,
+    };
+  }
+
+  const cancelled         = searchParams?.geannuleerd === "1";
+  const initialCampaignSlug = searchParams?.campaign?.trim() || null;
 
   return (
     <>
@@ -129,8 +171,15 @@ export default async function DonerenPage({ searchParams }: Props) {
             </div>
           )}
 
-          {/* Donatie­formulier */}
-          <DonationForm campaigns={campaigns} />
+          {/* Delivery donation-campaign-ux — voortgangskaart wordt nu BINNEN
+              DonationForm gerenderd, gekoppeld aan de campagne-selectie.
+              campaignProgress map wordt server-side pre-computed (zie boven).
+              initialCampaignSlug komt uit ?campaign=<slug> URL-param. */}
+          <DonationForm
+            campaigns={campaigns}
+            campaignProgress={campaignProgress}
+            initialCampaignSlug={initialCampaignSlug}
+          />
 
           {/* Beheerbare body uit Directus */}
           {page?.body && (

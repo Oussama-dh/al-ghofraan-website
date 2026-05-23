@@ -5,11 +5,39 @@ import { useMemo, useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
+import CampaignProgressBar from "@/components/donation/CampaignProgressBar";
 import type { DonationCampaign, DonationType } from "@/types/directus";
+
+/**
+ * Server-side berekende voortgang per campagne — wordt door
+ * app/doneren/page.tsx pre-computed en als Map doorgegeven. Geen
+ * automatische refresh op campaign-switch nodig: alle waarden komen
+ * uit één eerdere server-request.
+ */
+export interface CampaignProgressEntry {
+  /** Stripe `one_time/paid` totaal in eurocenten. */
+  autoRaisedCents:   number;
+  /** Stripe `monthly/active` distinct count + manual_monthly_donor_count. */
+  monthlyDonorCount: number;
+  /** manual_raised_amount_eur * 100 — al voor-berekend op server. */
+  manualRaisedCents: number;
+  /** goal_amount_eur*100 of legacy goal_amount, met fallback. */
+  goalCents:         number;
+}
 
 interface DonationFormProps {
   /** Campagnes uit Directus (status=published, met allow_one_time of allow_monthly). */
   campaigns?: DonationCampaign[];
+  /**
+   * Server-side gepre-computeerde voortgang per campagne. Key = campaign.id.
+   * Alleen aanwezig voor campagnes met show_progress=true.
+   */
+  campaignProgress?: Record<number, CampaignProgressEntry>;
+  /**
+   * Optionele initiële campagne via URL-param ?campaign=<slug>.
+   * Heeft voorrang op progress_default_open.
+   */
+  initialCampaignSlug?: string | null;
   className?: string;
 }
 
@@ -35,14 +63,37 @@ const ALGEMEEN_OPTION: DonationCampaign = {
   created_at:       null,
 };
 
-export default function DonationForm({ campaigns = [], className }: DonationFormProps) {
+export default function DonationForm({
+  campaigns = [],
+  campaignProgress = {},
+  initialCampaignSlug = null,
+  className,
+}: DonationFormProps) {
   // Algemene donatie altijd als eerste optie
   const allOptions: DonationCampaign[] = useMemo(
     () => [ALGEMEEN_OPTION, ...campaigns],
     [campaigns]
   );
 
-  const [campaignId, setCampaignId] = useState<number>(ALGEMEEN_OPTION.id);
+  // Initiële selectie volgorde van voorrang:
+  //   1. URL-param ?campaign=<slug> (vanuit HomepageCampaignBlock-link)
+  //   2. Eerste campagne met progress_default_open=true (Directus-instelling)
+  //   3. ALGEMEEN_OPTION (sentinel id=0)
+  //
+  // Stap 1 + 2 vereisen dat de campagne actief is in `campaigns`-prop.
+  // Geen risico op selectie van archived/gedeselecteerde campagnes —
+  // die zijn al uitgefilterd door getDonationCampaigns().
+  const initialCampaignId = useMemo<number>(() => {
+    if (initialCampaignSlug) {
+      const byUrl = campaigns.find((c) => c.slug === initialCampaignSlug);
+      if (byUrl) return byUrl.id;
+    }
+    const defaultOpen = campaigns.find((c) => c.progress_default_open);
+    if (defaultOpen) return defaultOpen.id;
+    return ALGEMEEN_OPTION.id;
+  }, [campaigns, initialCampaignSlug]);
+
+  const [campaignId, setCampaignId] = useState<number>(initialCampaignId);
 
   const selectedCampaign = useMemo(
     () => allOptions.find((c) => c.id === campaignId) ?? ALGEMEEN_OPTION,
@@ -272,6 +323,36 @@ export default function DonationForm({ campaigns = [], className }: DonationForm
         </fieldset>
       )}
 
+      {/* Delivery donation-campaign-ux — voortgangsvak van geselecteerde
+          campagne. Self-guarded in CampaignProgressBar: rendert null als
+          show_progress=false of goalCents<=0. Voor Algemene donatie
+          (id=0) is er sowieso geen progress, dus rendert niets. */}
+      {(() => {
+        const progress = campaignProgress[selectedCampaign.id];
+        if (!progress) return null;
+        return (
+          <div className="mb-6">
+            <CampaignProgressBar
+              campaign={selectedCampaign}
+              autoRaisedCents={progress.autoRaisedCents}
+              monthlyDonorCount={progress.monthlyDonorCount}
+              manualRaisedCents={progress.manualRaisedCents}
+              goalCents={progress.goalCents}
+              onDonateClick={() => {
+                // Smooth scroll naar bedrag-fieldset. Geen library nodig —
+                // browser-native scrollIntoView met scroll-mt-24 voor
+                // sticky-header offset (zie #donation-amount).
+                if (typeof document !== "undefined") {
+                  document
+                    .getElementById("donation-amount")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              }}
+            />
+          </div>
+        );
+      })()}
+
       {/* ─── Stripe Payment Link modus ─────────────────────────────
            Wanneer de geselecteerde campagne een Payment Link gebruikt, slaan we
            alle interne velden (type/bedrag/naam/email/message) over en sturen
@@ -353,7 +434,7 @@ export default function DonationForm({ campaigns = [], className }: DonationForm
       )}
 
       {/* Bedrag */}
-      <fieldset className="mb-6">
+      <fieldset id="donation-amount" className="mb-6 scroll-mt-24">
         <legend className={labelClass}>
           Kies een bedrag {type === "monthly" && <span className="text-taupe">(per maand)</span>}
         </legend>

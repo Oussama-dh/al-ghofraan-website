@@ -44,8 +44,10 @@ const ROLE_DEF = {
   manage: [
     "daily_hadiths",
   ],
+  // Bewust GEEN site_settings — Ahadieth beheerder heeft alleen
+  // toegang tot ahadieth-content. directus_files blijft read voor
+  // het laden van eventuele media in arabic_text / explanation_short.
   read: [
-    "site_settings",
     "directus_files",
   ],
   // Filtered access: read/update via permissions-filter, create via

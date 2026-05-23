@@ -210,6 +210,12 @@ export interface SiteSettings {
   homepage_whatsapp_cta_description?: string | null;
   homepage_whatsapp_cta_button_label?: string | null;
   homepage_whatsapp_cta_url?: string | null;
+  /**
+   * Delivery donation-campaign-ux — beheerbare teksten voor het
+   * campagneblok op de homepage. Leeg = fallback in `app/page.tsx`.
+   */
+  homepage_campaigns_title?: string | null;
+  homepage_campaigns_subtitle?: string | null;
   /** Delivery contact-maps — kaart op contactpagina. Frontend valideert URLs. */
   contact_maps_enabled?: boolean | null;
   contact_maps_embed_url?: string | null;
@@ -549,6 +555,48 @@ export interface DonationCampaign {
   use_stripe_payment_link?: boolean | null;
   stripe_payment_link_url?: string | null;
   stripe_payment_link_id?: string | null;
+  /**
+   * Delivery donation-campaign-progress — voortgang voor /doneren.
+   * Self-guarded: alleen zichtbaar als show_progress=true EN
+   * goal_amount > 0.
+   */
+  /** Huidig opgehaald bedrag in eurocenten. Handmatig bijgehouden. */
+  raised_amount?: number | null;
+  /** Leesbare weergave, bv. "€2.350". Leeg = auto-format vanuit raised_amount. */
+  raised_amount_display?: string | null;
+  /** Korte teaser onder de campagnetitel (1-2 zinnen, max 200 tekens). */
+  short_text?: string | null;
+  /** Toggle om de campagne als voortgangskaart op /doneren te tonen. */
+  show_progress?: boolean | null;
+  /**
+   * Delivery donation-campaign-progress-v2 — euro's + auto-aggregatie.
+   * Vervangt de raised_amount-flow uit delivery 50 (die nu hidden is).
+   */
+  /** Doelbedrag in EURO'S. Vervangt goal_amount (cents); fallback als leeg. */
+  goal_amount_eur?: number | null;
+  /** Handmatige correctie BOVENOP automatisch berekend Stripe-totaal, in EURO'S. */
+  manual_raised_amount_eur?: number | null;
+  /**
+   * Interne admin-notitie bij handmatige correctie. **NIET PUBLIEK
+   * UITLEESBAAR** — bewust uitgesloten van zowel de frontend-query
+   * (lib/directus.ts CAMPAIGN_FIELDS) als de Directus public read
+   * permission (seed 02 / seed 52 whitelist).
+   *
+   * Mag GEEN persoonsgegevens bevatten:
+   *   - geen donor-namen
+   *   - geen e-mails
+   *   - geen telefoonnummers
+   *   - geen bedrag-per-persoon
+   *
+   * Alleen voor admin-geheugen, bv. "Cash inzameling Q1 — 3 enveloppen".
+   */
+  manual_raised_note?: string | null;
+  /** Extra aantal maandelijkse donateurs bovenop auto-tellen. */
+  manual_monthly_donor_count?: number | null;
+  /** Aan = voortgangskaart staat standaard uitgeklapt. */
+  progress_default_open?: boolean | null;
+  /** Aan = campagne verschijnt OOK op homepage (max 2 totaal). */
+  show_on_homepage?: boolean | null;
 }
 
 // ─── donations ───────────────────────────────────────────────

@@ -367,6 +367,20 @@ const CAMPAIGN_FIELDS = [
   "featured", "sort",
   // Stripe Payment Link integratie (delivery 2b — Fase 1)
   "use_stripe_payment_link", "stripe_payment_link_url", "stripe_payment_link_id",
+  // Delivery donation-campaign-progress — voortgang op /doneren.
+  // Self-guarded in CampaignProgressBar: alleen zichtbaar als
+  // show_progress=true EN goal_amount > 0.
+  "raised_amount", "raised_amount_display", "short_text", "show_progress",
+  // Delivery donation-campaign-progress-v2 — euro-velden + auto-aggregatie.
+  // Vervangen raised_amount (cents) door manual_raised_amount_eur (euros) +
+  // server-side aggregatie van geslaagde Stripe-donaties per campagne.
+  //
+  // BEWUST GEEN `manual_raised_note` in deze whitelist — dat veld is een
+  // INTERNE admin-notitie en mag niet via de publieke frontend of API
+  // gelezen worden. Defense-in-depth: ook public read permission in
+  // seed 02 / seed 52 sluit dit veld uit (whitelist-based).
+  "goal_amount_eur", "manual_raised_amount_eur",
+  "manual_monthly_donor_count", "progress_default_open", "show_on_homepage",
 ];
 
 export async function getDonationCampaigns(): Promise<DonationCampaign[]> {

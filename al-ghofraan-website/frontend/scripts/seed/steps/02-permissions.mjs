@@ -1,5 +1,30 @@
 // scripts/seed/steps/02-permissions.mjs
 // Directus 11 — gebruikt het policies-model.
+//
+// Per collectie kan optioneel een expliciete `fields`-whitelist worden
+// opgegeven. Default = ["*"] (alle velden publiek leesbaar). Voor
+// gevoelige collecties met admin-only velden geef je een whitelist
+// op om defense-in-depth te krijgen — de frontend-query alleen
+// inperken is fragiel (één developer die ?fields=* doet en het lek
+// is open).
+
+// Publieke whitelist voor donation_campaigns. Sluit BEWUST
+// manual_raised_note uit — dat is een interne admin-notitie.
+// Houd deze lijst in sync met CAMPAIGN_FIELDS in lib/directus.ts;
+// nieuwe velden moeten expliciet hier worden toegevoegd om
+// publiek leesbaar te zijn. Default-secure.
+const DONATION_CAMPAIGN_PUBLIC_FIELDS = [
+  "id", "status", "title", "slug", "description", "image",
+  "goal_amount", "goal_amount_display",
+  "allow_one_time", "allow_monthly",
+  "suggested_amounts", "default_amount",
+  "featured", "sort",
+  "use_stripe_payment_link", "stripe_payment_link_url", "stripe_payment_link_id",
+  "raised_amount", "raised_amount_display", "short_text", "show_progress",
+  "goal_amount_eur", "manual_raised_amount_eur",
+  "manual_monthly_donor_count", "progress_default_open", "show_on_homepage",
+  // BEWUST UITGESLOTEN: manual_raised_note (interne admin-notitie).
+];
 
 const COLLECTIONS = [
   { collection: "activities",         filter: { status:    { _eq: "published" } } },
@@ -12,7 +37,13 @@ const COLLECTIONS = [
   { collection: "page_sections",      filter: { active:    { _eq: true       } } },
   { collection: "page_section_items", filter: { active:    { _eq: true       } } },
   { collection: "education_programs", filter: { status:    { _eq: "published" } } },
-  { collection: "donation_campaigns", filter: { status:    { _eq: "published" } } },
+  // Delivery donation-campaign-progress-v2 — fields-whitelist sluit
+  // manual_raised_note expliciet uit van publieke leesbaarheid.
+  {
+    collection: "donation_campaigns",
+    filter:     { status: { _eq: "published" } },
+    fields:     DONATION_CAMPAIGN_PUBLIC_FIELDS,
+  },
   { collection: "articles",           filter: { status:    { _eq: "published" } } },
   { collection: "videos",             filter: { status:    { _eq: "published" } } },
   { collection: "tv_announcements",   filter: { status:    { _eq: "published" } } },
@@ -27,7 +58,7 @@ const COLLECTIONS = [
   // wordt apart afgedwongen in `getPrayerCalendarHighlights`.
   { collection: "prayer_calendar_highlights", filter: { status: { _eq: "published" } } },
   // Delivery daily-hadith — public read alleen voor published + active items.
-  // Filter zorgt dat draft of inactive ahadieth niet uitlekken.
+  // Filter zorgt dat draft of inactive hadiths niet uitlekken.
   {
     collection: "daily_hadiths",
     filter: { _and: [{ status: { _eq: "published" } }, { active: { _eq: true } }] },
@@ -65,7 +96,7 @@ export async function setupPermissions(client) {
 
   let success = 0, failed = 0;
 
-  for (const { collection, filter } of COLLECTIONS) {
+  for (const { collection, filter, fields } of COLLECTIONS) {
     const key = `${collection}:read`;
     const payload = {
       policy:      publicPolicy.id,
@@ -74,7 +105,11 @@ export async function setupPermissions(client) {
       permissions: filter,
       validation:  null,
       presets:     null,
-      fields:      ["*"],
+      // Per-collectie expliciete whitelist mogelijk (default = ["*"]).
+      // Gebruikt door donation_campaigns om manual_raised_note uit te
+      // sluiten van publieke leesbaarheid. Houd deze whitelist in sync
+      // met CAMPAIGN_FIELDS in lib/directus.ts.
+      fields:      fields ?? ["*"],
     };
 
     try {

@@ -23,9 +23,12 @@ import {
   getPageSectionsWithItems,
   getHomepageVideos,
   getDailyHadithForToday,
+  getDonationCampaigns,
   resolveIconKey,
   ICON_KEYS,
 } from "@/lib/directus";
+import { getCampaignProgressBatch } from "@/lib/donations";
+import HomepageCampaignBlock from "@/components/donation/HomepageCampaignBlock";
 import { buildYouTubeEmbedUrl } from "@/lib/utils";
 import type { PageSection, PageSectionItem } from "@/types/directus";
 
@@ -75,7 +78,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [page, activities, iconMap, sections, homepageVideos, settings, hadith] = await Promise.all([
+  const [page, activities, iconMap, sections, homepageVideos, settings, hadith, campaigns] = await Promise.all([
     getPageContent("home"),
     getUpcomingActivities(6),
     getIconSettings(),
@@ -83,7 +86,18 @@ export default async function HomePage() {
     getHomepageVideos(3),
     getSiteSettings(),
     getDailyHadithForToday(),
+    getDonationCampaigns(),
   ]);
+
+  // Delivery donation-campaign-progress-v2 — homepage campagne-blok.
+  // Toon maximaal 2 campagnes met show_on_homepage=true. Volgorde
+  // (featured DESC, sort ASC, title) komt al uit getDonationCampaigns.
+  const homepageCampaigns = campaigns
+    .filter((c) => c.show_on_homepage)
+    .slice(0, 2);
+  const homepageCampaignProgress = await getCampaignProgressBatch(
+    homepageCampaigns.map((c) => c.id),
+  );
 
   const dateIcon        = resolveIconKey(iconMap, ICON_KEYS.activityDate);
   const locationIcon    = resolveIconKey(iconMap, ICON_KEYS.activityLocation);
@@ -144,9 +158,60 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      {/* Delivery daily-hadith — Hadieth van de dag, direct onder de ayah.
-          Self-guarded: rendert niets zonder actieve hadieth of vertaling. */}
+      {/* Delivery daily-hadith — Hadith van de dag, direct onder de ayah.
+          Self-guarded: rendert niets zonder actieve hadith of vertaling. */}
       <DailyHadithBlock hadith={hadith} />
+
+      {/* Delivery donation-campaign-ux — homepage campagne-blok.
+          Verplaatst naar direct NA DailyHadithBlock (was na missie).
+          Volgorde: hero → ayah → hadieth → campagnes → body/missie/activiteiten.
+          Max 2 campagnes met show_on_homepage=true. Title/subtitel beheerbaar
+          via site_settings.homepage_campaigns_title/_subtitle met fallbacks. */}
+      {homepageCampaigns.length > 0 && (
+        <section className="bg-sand-50 py-12 lg:py-16">
+          <Container>
+            <SectionTitle
+              title={
+                settings?.homepage_campaigns_title?.trim() ||
+                "Actuele campagnes"
+              }
+              subtitle={
+                settings?.homepage_campaigns_subtitle?.trim() ||
+                "Steun een specifiek doel van de DawahCommissie"
+              }
+              className="mb-8"
+            />
+            <div className={`grid gap-4 ${homepageCampaigns.length === 1 ? "max-w-md mx-auto" : "sm:grid-cols-2"}`}>
+              {homepageCampaigns.map((c) => {
+                const goalCents =
+                  typeof c.goal_amount_eur === "number" && c.goal_amount_eur > 0
+                    ? Math.round(c.goal_amount_eur * 100)
+                    : (c.goal_amount ?? 0);
+                const manualCents = Math.round(
+                  (c.manual_raised_amount_eur ?? 0) * 100,
+                );
+                const auto = homepageCampaignProgress.get(c.id) ?? {
+                  autoRaisedCents:   0,
+                  monthlyDonorCount: 0,
+                };
+                const monthlyDonorCount =
+                  auto.monthlyDonorCount + (c.manual_monthly_donor_count ?? 0);
+
+                return (
+                  <HomepageCampaignBlock
+                    key={c.id}
+                    campaign={c}
+                    autoRaisedCents={auto.autoRaisedCents}
+                    monthlyDonorCount={monthlyDonorCount}
+                    manualRaisedCents={manualCents}
+                    goalCents={goalCents}
+                  />
+                );
+              })}
+            </div>
+          </Container>
+        </section>
+      )}
 
       {/* Body uit page_content (rich text) */}
       {page?.body && (
