@@ -102,6 +102,14 @@ export interface Activity {
   minimum_age?: number | null;
   teacher?: string | null;
   show_teacher?: boolean | null;
+  /**
+   * Delivery TV-A correctie — Aan = deze activiteit kan op /gebedstijden/tv
+   * verschijnen als activiteit-slide. Werkt samen met master-toggle
+   * `site_settings.tv_show_next_activity`. Bij meerdere activiteiten met
+   * show_on_tv=true wint de eerstvolgende relevante (start_date ASC).
+   * Verlopen activiteiten worden automatisch overgeslagen.
+   */
+  show_on_tv?: boolean | null;
 }
 
 // ─── prayer_time_files ───────────────────────────────────────
@@ -150,6 +158,26 @@ export interface SiteSettings {
   tv_item_slide_seconds?: number | null;
   /** Refresh-interval voor server-data op /gebedstijden/tv (in minuten). Default 5. */
   tv_refresh_minutes?: number | null;
+  /**
+   * Delivery TV-A — extra blokken op /gebedstijden/tv.
+   *
+   * tv_show_donation_campaign  Master-toggle voor donatiecampagne-slide
+   *                            (mits een campagne show_on_tv=true heeft).
+   *                            Default AAN.
+   * tv_show_next_activity      Master-toggle voor activiteit-slide op TV.
+   *                            (Veldnaam historisch — toont nu een door
+   *                            de beheerder gekozen activiteit, niet
+   *                            automatisch de eerstvolgende.) Toont
+   *                            slide alleen als óók minstens één
+   *                            activiteit `show_on_tv=true` heeft én
+   *                            relevant/toekomstig is. Default UIT.
+   * tv_activity_lookahead_days Toon de op TV gekozen activiteit alleen
+   *                            als deze binnen X dagen valt. 0 = altijd
+   *                            tonen. Default 7.
+   */
+  tv_show_donation_campaign?: boolean | null;
+  tv_show_next_activity?: boolean | null;
+  tv_activity_lookahead_days?: number | null;
   /** Optionele URL naar voorwaardenpagina (gebruikt door RegistrationForm). */
   registration_terms_url?: string | null;
   /** Optionele eigen tekst voor de voorwaarden-checkbox. */
@@ -597,6 +625,14 @@ export interface DonationCampaign {
   progress_default_open?: boolean | null;
   /** Aan = campagne verschijnt OOK op homepage (max 2 totaal). */
   show_on_homepage?: boolean | null;
+  /**
+   * Delivery TV-A — campagne verschijnt als slide op /gebedstijden/tv
+   * met QR-code naar /doneren?campaign=<slug>. Apart van
+   * show_on_homepage; admin kan dezelfde of een andere campagne kiezen.
+   * Master-toggle `tv_show_donation_campaign` op site_settings moet ook
+   * aan staan om iets op TV te zien.
+   */
+  show_on_tv?: boolean | null;
 }
 
 // ─── donations ───────────────────────────────────────────────
@@ -917,6 +953,76 @@ export interface DailyHadith {
   created_at?: string | null;
 }
 
+// ─── hadieth_series ──────────────────────────────────────────
+/**
+ * Delivery B (stap 56) — beheerbare hadieth-series voor /gebedstijden/tv.
+ *
+ * Eén bron voor zowel "altijd-loop" series (Algemene ahadieth) als
+ * speciale schedule-series (Djoemoe'ah weekly_window, Ramadhaan
+ * date_range, etc). De TV-route kiest dagelijks de hoogste-priority
+ * actieve serie en toont één item per dag.
+ *
+ * Schedule-types:
+ *   - "always"        — altijd actief
+ *   - "date_range"    — vandaag tussen start_date en end_date (NL)
+ *   - "weekly_window" — wekelijks venster (weekday_start@start_prayer
+ *                      t/m weekday_end@end_prayer, Europe/Amsterdam).
+ *                      Weekday-conventie: 0=zondag .. 6=zaterdag (JS getDay).
+ *   - "hijri_month"   — vandaag's Hijri-maand == hijri_month
+ *
+ * Privacy: deze collectie wordt server-side opgehaald met admin-token.
+ * Geen public read whitelist; geen lekkagerisico.
+ */
+export type HadiethScheduleType =
+  | "always"
+  | "date_range"
+  | "weekly_window"
+  | "hijri_month";
+
+export interface HadiethSeries {
+  id: string | number;
+  status: "published" | "draft" | "archived";
+  active?: boolean | null;
+  title: string;
+  slug: string;
+  description?: string | null;
+  /** Hoger wint bij overlap. Default 0. */
+  priority?: number | null;
+  show_on_tv?: boolean | null;
+  schedule_type: HadiethScheduleType;
+  /** date_range: YYYY-MM-DD inclusief */
+  start_date?: string | null;
+  end_date?:   string | null;
+  /** weekly_window: 0=zondag, 1=maandag, ..., 6=zaterdag (JS getDay) */
+  weekday_start?: number | null;
+  weekday_end?:   number | null;
+  /** weekly_window: fajr|shoeroeq|dhoehr|asr|maghrib|ishaa */
+  start_prayer?: string | null;
+  end_prayer?:   string | null;
+  /** hijri_month: 1-12. 9=Ramadhaan, 12=Dhoel-Hijjah. */
+  hijri_month?: number | null;
+  sort?: number | null;
+  created_at?: string | null;
+}
+
+// ─── hadieth_series_items ────────────────────────────────────
+export interface HadiethSeriesItem {
+  id: string | number;
+  status: "published" | "draft" | "archived";
+  active?: boolean | null;
+  /** M2O naar hadieth_series.id */
+  series: string | number;
+  arabic_text?: string | null;
+  /** Vereist — zonder vertaling rendert de TV-slide niets. */
+  translation_nl: string;
+  source?: string | null;
+  /** Authenticiteit (bv. "Sahih", "Hasan"). */
+  authenticity?: string | null;
+  explanation_short?: string | null;
+  sort?: number | null;
+  created_at?: string | null;
+}
+
 // ─── SDK Schema ──────────────────────────────────────────────
 export interface DirectusSchema {
   activities: Activity[];
@@ -944,4 +1050,6 @@ export interface DirectusSchema {
   education_categories: EducationCategory[];
   vacancies: Vacancy[];
   prayer_calendar_highlights: PrayerCalendarHighlight[];
+  hadieth_series: HadiethSeries[];
+  hadieth_series_items: HadiethSeriesItem[];
 }

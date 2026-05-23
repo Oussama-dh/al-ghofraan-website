@@ -77,6 +77,9 @@ import { setupDonationCampaignProgress }    from "./steps/50-donation-campaign-p
 import { setupDonationCampaignProgressV2 }  from "./steps/51-donation-campaign-progress-v2.mjs";
 import { setupDonationCampaignPublicFields } from "./steps/52-donation-campaign-public-fields.mjs";
 import { setupDonationCampaignUx }           from "./steps/53-donation-campaign-ux.mjs";
+import { setupTvDisplayBlocks }              from "./steps/54-tv-display-blocks.mjs";
+import { setupTvActivityManualSelection }    from "./steps/55-tv-activity-manual-selection.mjs";
+import { setupHadiethSeriesTv }              from "./steps/56-hadieth-series-tv.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -179,6 +182,9 @@ const STEPS = [
   { id: "51",  label: "Donatiecampagne v2 (euro's + legacy hidden)",            run: setupDonationCampaignProgressV2 },
   { id: "52",  label: "Public read whitelist donation_campaigns (manual_raised_note uitsluiten)", run: setupDonationCampaignPublicFields },
   { id: "53",  label: "Donatiecampagne UX (homepage-teksten + progress_default_open semantiek)", run: setupDonationCampaignUx },
+  { id: "54",  label: "TV-display: donatiecampagne + QR + eerstvolgende activiteit", run: setupTvDisplayBlocks },
+  { id: "55",  label: "TV-activiteit handmatige selectie + HTML strip",               run: setupTvActivityManualSelection },
+  { id: "56",  label: "Hadieth-series voor TV (collecties + permissions + templates)", run: setupHadiethSeriesTv },
 ];
 
 // ─── CLI-argument parsing ──────────────────────────────────────

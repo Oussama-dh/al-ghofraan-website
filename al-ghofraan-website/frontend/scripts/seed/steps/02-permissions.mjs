@@ -10,8 +10,9 @@
 
 // Publieke whitelist voor donation_campaigns. Sluit BEWUST
 // manual_raised_note uit — dat is een interne admin-notitie.
-// Houd deze lijst in sync met CAMPAIGN_FIELDS in lib/directus.ts;
-// nieuwe velden moeten expliciet hier worden toegevoegd om
+// Houd deze lijst in sync met CAMPAIGN_FIELDS in lib/directus.ts
+// EN met dezelfde array in seed-stap 54 (productie-patch).
+// Nieuwe velden moeten expliciet hier worden toegevoegd om
 // publiek leesbaar te zijn. Default-secure.
 const DONATION_CAMPAIGN_PUBLIC_FIELDS = [
   "id", "status", "title", "slug", "description", "image",
@@ -23,6 +24,8 @@ const DONATION_CAMPAIGN_PUBLIC_FIELDS = [
   "raised_amount", "raised_amount_display", "short_text", "show_progress",
   "goal_amount_eur", "manual_raised_amount_eur",
   "manual_monthly_donor_count", "progress_default_open", "show_on_homepage",
+  // Delivery TV-A — show_on_tv toegevoegd aan publieke whitelist.
+  "show_on_tv",
   // BEWUST UITGESLOTEN: manual_raised_note (interne admin-notitie).
 ];
 

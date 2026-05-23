@@ -381,6 +381,8 @@ const CAMPAIGN_FIELDS = [
   // seed 02 / seed 52 sluit dit veld uit (whitelist-based).
   "goal_amount_eur", "manual_raised_amount_eur",
   "manual_monthly_donor_count", "progress_default_open", "show_on_homepage",
+  // Delivery TV-A — show_on_tv: campagne op /gebedstijden/tv tonen.
+  "show_on_tv",
 ];
 
 export async function getDonationCampaigns(): Promise<DonationCampaign[]> {
@@ -422,6 +424,173 @@ export async function getDonationCampaignBySlug(slug: string): Promise<DonationC
     },
     `getDonationCampaignBySlug(${slug})`,
     null
+  );
+}
+
+/**
+ * Delivery TV-A — eerste campagne met `show_on_tv=true` voor de
+ * /gebedstijden/tv slide. Volgorde: featured DESC, sort ASC, title ASC.
+ *
+ * Server-side fetch met `directusServer` (admin-token). Geen public
+ * read nodig — TV-route draait altijd server-side. Defense-in-depth:
+ * de campagne is sowieso publiek leesbaar (zelfde permission als
+ * /doneren), maar door admin-token te gebruiken zijn we niet afhankelijk
+ * van de public-permission whitelist voor `show_on_tv`.
+ *
+ * Fail-soft: bij Directus-fout → null (TV-page slaat slide stilletjes
+ * over via self-guard in PrayerTimesTvDisplay).
+ */
+export async function getTvDonationCampaign(): Promise<DonationCampaign | null> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("donation_campaigns", {
+          filter: {
+            status:      { _eq: "published" },
+            show_on_tv:  { _eq: true },
+            // Tenminste één donatie-type — anders is QR naar /doneren nutteloos
+            _or: [
+              { allow_one_time: { _eq: true } },
+              { allow_monthly:  { _eq: true } },
+            ],
+          } as never,
+          sort:   ["-featured", "sort", "title"],
+          limit:  1,
+          fields: CAMPAIGN_FIELDS,
+        }),
+      );
+      return ((result as unknown as DonationCampaign[])[0]) ?? null;
+    },
+    "getTvDonationCampaign",
+    null,
+  );
+}
+
+/**
+ * Delivery TV-A — eerstvolgende gepubliceerde activiteit voor /gebedstijden/tv.
+ *
+ * @deprecated Sinds delivery TV-A correctie: TV-route gebruikt nu
+ * `getTvActivity()` dat alleen activiteiten met `show_on_tv=true` toont.
+ * Deze functie is dead-code op de TV-route maar blijft beschikbaar voor
+ * andere mogelijke gebruikers (bijv. e-mail-templates, embed-widgets).
+ * Geen nieuwe call-sites toevoegen — gebruik `getTvActivity()` als je
+ * "expliciet door beheerder gekozen voor TV" bedoelt.
+ *
+ * Wrapper rond `getUpcomingActivities(1)` met optioneel lookahead-filter:
+ * als `lookaheadDays > 0`, dan moet de activiteit binnen X dagen
+ * plaatsvinden (anders null). `lookaheadDays === 0` of null = geen
+ * lookahead-filter, altijd de eerstvolgende.
+ */
+export async function getNextActivity(
+  lookaheadDays: number | null = null,
+): Promise<Activity | null> {
+  return safe(
+    async () => {
+      const list = await getUpcomingActivities(1);
+      const first = list[0] ?? null;
+      if (!first) return null;
+
+      // Geen lookahead = altijd tonen
+      if (!lookaheadDays || lookaheadDays <= 0) return first;
+
+      // Lookahead-filter op start_date (YYYY-MM-DD). Recurring activities
+      // hebben hun originele start_date in het verleden; voor die zou
+      // de huidige logica ze altijd uitsluiten. We omzeilen dat door
+      // recurring (is_recurring=true) altijd door te laten — beheerder
+      // bepaalt zelf via recurrence_until of een serie nog loopt.
+      if (first.is_recurring === true) return first;
+
+      const startMs = Date.parse(first.start_date);
+      if (!Number.isFinite(startMs)) return first; // ongeldige datum → fail-open, toon
+
+      const horizonMs = Date.now() + lookaheadDays * 86_400_000;
+      return startMs <= horizonMs ? first : null;
+    },
+    `getNextActivity(lookahead=${lookaheadDays})`,
+    null,
+  );
+}
+
+/**
+ * Delivery TV-A correctie — door beheerder gekozen activiteit voor
+ * /gebedstijden/tv.
+ *
+ * Selectie-regels:
+ *   1. status = "published"
+ *   2. show_on_tv = true   (handmatig per activiteit aangezet)
+ *   3. Relevant/toekomstig:
+ *      - eenmalige activiteit: start_date >= vandaag (NL-datum),
+ *        verlopen activiteiten worden overgeslagen.
+ *      - terugkerende activiteit (is_recurring=true): doorgelaten
+ *        als de serie nog niet voorbij is (recurrence_until leeg of
+ *        in de toekomst). Beheerder kan zelf de serie stoppen.
+ *   4. Sorteer op start_date ASC — eerstvolgende wint.
+ *   5. Optioneel lookahead-filter (`lookaheadDays`): activiteiten
+ *      verder dan X dagen in de toekomst worden weggefilterd.
+ *      Recurring blijft doorgelaten (serie kan vandaag al lopen).
+ *      lookaheadDays === 0 of null = geen filter.
+ *
+ * Geeft null als er geen geschikte activiteit is — TV-route laat de
+ * slide dan stilletjes weg.
+ */
+export async function getTvActivity(
+  lookaheadDays: number | null = null,
+): Promise<Activity | null> {
+  return safe(
+    async () => {
+      const today = new Date().toISOString().split("T")[0];
+      const result = await directusServer.request(
+        readItems("activities", {
+          filter: {
+            status:     { _eq: "published" },
+            show_on_tv: { _eq: true },
+            _or: [
+              { start_date: { _gte: today } },
+              {
+                _and: [
+                  { is_recurring: { _eq: true } },
+                  {
+                    _or: [
+                      { recurrence_until: { _null: true } },
+                      { recurrence_until: { _gte: today } },
+                    ],
+                  },
+                ],
+              },
+            ],
+          } as never,
+          sort:  ["start_date"],
+          limit: 1,
+          // Whitelist: alleen velden die de TV-slide rendert. Hou klein om
+          // PII (bv. teacher) niet onnodig op te halen. show_teacher is
+          // bewust uitgesloten — de TV-slide toont geen docent-info.
+          fields: [
+            "id", "status", "title", "slug",
+            "description",
+            "start_date", "end_date", "location",
+            "is_recurring", "recurrence_type", "recurrence_interval",
+            "recurrence_until", "recurrence_weekday",
+            "show_on_tv",
+          ],
+        })
+      );
+      const first = (result as Activity[])[0] ?? null;
+      if (!first) return null;
+
+      // Geen lookahead = altijd tonen wat de query oplevert.
+      if (!lookaheadDays || lookaheadDays <= 0) return first;
+
+      // Recurring blijft doorgelaten (serie kan vandaag actief zijn).
+      if (first.is_recurring === true) return first;
+
+      const startMs = Date.parse(first.start_date);
+      if (!Number.isFinite(startMs)) return first; // ongeldige datum → fail-open
+
+      const horizonMs = Date.now() + lookaheadDays * 86_400_000;
+      return startMs <= horizonMs ? first : null;
+    },
+    `getTvActivity(lookahead=${lookaheadDays})`,
+    null,
   );
 }
 

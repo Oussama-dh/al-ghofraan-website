@@ -24,9 +24,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter }                    from "next/navigation";
-import { Sunrise, Sun, CloudSun, Sunset, Moon, MoonStar } from "lucide-react";
+import { Sunrise, Sun, CloudSun, Sunset, Moon, MoonStar, Heart, Calendar, MapPin, BookOpen } from "lucide-react";
 import type { LucideIcon }              from "lucide-react";
-import { cn }                           from "@/lib/utils";
+import { cn, stripHtml }                from "@/lib/utils";
 import {
   getAmsterdamDateParts,
   getAmsterdamMinutes,
@@ -37,7 +37,12 @@ import {
 import type {
   PrayerTimeRow,
   TvAnnouncement,
+  Activity,
+  DonationCampaign,
+  HadiethSeries,
+  HadiethSeriesItem,
 } from "@/types/directus";
+import type { CampaignProgressData } from "@/lib/donations";
 
 // ─── Configuratie ─────────────────────────────────────────────
 // Slide-duur en refresh-interval komen via props (uit site_settings).
@@ -71,7 +76,39 @@ const NL_MONTHS = [
 
 type Slide =
   | { kind: "prayer" }
-  | { kind: "item"; item: TvAnnouncement };
+  | { kind: "item";     item: TvAnnouncement }
+  | { kind: "donation"; data: TvDonationSlideData }
+  | { kind: "activity"; data: TvActivitySlideData }
+  | { kind: "series";   data: TvSeriesSlideData };
+
+/**
+ * Delivery TV-A — extra data voor donatiecampagne-slide.
+ * Server (page.tsx) pre-rendert QR-SVG en haalt voortgang op zodat
+ * de client component verder niets hoeft te fetchen.
+ */
+export interface TvDonationSlideData {
+  campaign:  DonationCampaign;
+  /** Server-side gerenderde QR-SVG (donker op wit). Leeg = geen QR tonen. */
+  qrSvg:     string;
+  donateUrl: string;
+  progress:  CampaignProgressData;
+}
+
+/** Delivery TV-A — extra data voor eerstvolgende-activiteit-slide. */
+export interface TvActivitySlideData {
+  activity: Activity;
+}
+
+/**
+ * Delivery B — beheerbare hadieth-series. Server kiest de winnende
+ * serie en het item van vandaag; client rendert puur. Bij actieve serie
+ * onderdrukt de client TEVENS de losse `tv_announcements.type=hadith`
+ * items zodat hadieth-content niet door elkaar loopt.
+ */
+export interface TvSeriesSlideData {
+  series: HadiethSeries;
+  item:   HadiethSeriesItem;
+}
 
 /**
  * Snelheidsinstellingen vanuit site_settings (in milliseconden).
@@ -99,6 +136,21 @@ interface Props {
   announcements: TvAnnouncement[];
   subtitle?:     string | null;
   tvConfig?:     TvConfig;
+  /**
+   * Delivery TV-A — optionele extra slides.
+   * Wanneer null/undefined wordt de slide simpelweg niet ingevoegd in
+   * de playlist; bestaande TV-routes blijven identiek werken.
+   */
+  tvDonation?:   TvDonationSlideData | null;
+  tvActivity?:   TvActivitySlideData | null;
+  /**
+   * Delivery B — beheerbare hadieth-series. Wanneer aanwezig wordt:
+   *   (a) een SeriesSlide met de hadieth-content getoond, EN
+   *   (b) bestaande `tv_announcements.type=hadith` items uit de
+   *       playlist gefilterd — om dubbele hadieth-content te voorkomen.
+   *       Andere announcement-types blijven gewoon staan.
+   */
+  tvSeries?:     TvSeriesSlideData | null;
 }
 
 export default function PrayerTimesTvDisplay({
@@ -109,6 +161,9 @@ export default function PrayerTimesTvDisplay({
   announcements,
   subtitle,
   tvConfig,
+  tvDonation,
+  tvActivity,
+  tvSeries,
 }: Props) {
   const router = useRouter();
 
@@ -129,15 +184,55 @@ export default function PrayerTimesTvDisplay({
     return () => clearInterval(id);
   }, []);
 
-  // ─── Playlist [prayer, item, prayer, item, ...] ────────────
+  // ─── Playlist [prayer, extra, prayer, extra, ...] ──────────
+  //
+  // Volgorde van extra-slides (klant-keuze Delivery B):
+  //   1. Hadieth-serie slide (als tvSeries aanwezig — belangrijkste
+  //      inhoudelijke reminder; series eerst).
+  //   2. Donatiecampagne + QR (als tvDonation aanwezig).
+  //   3. Eerstvolgende activiteit (als tvActivity aanwezig).
+  //   4. Bestaande announcements — met één filter:
+  //        Bij actieve serie worden `tv_announcements.type=hadith`
+  //        verborgen om dubbele hadieth-content te voorkomen.
+  //        Andere announcement-types (reminder, announcement, event,
+  //        donation) blijven onveranderd.
+  //
+  // Tussen elke item-slide blijft een prayer-slide staan zodat de TV
+  // nooit twee item-slides achter elkaar toont (= rustige look,
+  // kernpatroon ongewijzigd t.o.v. v1).
+  //
+  // Self-guards:
+  //   - tvDonation met lege QR-SVG (renderQrSvg fail-soft) wordt
+  //     overgeslagen — anders lege bak.
+  //   - tvSeries item zonder translation_nl wordt al server-side
+  //     gefilterd in lib/hadiethSeries.ts.
   const slides: Slide[] = useMemo(() => {
     const list: Slide[] = [{ kind: "prayer" }];
-    for (const item of announcements) {
-      list.push({ kind: "item", item });
+
+    const extras: Slide[] = [];
+    if (tvSeries) {
+      extras.push({ kind: "series", data: tvSeries });
+    }
+    if (tvDonation && tvDonation.qrSvg) {
+      extras.push({ kind: "donation", data: tvDonation });
+    }
+    if (tvActivity) {
+      extras.push({ kind: "activity", data: tvActivity });
+    }
+    // Bestaande announcements — bij actieve serie filteren we type=hadith.
+    const filteredAnnouncements = tvSeries
+      ? announcements.filter((a) => a.type !== "hadith")
+      : announcements;
+    for (const item of filteredAnnouncements) {
+      extras.push({ kind: "item", item });
+    }
+
+    for (const extra of extras) {
+      list.push(extra);
       list.push({ kind: "prayer" });
     }
     return list;
-  }, [announcements]);
+  }, [announcements, tvDonation, tvActivity, tvSeries]);
 
   // ─── Slide-rotatie ─────────────────────────────────────────
   const [slideIdx, setSlideIdx] = useState(0);
@@ -276,14 +371,27 @@ export default function PrayerTimesTvDisplay({
         />
 
         <main className="min-h-0 flex items-center justify-center p-6 md:p-10 lg:p-12 overflow-hidden">
-          {currentSlide.kind === "prayer" ? (
-            <PrayerSlide
-              todayRow={slideRow}
-              nextPrayerKey={nextPrayerKey}
-            />
-          ) : (
-            <ItemSlide item={currentSlide.item} />
-          )}
+          {(() => {
+            // Switch over discriminated union — TypeScript verifieert
+            // dat alle slide-kinds afgehandeld zijn.
+            switch (currentSlide.kind) {
+              case "prayer":
+                return (
+                  <PrayerSlide
+                    todayRow={slideRow}
+                    nextPrayerKey={nextPrayerKey}
+                  />
+                );
+              case "item":
+                return <ItemSlide item={currentSlide.item} />;
+              case "donation":
+                return <DonationSlide data={currentSlide.data} />;
+              case "activity":
+                return <ActivitySlide data={currentSlide.data} />;
+              case "series":
+                return <SeriesSlide data={currentSlide.data} />;
+            }
+          })()}
         </main>
 
         <BottomBar
@@ -791,3 +899,372 @@ const META_BY_TYPE: Record<
     dot:   "bg-white",
   },
 };
+
+// ─── DonationSlide (Delivery TV-A) ────────────────────────────
+// Layout: links campagne-info (titel, short_text, voortgang),
+// rechts QR-code op witte achtergrond (~320px). Verhouding 60/40
+// op LG+ zodat de QR scannable blijft vanaf afstand.
+//
+// Voortgang: alleen tonen als campagne.show_progress=true (admin
+// stuurt dit via Directus). Hergebruikt bestaande velden:
+//   - goal_amount_eur            (doelbedrag in euro's)
+//   - manual_raised_amount_eur   (handmatige bijdrage)
+//   - progress.autoRaisedCents   (server-side Stripe aggregatie)
+//   - progress.monthlyDonorCount + manual_monthly_donor_count
+//
+// Self-guards:
+//   - Lege qrSvg → playlist sloeg slide al over (zie useMemo).
+//     Defense-in-depth: hier ook null-check.
+//   - Geen voortgang als show_progress=false of goal_amount_eur ontbreekt.
+function DonationSlide({ data }: { data: TvDonationSlideData }) {
+  const { campaign, qrSvg, progress } = data;
+
+  // Bedrag-formatting — geen externe lib (Intl is native + werkt
+  // server- én client-side identiek).
+  const fmtEur = (eurAmount: number): string => {
+    try {
+      return new Intl.NumberFormat("nl-NL", {
+        style:                 "currency",
+        currency:              "EUR",
+        maximumFractionDigits: 0,
+      }).format(eurAmount);
+    } catch {
+      return `€${Math.round(eurAmount)}`;
+    }
+  };
+
+  // Voortgangsberekening — alleen relevant als show_progress aan staat.
+  // Niet show_progress aan? → progressBlock = null en de slide toont
+  // alleen titel + short_text + QR (rustiger voor gevoelige fondsen).
+  const showProgress = campaign.show_progress === true;
+  const goalEur      = Number(campaign.goal_amount_eur ?? 0);
+  const manualEur    = Number(campaign.manual_raised_amount_eur ?? 0);
+  const autoEur      = Math.round((progress.autoRaisedCents ?? 0) / 100);
+  const raisedEur    = manualEur + autoEur;
+  const monthlyDonors =
+    (progress.monthlyDonorCount ?? 0) +
+    Number(campaign.manual_monthly_donor_count ?? 0);
+
+  const showProgressBlock = showProgress && goalEur > 0;
+  // Percentage met clamp op 100 voor de balk (visueel) — bedrag mag
+  // boven 100% uitkomen, dat is goed nieuws en mag in tekst staan.
+  const pctClamped =
+    showProgressBlock ? Math.min(100, Math.round((raisedEur / goalEur) * 100)) : 0;
+
+  return (
+    <div className="w-full max-w-[1500px] flex flex-col items-center gap-6 lg:gap-10">
+      {/* Type-label — consistent met andere item-slides */}
+      <div className="inline-flex items-center gap-3 lg:gap-5 rounded-full px-6 md:px-8 lg:px-10 py-2 md:py-3 lg:py-4 border-2 bg-white/15 border-white/40 text-white">
+        <Heart
+          aria-hidden="true"
+          className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7"
+          strokeWidth={2}
+        />
+        <span className="font-display tracking-wide text-2xl md:text-3xl lg:text-4xl xl:text-5xl">
+          Doneer mee
+        </span>
+      </div>
+
+      {/* Twee-koloms layout op LG+: links info (60%), rechts QR (40%).
+          Op mobile/tablet stacken we (info boven, QR onder) zodat de
+          QR niet te klein wordt om te scannen. */}
+      <div className="w-full flex flex-col lg:flex-row items-center lg:items-stretch justify-center gap-8 lg:gap-14">
+        {/* Links — campagne info */}
+        <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left gap-4 lg:gap-6 max-w-[700px]">
+          {/* Titel */}
+          <h2
+            className="font-display text-white leading-tight text-4xl md:text-5xl lg:text-6xl xl:text-7xl overflow-hidden"
+            style={{
+              display:         "-webkit-box",
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: "vertical",
+            }}
+          >
+            {campaign.title}
+          </h2>
+
+          {/* Short text — fallback naar description als short_text leeg is */}
+          {(campaign.short_text || campaign.description) && (
+            <p
+              className="font-body text-sand/90 leading-relaxed text-xl md:text-2xl lg:text-3xl overflow-hidden"
+              style={{
+                display:         "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical",
+              }}
+            >
+              {campaign.short_text || campaign.description}
+            </p>
+          )}
+
+          {/* Voortgang — alleen als show_progress=true EN goal_amount_eur > 0 */}
+          {showProgressBlock && (
+            <div className="w-full max-w-[520px] flex flex-col gap-2 mt-2">
+              <div className="flex items-baseline justify-between gap-4 font-display tabular-nums">
+                <span className="text-white text-3xl md:text-4xl lg:text-5xl">
+                  {fmtEur(raisedEur)}
+                </span>
+                <span className="text-sand/70 text-xl md:text-2xl lg:text-3xl">
+                  van {fmtEur(goalEur)}
+                </span>
+              </div>
+              {/* Balk — visuele clamp op 100, geen percentage-tekst om
+                  niet competitief over te komen ("100% =klaar") en om
+                  net-boven-100 niet aanstootgevend te tonen. */}
+              <div className="w-full h-3 lg:h-4 rounded-full bg-white/10 border border-white/15 overflow-hidden">
+                <div
+                  className="h-full bg-white/85 transition-all duration-500"
+                  style={{ width: `${pctClamped}%` }}
+                />
+              </div>
+              {monthlyDonors > 0 && (
+                <div className="font-body text-sand/75 text-base md:text-lg lg:text-xl mt-1">
+                  {monthlyDonors === 1
+                    ? "1 maandelijkse donateur"
+                    : `${monthlyDonors} maandelijkse donateurs`}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* CTA-tekst onder info — verwijst naar QR rechts */}
+          <p className="font-body text-white/90 text-lg md:text-xl lg:text-2xl mt-2">
+            Scan de QR-code voor directe donatie
+          </p>
+        </div>
+
+        {/* Rechts — QR-code in wit blok */}
+        {qrSvg && (
+          <div className="shrink-0 flex flex-col items-center gap-3">
+            <div
+              className="bg-white rounded-2xl p-4 md:p-5 lg:p-6 shadow-2xl shadow-black/40"
+              style={{
+                // Vaste pixel-afmetingen zorgen dat QR groot genoeg
+                // is om vanaf 4-5 meter te scannen. Op kleinere
+                // breakpoints houden we een minimum.
+                width:  "min(320px, 80vw)",
+                height: "min(320px, 80vw)",
+              }}
+              aria-label={`QR-code naar ${data.donateUrl}`}
+              // SVG-string is server-side gerenderd door lib/qrcode.ts
+              // — geen XSS-risico (vaste lib output, vaste opties).
+              dangerouslySetInnerHTML={{ __html: qrSvg }}
+            />
+            {/* URL-fallback onder QR — voor wie geen telefoon bij zich heeft */}
+            <p className="font-body tabular-nums text-sand/75 text-base md:text-lg text-center max-w-[320px] break-all">
+              al-ghofraan.nl/doneren
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── ActivitySlide (Delivery TV-A) ────────────────────────────
+// Eerstvolgende activiteit op TV. Tekst-only — geen image om TV
+// rustig te houden (image-aspectratio's variëren, willen geen
+// onverwachte witvlakken op groot scherm).
+//
+// Layout:
+//   - Type-label "Eerstvolgende activiteit"
+//   - Titel groot
+//   - Datum + locatie als chip-row
+//   - Korte beschrijving (line-clamp 3)
+function ActivitySlide({ data }: { data: TvActivitySlideData }) {
+  const { activity } = data;
+
+  // Datum-formatting in Europe/Amsterdam — herbruik native Intl met
+  // nl-NL locale. Doet automatisch DST en weekdagen.
+  // Voor recurring activities staat start_date vaak in het verleden;
+  // dan tonen we toch die datum (de admin heeft via recurring de
+  // bedoeling de serie lopend te houden). Volgende-occurrence-logica
+  // is uit scope voor TV — /agenda toont dat correct.
+  let dateLabel = "";
+  let timeLabel = "";
+  try {
+    const d = new Date(activity.start_date);
+    if (!Number.isNaN(d.getTime())) {
+      dateLabel = new Intl.DateTimeFormat("nl-NL", {
+        weekday:  "long",
+        day:      "numeric",
+        month:    "long",
+        year:     "numeric",
+        timeZone: "Europe/Amsterdam",
+      }).format(d);
+      // Tijd alleen tonen als start_date een tijd-component heeft
+      // (T-separator). Date-only events tonen geen 00:00.
+      if (/T\d{2}:\d{2}/.test(activity.start_date)) {
+        timeLabel = new Intl.DateTimeFormat("nl-NL", {
+          hour:     "2-digit",
+          minute:   "2-digit",
+          timeZone: "Europe/Amsterdam",
+        }).format(d);
+      }
+    }
+  } catch {
+    // Fail-soft: lege labels, slide toont titel + locatie zonder datum.
+  }
+
+  return (
+    <div className="w-full max-w-[1500px] flex flex-col items-center text-center gap-6 lg:gap-10">
+      {/* Type-label */}
+      <div className="inline-flex items-center gap-3 lg:gap-5 rounded-full px-6 md:px-8 lg:px-10 py-2 md:py-3 lg:py-4 border-2 bg-white/15 border-white/40 text-white">
+        <Calendar
+          aria-hidden="true"
+          className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7"
+          strokeWidth={2}
+        />
+        <span className="font-display tracking-wide text-2xl md:text-3xl lg:text-4xl xl:text-5xl">
+          Eerstvolgende activiteit
+        </span>
+      </div>
+
+      {/* Titel — leidend, groot */}
+      <h2
+        className="font-display text-white leading-tight max-w-[1400px] overflow-hidden text-4xl md:text-6xl lg:text-7xl xl:text-8xl"
+        style={{
+          display:         "-webkit-box",
+          WebkitLineClamp: 3,
+          WebkitBoxOrient: "vertical",
+        }}
+      >
+        {activity.title}
+      </h2>
+
+      {/* Meta-chips: datum + locatie. Capitalisering: weekdag krijgt
+          first-letter-caps via CSS zodat we niet hoeven te slicen. */}
+      {(dateLabel || activity.location) && (
+        <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6">
+          {dateLabel && (
+            <div className="inline-flex items-center gap-2 md:gap-3 rounded-full px-5 md:px-6 py-2 md:py-3 bg-white/10 border border-white/20">
+              <Calendar
+                aria-hidden="true"
+                className="w-5 h-5 md:w-6 md:h-6 text-sand/85"
+                strokeWidth={1.75}
+              />
+              <span className="font-body text-white text-xl md:text-2xl lg:text-3xl capitalize">
+                {dateLabel}
+                {timeLabel && (
+                  <>
+                    <span className="text-sand/60 mx-2">·</span>
+                    <span className="tabular-nums">{timeLabel}</span>
+                  </>
+                )}
+              </span>
+            </div>
+          )}
+          {activity.location && (
+            <div className="inline-flex items-center gap-2 md:gap-3 rounded-full px-5 md:px-6 py-2 md:py-3 bg-white/10 border border-white/20">
+              <MapPin
+                aria-hidden="true"
+                className="w-5 h-5 md:w-6 md:h-6 text-sand/85"
+                strokeWidth={1.75}
+              />
+              <span className="font-body text-white text-xl md:text-2xl lg:text-3xl">
+                {activity.location}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Korte beschrijving — plain text, line-clamp houdt TV-layout stabiel.
+          stripHtml() decodeert HTML-tags én entities (&nbsp; &amp; &#39; ...)
+          uit het Directus rich-text veld. GEEN dangerouslySetInnerHTML op
+          de TV-route — bezoekers in de moskee zien rustige tekst, geen
+          rauwe HTML. Self-guard: lege output na strip → geen <p> renderen. */}
+      {(() => {
+        const plain = stripHtml(activity.description);
+        if (!plain) return null;
+        return (
+          <p
+            className="font-body text-white/90 leading-relaxed max-w-5xl text-xl md:text-2xl lg:text-3xl xl:text-4xl overflow-hidden"
+            style={{
+              display:         "-webkit-box",
+              WebkitLineClamp: 4,
+              WebkitBoxOrient: "vertical",
+            }}
+          >
+            {plain}
+          </p>
+        );
+      })()}
+    </div>
+  );
+}
+
+// ─── SeriesSlide ───────────────────────────────────────────────
+// Delivery B — hadieth uit een actieve serie. Visueel sterk gespiegeld
+// op de hadieth-variant van ItemSlide (Arabisch leidend, NL-vertaling
+// onder, bron + authenticiteit klein), maar met het serie-titel als
+// label (bv. "Djoemoe'ah-serie", "Ramadhaan-serie", "Algemene ahadieth").
+//
+// Server (lib/hadiethSeries.ts) garandeert dat translation_nl niet leeg is.
+// arabic_text en source/authenticity zijn optioneel.
+function SeriesSlide({ data }: { data: TvSeriesSlideData }) {
+  const { series, item } = data;
+  return (
+    <div className="w-full max-w-[1500px] flex flex-col items-center text-center gap-6 lg:gap-10">
+      {/* ─── Serie-label ────────────────────────────────────── */}
+      <div
+        className={cn(
+          "inline-flex items-center gap-3 lg:gap-5 rounded-full",
+          "px-6 md:px-8 lg:px-10 py-2 md:py-3 lg:py-4",
+          "border-2 border-sand/50 bg-sand/15 text-sand",
+        )}
+      >
+        <BookOpen
+          aria-hidden="true"
+          className="w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8"
+          strokeWidth={1.75}
+        />
+        <span className="font-display tracking-wide text-2xl md:text-3xl lg:text-4xl xl:text-5xl">
+          {series.title}
+        </span>
+      </div>
+
+      {/* ─── Arabische tekst leidend (optioneel) ────────────── */}
+      {item.arabic_text && (
+        <div
+          className={cn(
+            "font-arabic text-sand/95 max-w-[1400px] overflow-hidden",
+            "text-4xl md:text-6xl lg:text-7xl xl:text-8xl",
+            "leading-[1.7] md:leading-[1.7] lg:leading-[1.7]",
+          )}
+          lang="ar"
+          dir="rtl"
+          style={{
+            display:         "-webkit-box",
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: "vertical",
+          }}
+        >
+          {item.arabic_text}
+        </div>
+      )}
+
+      {/* ─── Nederlandse vertaling (vereist) ─────────────────── */}
+      <p
+        className="font-body text-white/90 leading-relaxed max-w-5xl overflow-hidden text-2xl md:text-3xl lg:text-4xl"
+        style={{
+          display:         "-webkit-box",
+          WebkitLineClamp: 4,
+          WebkitBoxOrient: "vertical",
+        }}
+      >
+        {item.translation_nl}
+      </p>
+
+      {/* ─── Bron + authenticiteit klein onderaan ───────────── */}
+      {(item.source || item.authenticity) && (
+        <div className="font-body text-base md:text-lg lg:text-xl text-sand/70 italic mt-2">
+          {item.source}
+          {item.authenticity && (
+            <span className="ml-3 not-italic font-medium">[{item.authenticity}]</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

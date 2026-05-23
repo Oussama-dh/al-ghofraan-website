@@ -23,9 +23,12 @@
 //
 // Synchronisatie:
 //   - Houd `DONATION_CAMPAIGN_PUBLIC_FIELDS` in deze stap IDENTIEK aan
-//     dezelfde array in scripts/seed/steps/02-permissions.mjs.
+//     dezelfde array in scripts/seed/steps/02-permissions.mjs
+//     EN scripts/seed/steps/54-tv-display-blocks.mjs.
 //   - Houd in sync met `CAMPAIGN_FIELDS` in lib/directus.ts (zelfde
 //     velden minus eventuele admin-only zoals manual_raised_note).
+//   - Bij nieuwe velden: voeg overal toe zodat een rerun van een
+//     willekeurige seed-stap niet stilletjes velden weer verbergt.
 
 const COLLECTION   = "donation_campaigns";
 const POLICY_NAME  = "Public"; // Directus standaard
@@ -40,6 +43,8 @@ const DONATION_CAMPAIGN_PUBLIC_FIELDS = [
   "raised_amount", "raised_amount_display", "short_text", "show_progress",
   "goal_amount_eur", "manual_raised_amount_eur",
   "manual_monthly_donor_count", "progress_default_open", "show_on_homepage",
+  // Delivery TV-A — show_on_tv toegevoegd. Houd in sync met seed 02 + 54.
+  "show_on_tv",
   // BEWUST UITGESLOTEN: manual_raised_note (interne admin-notitie).
 ];
 

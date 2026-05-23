@@ -168,3 +168,43 @@ export function buildYouTubeEmbedUrl(youtubeUrl: string | null | undefined): str
   if (!id) return null;
   return `https://www.youtube-nocookie.com/embed/${id}`;
 }
+
+/**
+ * Strip HTML-tags en decodeer veelvoorkomende entities uit een string.
+ * Bedoeld voor het weergeven van Directus rich-text velden als plain text
+ * (bijvoorbeeld op de TV-route, activiteitkaarten, of in ICS-exports).
+ *
+ * - Vervangt <br> en </p> door whitespace voordat tags worden gestript
+ *   zodat blokken niet aan elkaar plakken.
+ * - Decodeer named entities (&nbsp; &amp; &lt; &gt; &quot; &apos;) en
+ *   numerieke entities (&#39; &#x27;) — dekt de Directus WYSIWYG output.
+ * - Collapse whitespace tot één spatie zodat de output rustig blijft op TV.
+ * - Trim leading/trailing whitespace.
+ *
+ * NB: er bestaan al twee private `stripHtml`-helpers in `lib/ics.ts` en
+ * `lib/calendar.ts` die identiek gedrag hebben. Bewust niet samengevoegd
+ * in deze delivery om productie-paden voor ICS-export en calendar-link
+ * niet te raken. Latere opruim-delivery kan ze hierheen laten verwijzen.
+ */
+export function stripHtml(input: string | null | undefined): string {
+  if (!input) return "";
+  return input
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<\/p>/gi, " ")
+    .replace(/<\/(h[1-6]|div|li)>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/&#(\d+);/g, (_match, code: string) => {
+      const n = parseInt(code, 10);
+      return Number.isFinite(n) && n > 0 && n < 0x10ffff ? String.fromCodePoint(n) : "";
+    })
+    .replace(/\s+/g, " ")
+    .trim();
+}
