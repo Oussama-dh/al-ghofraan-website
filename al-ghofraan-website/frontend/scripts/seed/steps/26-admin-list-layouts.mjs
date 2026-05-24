@@ -127,7 +127,7 @@ const LAYOUTS = [
     sort_field: "sort",
     archive_field: "status",
     listFields: [
-      "title", "status", "featured", "goal_amount_display",
+      "title", "status", "featured", "goal_amount_eur",
       "use_stripe_payment_link", "sort",
     ],
     listSort: ["sort"],

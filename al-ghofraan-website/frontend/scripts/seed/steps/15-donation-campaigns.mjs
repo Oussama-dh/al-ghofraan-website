@@ -121,27 +121,14 @@ export async function setupDonationCampaigns(client) {
     schema:{ foreign_key_table: "directus_files" },
   });
 
-  await ensureField(client, "donation_campaigns", {
-    field: "goal_amount",
-    type:  "integer",
-    meta:  {
-      width:     "half",
-      interface: "input",
-      note:      "Doelbedrag in eurocenten (bv. 500000 = €5.000,00). Optioneel — laat leeg als er geen vast doel is.",
-    },
-    schema:{},
-  });
-
-  await ensureField(client, "donation_campaigns", {
-    field: "goal_amount_display",
-    type:  "string",
-    meta:  {
-      width:     "half",
-      interface: "input",
-      note:      "Leesbare weergave (bv. '€5.000'). Vrij in te vullen voor het opzettelijk afronden.",
-    },
-    schema:{},
-  });
+  // Delivery 57 — legacy cent-velden goal_amount en goal_amount_display
+  // worden NIET meer aangemaakt op fresh installs. Beheerders gebruiken
+  // uitsluitend goal_amount_eur (in euro's, niet cents). Op productie
+  // installs waar deze velden al bestaan, ruimt scripts/seed/steps/
+  // 57-donation-campaigns-legacy-cleanup.mjs ze idempotent op.
+  //
+  // ensureField(donation_campaigns, goal_amount)        — verwijderd in delivery 57
+  // ensureField(donation_campaigns, goal_amount_display) — verwijderd in delivery 57
 
   await ensureField(client, "donation_campaigns", {
     field: "allow_one_time",

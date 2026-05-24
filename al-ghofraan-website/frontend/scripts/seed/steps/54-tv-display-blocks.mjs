@@ -47,19 +47,21 @@ const POLICY_NAME = "Public";
 
 // Houd IDENTIEK aan:
 //   - scripts/seed/steps/02-permissions.mjs DONATION_CAMPAIGN_PUBLIC_FIELDS
+//   - scripts/seed/steps/52-donation-campaign-public-fields.mjs DONATION_CAMPAIGN_PUBLIC_FIELDS
 //   - lib/directus.ts CAMPAIGN_FIELDS (minus admin-only manual_raised_note)
 const DONATION_CAMPAIGN_PUBLIC_FIELDS = [
   "id", "status", "title", "slug", "description", "image",
-  "goal_amount", "goal_amount_display",
   "allow_one_time", "allow_monthly",
   "suggested_amounts", "default_amount",
   "featured", "sort",
   "use_stripe_payment_link", "stripe_payment_link_url", "stripe_payment_link_id",
-  "raised_amount", "raised_amount_display", "short_text", "show_progress",
+  "short_text", "show_progress",
   "goal_amount_eur", "manual_raised_amount_eur",
   "manual_monthly_donor_count", "progress_default_open", "show_on_homepage",
   // Delivery TV-A — show_on_tv toegevoegd aan publieke whitelist.
   "show_on_tv",
+  // Delivery 57 — legacy cent-velden verwijderd (goal_amount,
+  // goal_amount_display, raised_amount, raised_amount_display).
   // BEWUST UITGESLOTEN: manual_raised_note (interne admin-notitie).
 ];
 

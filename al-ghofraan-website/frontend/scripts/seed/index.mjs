@@ -80,6 +80,9 @@ import { setupDonationCampaignUx }           from "./steps/53-donation-campaign-
 import { setupTvDisplayBlocks }              from "./steps/54-tv-display-blocks.mjs";
 import { setupTvActivityManualSelection }    from "./steps/55-tv-activity-manual-selection.mjs";
 import { setupHadiethSeriesTv }              from "./steps/56-hadieth-series-tv.mjs";
+import { setupDonationCampaignsLegacyCleanup } from "./steps/57-donation-campaigns-legacy-cleanup.mjs";
+import { setupActivityManagementImprovements } from "./steps/58-activity-management-improvements.mjs";
+import { setupRegistrationsAdminList }         from "./steps/59-registrations-admin-list.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -185,6 +188,9 @@ const STEPS = [
   { id: "54",  label: "TV-display: donatiecampagne + QR + eerstvolgende activiteit", run: setupTvDisplayBlocks },
   { id: "55",  label: "TV-activiteit handmatige selectie + HTML strip",               run: setupTvActivityManualSelection },
   { id: "56",  label: "Hadieth-series voor TV (collecties + permissions + templates)", run: setupHadiethSeriesTv },
+  { id: "57",  label: "donation_campaigns legacy cent-velden cleanup",                  run: setupDonationCampaignsLegacyCleanup },
+  { id: "58",  label: "activiteitenbeheer verbeteringen (registration_closes_at)",       run: setupActivityManagementImprovements },
+  { id: "59",  label: "registrations admin-list kolommen (activity + onderwijs)",         run: setupRegistrationsAdminList },
 ];
 
 // ─── CLI-argument parsing ──────────────────────────────────────

@@ -25,6 +25,7 @@ import {
   describeRecurrence,
 } from "@/lib/recurrence";
 import ActivityOccurrenceSection from "@/components/activity/ActivityOccurrenceSection";
+import { isRegistrationClosed, resolveRegistrationClose } from "@/lib/server/registrationClose";
 
 interface Props {
   params: { slug: string };
@@ -93,6 +94,22 @@ export default async function ActivityDetailPage({ params }: Props) {
     maxRegistrations !== null &&
     currentCount !== null &&
     currentCount >= maxRegistrations;
+
+  // Delivery 58 — automatische sluiting van inschrijving.
+  // Voor recurring zonder expliciet veld is dit altijd false.
+  // Voor eenmalige activiteiten: fallback naar start_date.
+  // Bij `isFull` wint die melding boven `isClosed` (vol = definitief).
+  const isClosed = isRegistrationClosed(activity);
+  const closeContext = resolveRegistrationClose(activity);
+
+  // Subtekst onder "Inschrijving is gesloten" — uitleg waarom.
+  // Voor `fallback_start_date` is "activiteit is begonnen of voorbij"
+  // duidelijker dan een datumtijd; bezoeker weet zelf dat de activiteit
+  // al begonnen is.
+  const closedSubMessage: string =
+    closeContext.source === "fallback_start_date"
+      ? "Deze activiteit is al begonnen of voorbij."
+      : "Inschrijven voor deze activiteit is gesloten.";
 
   // "Nog X plekken beschikbaar" — alleen wanneer admin het tonen aanzet,
   // max gevuld is, count gelukt is en er nog plek over is.
@@ -306,7 +323,7 @@ export default async function ActivityDetailPage({ params }: Props) {
                   location:    activity.location,
                 }}
                 occurrences={occurrences}
-                showForm={Boolean(activity.registration_enabled)}
+                showForm={Boolean(activity.registration_enabled) && !isClosed}
                 formProps={{
                   sourceSlug:   activity.slug,
                   sourceTitle:  activity.title,
@@ -321,6 +338,22 @@ export default async function ActivityDetailPage({ params }: Props) {
                   },
                 }}
               />
+              {/* Delivery 58 — als de beheerder expliciet
+                  `registration_closes_at` heeft gezet voor recurring en
+                  dat moment is bereikt, toon een gesloten-melding. */}
+              {activity.registration_enabled && isClosed && (
+                <div
+                  role="status"
+                  className="mt-6 rounded-2xl border border-sand-200 bg-white p-6 lg:p-8 text-center"
+                >
+                  <h2 className="font-display text-xl text-ink mb-2">
+                    Inschrijving is gesloten
+                  </h2>
+                  <p className="font-body text-sm text-taupe-dark max-w-md mx-auto">
+                    {closedSubMessage}
+                  </p>
+                </div>
+              )}
             </div>
           ) : recurring && !showOccurrencePicker ? (
             // ── Delivery recurring-ux — terugkerende flow ZONDER picker ─
@@ -379,6 +412,19 @@ export default async function ActivityDetailPage({ params }: Props) {
                         <p className="font-body text-sm text-taupe-dark max-w-md mx-auto">
                           Inschrijven is niet meer mogelijk. Houd onze website in
                           de gaten voor nieuwe activiteiten.
+                        </p>
+                      </div>
+                    ) : isClosed ? (
+                      // Delivery 58 — registration_closes_at of fallback bereikt
+                      <div
+                        role="status"
+                        className="rounded-2xl border border-sand-200 bg-white p-6 lg:p-8 text-center"
+                      >
+                        <h2 className="font-display text-xl text-ink mb-2">
+                          Inschrijving is gesloten
+                        </h2>
+                        <p className="font-body text-sm text-taupe-dark max-w-md mx-auto">
+                          {closedSubMessage}
                         </p>
                       </div>
                     ) : (
@@ -454,6 +500,19 @@ export default async function ActivityDetailPage({ params }: Props) {
                       <p className="font-body text-sm text-taupe-dark max-w-md mx-auto">
                         Inschrijven is niet meer mogelijk. Houd onze website in
                         de gaten voor nieuwe activiteiten.
+                      </p>
+                    </div>
+                  ) : isClosed ? (
+                    // Delivery 58 — registration_closes_at of fallback bereikt
+                    <div
+                      role="status"
+                      className="rounded-2xl border border-sand-200 bg-white p-6 lg:p-8 text-center"
+                    >
+                      <h2 className="font-display text-xl text-ink mb-2">
+                        Inschrijving is gesloten
+                      </h2>
+                      <p className="font-body text-sm text-taupe-dark max-w-md mx-auto">
+                        {closedSubMessage}
                       </p>
                     </div>
                   ) : (

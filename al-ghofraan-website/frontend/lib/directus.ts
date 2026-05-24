@@ -361,7 +361,6 @@ export function getEffectiveEducationCategorySlug(
 // ─── Donation campaigns ──────────────────────────────────────
 const CAMPAIGN_FIELDS = [
   "id", "status", "title", "slug", "description", "image",
-  "goal_amount", "goal_amount_display",
   "allow_one_time", "allow_monthly",
   "suggested_amounts", "default_amount",
   "featured", "sort",
@@ -369,11 +368,12 @@ const CAMPAIGN_FIELDS = [
   "use_stripe_payment_link", "stripe_payment_link_url", "stripe_payment_link_id",
   // Delivery donation-campaign-progress — voortgang op /doneren.
   // Self-guarded in CampaignProgressBar: alleen zichtbaar als
-  // show_progress=true EN goal_amount > 0.
-  "raised_amount", "raised_amount_display", "short_text", "show_progress",
+  // show_progress=true EN goal_amount_eur > 0.
+  "short_text", "show_progress",
   // Delivery donation-campaign-progress-v2 — euro-velden + auto-aggregatie.
-  // Vervangen raised_amount (cents) door manual_raised_amount_eur (euros) +
-  // server-side aggregatie van geslaagde Stripe-donaties per campagne.
+  // Legacy cent-velden goal_amount, goal_amount_display, raised_amount en
+  // raised_amount_display zijn verwijderd in delivery 57. Bedragen lopen
+  // nu altijd via goal_amount_eur + server-side Stripe-aggregatie.
   //
   // BEWUST GEEN `manual_raised_note` in deze whitelist — dat veld is een
   // INTERNE admin-notitie en mag niet via de publieke frontend of API

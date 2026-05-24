@@ -110,6 +110,19 @@ export interface Activity {
    * Verlopen activiteiten worden automatisch overgeslagen.
    */
   show_on_tv?: boolean | null;
+  /**
+   * Delivery 58 — Automatische sluiting van inschrijfformulier.
+   *
+   * - Eenmalige activiteit + leeg → fallback naar `start_date`.
+   * - Recurring (`is_recurring=true`) + leeg → blijft open.
+   * - Gevuld → formulier sluit op dit moment, ongeacht recurring of niet.
+   *
+   * Server-side enforced in `app/api/inschrijven/route.ts` en
+   * frontend-gated in `app/agenda/[slug]/page.tsx` met bericht
+   * "Inschrijving is gesloten". Bij `isFull` wint die melding boven
+   * `isClosed`.
+   */
+  registration_closes_at?: string | null;
 }
 
 // ─── prayer_time_files ───────────────────────────────────────
@@ -562,10 +575,6 @@ export interface DonationCampaign {
   slug: string;
   description?: string | null;
   image?: string | DirectusFile | null;
-  /** Doelbedrag in eurocenten */
-  goal_amount?: number | null;
-  /** Leesbare weergave, bv. "€5.000" */
-  goal_amount_display?: string | null;
   allow_one_time: boolean;
   allow_monthly: boolean;
   /** JSON array met euro-bedragen, bv. [5, 10, 25, 50, 100] */
@@ -586,21 +595,19 @@ export interface DonationCampaign {
   /**
    * Delivery donation-campaign-progress — voortgang voor /doneren.
    * Self-guarded: alleen zichtbaar als show_progress=true EN
-   * goal_amount > 0.
+   * goal_amount_eur > 0.
    */
-  /** Huidig opgehaald bedrag in eurocenten. Handmatig bijgehouden. */
-  raised_amount?: number | null;
-  /** Leesbare weergave, bv. "€2.350". Leeg = auto-format vanuit raised_amount. */
-  raised_amount_display?: string | null;
   /** Korte teaser onder de campagnetitel (1-2 zinnen, max 200 tekens). */
   short_text?: string | null;
   /** Toggle om de campagne als voortgangskaart op /doneren te tonen. */
   show_progress?: boolean | null;
   /**
    * Delivery donation-campaign-progress-v2 — euro's + auto-aggregatie.
-   * Vervangt de raised_amount-flow uit delivery 50 (die nu hidden is).
+   * (Legacy cent-velden goal_amount/raised_amount + display-strings
+   * zijn verwijderd in delivery 57. Bedragen lopen nu altijd via
+   * euro-velden en server-side aggregatie.)
    */
-  /** Doelbedrag in EURO'S. Vervangt goal_amount (cents); fallback als leeg. */
+  /** Doelbedrag in EURO'S. Verplicht voor voortgangsbalk (show_progress). */
   goal_amount_eur?: number | null;
   /** Handmatige correctie BOVENOP automatisch berekend Stripe-totaal, in EURO'S. */
   manual_raised_amount_eur?: number | null;

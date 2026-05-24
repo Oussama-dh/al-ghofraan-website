@@ -44,35 +44,15 @@ const COLLECTION = "donation_campaigns";
 export async function setupDonationCampaignProgress(client) {
   console.log("\n💰 Stap 50 · donation_campaigns voortgang-velden");
 
-  await ensureField(client, COLLECTION, {
-    field: "raised_amount",
-    type:  "integer",
-    meta: {
-      width:     "half",
-      interface: "input",
-      note:
-        "Huidig opgehaald bedrag in EUROCENTEN (€2.350 = 235000). " +
-        "Handmatig bijgehouden — pas regelmatig aan om actuele " +
-        "voortgang te tonen. Leeg of 0 = voortgangsbalk start op 0%.",
-    },
-    schema: {
-      default_value: 0,
-    },
-  });
-
-  await ensureField(client, COLLECTION, {
-    field: "raised_amount_display",
-    type:  "string",
-    meta: {
-      width:     "half",
-      interface: "input",
-      note:
-        "Optioneel — leesbare weergave, bv. '€2.350'. " +
-        "Laat leeg om automatisch te laten formatteren vanuit " +
-        "raised_amount.",
-    },
-    schema: {},
-  });
+  // Delivery 57 — legacy cent-velden raised_amount en raised_amount_display
+  // worden NIET meer aangemaakt op fresh installs. Stripe-aggregatie +
+  // manual_raised_amount_eur (in euro's, sinds stap 51) is de enige
+  // bron van waarheid. Op productie installs waar deze velden al
+  // bestaan, ruimt scripts/seed/steps/
+  // 57-donation-campaigns-legacy-cleanup.mjs ze idempotent op.
+  //
+  // ensureField(donation_campaigns, raised_amount)         — verwijderd in delivery 57
+  // ensureField(donation_campaigns, raised_amount_display) — verwijderd in delivery 57
 
   await ensureField(client, COLLECTION, {
     field: "short_text",
@@ -100,7 +80,7 @@ export async function setupDonationCampaignProgress(client) {
       special:   ["cast-boolean"],
       note:
         "Aanzetten om deze campagne als voortgangskaart op /doneren " +
-        "te tonen. Vereist ook 'goal_amount' > 0. " +
+        "te tonen. Vereist ook 'goal_amount_eur' > 0. " +
         "Default: uit (= bestaande gedrag, geen kaart zichtbaar).",
     },
     schema: {

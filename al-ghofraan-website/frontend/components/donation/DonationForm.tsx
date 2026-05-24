@@ -52,8 +52,6 @@ const ALGEMEEN_OPTION: DonationCampaign = {
   slug:             "algemeen",
   description:      null,
   image:            null,
-  goal_amount:      null,
-  goal_amount_display: null,
   allow_one_time:   true,
   allow_monthly:    true,
   suggested_amounts: null,
@@ -310,9 +308,17 @@ export default function DonationForm({
                         ★ uitgelicht
                       </span>
                     )}
-                    {c.goal_amount_display && (
+                    {/* Delivery 57 — auto-format vanuit goal_amount_eur.
+                        Vervangt het legacy goal_amount_display tekstveld;
+                        beheerder hoeft alleen goal_amount_eur in te vullen. */}
+                    {typeof c.goal_amount_eur === "number" && c.goal_amount_eur > 0 && (
                       <span className="font-body text-xs text-taupe">
-                        doel: {c.goal_amount_display}
+                        doel: {c.goal_amount_eur.toLocaleString("nl-NL", {
+                          style:                 "currency",
+                          currency:              "EUR",
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        })}
                       </span>
                     )}
                   </div>

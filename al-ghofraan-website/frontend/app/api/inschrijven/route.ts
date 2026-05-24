@@ -53,6 +53,7 @@ import {
 } from "@/lib/server/notifications";
 import { getSiteUrl } from "@/lib/utils";
 import { generateActivityOccurrences } from "@/lib/recurrence";
+import { isRegistrationClosed } from "@/lib/server/registrationClose";
 import type {
   Activity,
   EducationProgram,
@@ -396,6 +397,7 @@ interface SourceData {
     | "is_recurring" | "recurrence_type"
     | "recurrence_interval" | "recurrence_until" | "recurrence_weekday"
     | "show_occurrence_picker"
+    | "registration_closes_at"
   > | null;
 }
 
@@ -420,6 +422,8 @@ async function findSource(
             "recurrence_until", "recurrence_weekday",
             // Delivery recurring-ux — picker-toggle.
             "show_occurrence_picker",
+            // Delivery 58 — automatische sluiting van inschrijving.
+            "registration_closes_at",
           ],
           limit:  1,
         }),
@@ -464,6 +468,8 @@ async function findSource(
             recurrence_until:       row.recurrence_until ?? null,
             recurrence_weekday:     row.recurrence_weekday ?? null,
             show_occurrence_picker: row.show_occurrence_picker ?? null,
+            // Delivery 58 — sluit-moment voor de gate
+            registration_closes_at: row.registration_closes_at ?? null,
           },
         },
       };
@@ -558,6 +564,25 @@ export async function POST(request: Request) {
   if (!src.registrationEnabled) {
     return NextResponse.json(
       { error: "Inschrijven voor dit item is momenteel gesloten." },
+      { status: 403 },
+    );
+  }
+
+  // Delivery 58 — automatische sluiting van inschrijfformulier.
+  // Alleen voor activity-bron (education_programs heeft geen
+  // start_date / is_recurring; voor onderwijs blijft het bestaande
+  // pad zoals voorheen).
+  if (
+    src.sourceCollection === "activities" &&
+    src.activityRow &&
+    isRegistrationClosed({
+      registration_closes_at: src.activityRow.registration_closes_at ?? null,
+      start_date:             src.activityRow.start_date,
+      is_recurring:           src.activityRow.is_recurring ?? null,
+    })
+  ) {
+    return NextResponse.json(
+      { error: "Inschrijving is gesloten voor deze activiteit." },
       { status: 403 },
     );
   }

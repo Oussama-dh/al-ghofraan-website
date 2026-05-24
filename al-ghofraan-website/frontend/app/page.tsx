@@ -183,10 +183,10 @@ export default async function HomePage() {
             />
             <div className={`grid gap-4 ${homepageCampaigns.length === 1 ? "max-w-md mx-auto" : "sm:grid-cols-2"}`}>
               {homepageCampaigns.map((c) => {
-                const goalCents =
-                  typeof c.goal_amount_eur === "number" && c.goal_amount_eur > 0
-                    ? Math.round(c.goal_amount_eur * 100)
-                    : (c.goal_amount ?? 0);
+                // Delivery 57 — legacy cent-velden verwijderd; alleen
+                // goal_amount_eur. HomepageCampaignBlock self-guarded
+                // op goalCents <= 0, dus 0 = niet renderen.
+                const goalCents = Math.round((c.goal_amount_eur ?? 0) * 100);
                 const manualCents = Math.round(
                   (c.manual_raised_amount_eur ?? 0) * 100,
                 );

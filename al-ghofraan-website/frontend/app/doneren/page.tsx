@@ -85,11 +85,10 @@ export default async function DonerenPage({ searchParams }: Props) {
     goalCents:         number;
   }> = {};
   for (const c of progressCampaigns) {
-    // goalCents: voorkeur euro-veld; legacy cents als fallback
-    const goalCents =
-      typeof c.goal_amount_eur === "number" && c.goal_amount_eur > 0
-        ? Math.round(c.goal_amount_eur * 100)
-        : (c.goal_amount ?? 0);
+    // Delivery 57 — goal_amount_eur is enige bron. Campagnes zonder
+    // doelbedrag (of <= 0) worden hier overgeslagen — voortgangsbalk
+    // heeft geen zin zonder doel.
+    const goalCents = Math.round((c.goal_amount_eur ?? 0) * 100);
     if (goalCents <= 0) continue;
 
     const manualCents = Math.round((c.manual_raised_amount_eur ?? 0) * 100);
