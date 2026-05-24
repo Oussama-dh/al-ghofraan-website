@@ -147,10 +147,9 @@ Zie ook bestaande `CMS_BEHEER.md` voor diepere homepage-uitleg.
 
 ### 3.2 Wat NIET invullen
 
-- ❌ **goal_amount** (zonder _eur) — dat is een oud veld in **cents**. Hidden in Directus, gemarkeerd `[LEGACY]`. Laat staan op leeg/null. Vul ALTIJD `goal_amount_eur` in.
-- ❌ **goal_amount_display** — oud handmatig tekstveld. Niet meer gebruiken.
-- ❌ **raised_amount**, **raised_amount_display** — oud. Niet aanraken.
 - ❌ **Persoonsgegevens in manual_raised_note** — dit veld is bedoeld voor opmerkingen over het bedrag (bv. "incl. €100 contant op 17-03 van anonieme weldoener"), **niet** voor namen of contactgegevens
+
+> 📝 **Update mei 2026**: de oude cent-velden (`goal_amount`, `goal_amount_display`, `raised_amount`, `raised_amount_display`) zijn in delivery 57 helemaal uit Directus verwijderd. Je ziet ze niet meer in het formulier — gebruik uitsluitend `goal_amount_eur` (in euro's) en `manual_raised_amount_eur` (in euro's). Geen actie nodig voor bestaande campagnes — alles loopt al via euro-velden.
 
 ### 3.3 Wat verschijnt wanneer?
 
@@ -440,6 +439,62 @@ Op de TV-route wordt de `description` automatisch geschoond:
 
 Dus je hoeft niet bang te zijn dat opmaak doorlekt — maar **houd de tekst kort en helder** zodat er iets nuttigs op TV verschijnt.
 
+### 7.7 Inschrijving automatisch sluiten
+
+Sinds delivery 58 kun je per activiteit instellen wanneer het inschrijfformulier automatisch dichtgaat. Veld: **`registration_closes_at`** (datum + tijd).
+
+| Wat | Wat gebeurt er |
+|---|---|
+| Leeg + eenmalige activiteit | Inschrijving sluit automatisch bij `start_date` (begin activiteit) |
+| Leeg + terugkerende activiteit | Inschrijving blijft open totdat je dit veld expliciet vult |
+| Gevuld (datum + tijd) | Inschrijving sluit op het ingevulde moment |
+
+Wanneer gesloten: bezoeker ziet "Inschrijving is gesloten" in plaats van het formulier. Bestaande inschrijvingen blijven gewoon zichtbaar in Directus — je kunt ze nog steeds bewerken, inchecken en exporteren.
+
+Als activiteit **én** vol **én** gesloten is, wint de "vol"-melding ("Deze activiteit zit vol").
+
+### 7.8 Deelnemers exporteren via Directus
+
+> ⚠️ Persoonsgegevens (naam, e-mail, telefoon) zijn alleen via **Directus admin** te exporteren door bevoegde beheerders. Er is bewust géén publieke export-link, geen aparte exportcode en geen download via de check-in pagina.
+
+**Stap-voor-stap:**
+
+1. Log in op Directus admin: https://cms.al-ghofraan.nl
+2. Linkermenu → **Registrations**
+3. Filter de lijst op de juiste activiteit:
+   - Klik op de filter-knop (trechter-icoon) bovenaan
+   - Voeg filter toe: `source_collection` = `activities`
+   - Voeg filter toe: `source_title` bevat de titel van je activiteit (of filter op `source_id` als je dat liever hebt)
+   - (Eventueel) `status` = `confirmed` als je alleen bevestigde inschrijvingen wilt
+4. Bovenaan rechts: klik op het **drie-puntjes menu (⋮)** → **Export**
+5. Kies CSV (of JSON, XML, JSON) — voor Excel: **CSV** met scheidingsteken `;` (semicolon)
+6. Download het bestand
+
+**Welke kolommen zie je standaard?**
+
+Vanaf seed 59 zijn de standaardkolommen voor de Registrations-lijst:
+- Naam, E-mail, Telefoon
+- Bron-titel (welke activiteit), Type (activity/education), Status
+- Ingecheckt op (check-in tijdstip)
+- Aangemeld op
+
+Je kunt je eigen lijst-layout opslaan via Directus' standaard layout-functie (rechtsboven → "Layout Options"). Bijvoorbeeld extra kolommen toevoegen voor leeftijd, geslacht of opmerkingen.
+
+**Privacy:**
+
+- Deze gegevens zijn **vertrouwelijk**. Deel ze alleen met andere bevoegde organisatoren.
+- Verwijder oude exports van je computer/telefoon na de activiteit.
+- Plak geen deelnemerslijst in WhatsApp of e-mail naar onbevoegden.
+- De **Activiteiten beheerder** rol ziet alleen registraties met `type=activity` — onderwijs-inschrijvingen blijven afgeschermd.
+
+**Welke rollen kunnen exporteren?**
+
+- **Activiteiten beheerder** — alle inschrijvingen met `type=activity`
+- **Onderwijs beheerder** — alle inschrijvingen met `type=education`
+- **Administrator** — alle inschrijvingen
+
+Bezit je geen Directus-account? Vraag de hoofdbeheerder om de juiste rol toegewezen te krijgen.
+
 ---
 
 ## 8. Onderwijs beheren
@@ -608,9 +663,9 @@ Een rol kan **meerdere rollen niet combineren** in Directus standaard — je heb
 **Symptoom**: "De voortgangsbalk verschijnt niet."
 **Oplossing**: Op de campagne: **show_progress** = aan. En **goal_amount_eur** moet > 0 zijn.
 
-### 13.4 Bedrag in cents invullen
-**Symptoom**: "Ik tikte 5000 voor €5.000 maar op de website staat €50,00."
-**Oorzaak**: je vulde het oude veld `goal_amount` in (cents — 5000 cents = €50). Verwijder de waarde uit `goal_amount` en vul `goal_amount_eur` = `5000` in (euro's).
+### 13.4 Bedrag in verkeerde eenheid invullen
+**Symptoom**: "Ik tikte 500 voor €5,00 maar er staat €500 op de site."
+**Oorzaak**: `goal_amount_eur` is in **euro's**, niet centen. €500 = `500`, niet `50000`. Centiemen-decimalen mogen wel: `12.50` voor €12,50.
 
 ### 13.5 HTML/rich-text te lang maken
 **Symptoom**: "Op de TV-route staat een halve roman, het loopt over."
@@ -620,9 +675,11 @@ Een rol kan **meerdere rollen niet combineren** in Directus standaard — je heb
 **Symptoom**: "Twee campagnes verschijnen om beurten, dat is verwarrend."
 **Oplossing**: Maar **één** campagne tegelijk `show_on_tv=aan` zetten. Bij meerdere wint volgorde: featured → laagste sort → titel ASC, maar duidelijker is om bewust één te kiezen.
 
-### 13.7 Legacy velden aanraken
-**Symptoom**: "Ik vulde `goal_amount` in, niets klopt meer."
-**Oplossing**: Velden met **[LEGACY]** in de notitie zijn verborgen + gemarkeerd. Niet invullen. Gebruik altijd de nieuwe `_eur` velden.
+### 13.7 Inschrijfformulier sluit onverwacht
+**Symptoom**: "Mensen kunnen zich niet meer inschrijven terwijl de activiteit pas volgende week is."
+**Oorzaak A**: `registration_closes_at` staat in het verleden. Verwijder de waarde of zet 'm later.
+**Oorzaak B**: Eenmalige activiteit met `start_date` in het verleden — die sluit automatisch. Zet `registration_closes_at` in de toekomst als je inschrijving toch open wilt houden.
+**Oorzaak C**: `max_registrations` is bereikt — dan staat er "Deze activiteit zit vol".
 
 ### 13.8 Persoonsgegevens in interne notities
 **Symptoom**: namen of e-mails in `manual_raised_note` of `description`.
@@ -742,4 +799,4 @@ Als je twijfelt: **eerst draft maken, dan vragen**. Een artikel in draft kan gee
 
 ---
 
-**Versie**: mei 2026 — na delivery 56 (hadieth_series).
+**Versie**: mei 2026 — na delivery 59 (registrations admin-list + Directus-export workflow). Inclusief delivery 57 (legacy donation_campaigns cleanup), 58 (registration_closes_at), en 58c (custom export rollback).

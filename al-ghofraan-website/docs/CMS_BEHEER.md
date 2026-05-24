@@ -726,15 +726,26 @@ Directus → **Donation Campaigns** → klik **+** rechtsboven:
 | `slug`                | URL-segment, automatisch uit titel                                         |
 | `description`         | Rich text — uitleg waarom dit doel belangrijk is                          |
 | `image`               | Optionele afbeelding                                                       |
-| `goal_amount`         | Doelbedrag in **eurocenten** (bv. 500000 = €5.000). Optioneel             |
-| `goal_amount_display` | Leesbare weergave (bv. "€5.000"). Vrij in te vullen                       |
+| `goal_amount_eur`     | Doelbedrag in **euro's** (bv. 5000 = €5.000). Optioneel                   |
+| `manual_raised_amount_eur` | Handmatige toevoeging in euro's (cash/bank niet via Stripe). Optioneel |
+| `manual_monthly_donor_count` | Aantal handmatig getelde maandelijkse donateurs naast Stripe. Optioneel |
+| `manual_raised_note`  | Interne notitie over de manual_raised (geen persoonsgegevens!)             |
+| `short_text`          | Korte teaser (max ~200 tekens). Verschijnt als `show_progress=aan`         |
+| `show_progress`       | Toon voortgangsbalk op `/doneren`. Vereist `goal_amount_eur > 0`           |
+| `show_on_homepage`    | Toon op homepage in campagne-blok (max 2 tegelijk)                         |
+| `show_on_tv`          | Toon als slide op `/gebedstijden/tv` (sinds delivery 54)                   |
+| `progress_default_open` | Bij meerdere campagnes: welke voortgangsbalk standaard open op /doneren  |
 | `allow_one_time`      | Sta eenmalige donaties toe voor dit doel                                  |
 | `allow_monthly`       | Sta maandelijkse donaties toe voor dit doel                               |
 | `suggested_amounts`   | JSON array met euro-bedragen, bv. `[5, 10, 25, 50, 100]`. Leeg = standaard|
 | `default_amount`      | Voorgeselecteerd bedrag in **euro's** (bv. 25). Optioneel                 |
 | `featured`            | Toon extra prominent (`★ uitgelicht` label)                                |
 | `sort`                | Lager getal = bovenaan. Stappen van 10 aanbevolen                          |
+| `use_stripe_payment_link` | Gebruik Stripe Payment Link i.p.v. eigen checkout                      |
+| `stripe_payment_link_url` | URL van de Stripe Payment Link (door technische beheerder ingevuld)    |
 | `status`              | Zet op **`published`** om live te zetten                                   |
+
+> 📝 **Update mei 2026** — De oude cent-velden `goal_amount`, `goal_amount_display`, `raised_amount` en `raised_amount_display` zijn in delivery 57 volledig verwijderd uit Directus. Gebruik uitsluitend de euro-velden hierboven. Voortgang loopt automatisch via Stripe-aggregatie + `manual_raised_amount_eur`.
 
 ### Eenmalig vs. maandelijks toestaan
 

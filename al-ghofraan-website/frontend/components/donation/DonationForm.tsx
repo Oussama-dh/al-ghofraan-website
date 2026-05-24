@@ -21,7 +21,7 @@ export interface CampaignProgressEntry {
   monthlyDonorCount: number;
   /** manual_raised_amount_eur * 100 — al voor-berekend op server. */
   manualRaisedCents: number;
-  /** goal_amount_eur*100 of legacy goal_amount, met fallback. */
+  /** goal_amount_eur × 100 (centen). Sinds delivery 57 geen legacy-fallback meer. */
   goalCents:         number;
 }
 

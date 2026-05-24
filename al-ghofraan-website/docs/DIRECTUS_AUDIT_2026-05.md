@@ -7,6 +7,73 @@
 
 ---
 
+## 📌 Update — na delivery 57, 58, 58c en 59 (eind mei 2026)
+
+Sinds dit auditrapport zijn enkele cleanups en verbeteringen uitgevoerd. **Het originele rapport blijft hieronder staan als historisch document**; dit update-blok beschrijft de huidige feitelijke staat.
+
+### Wat is gewijzigd t.o.v. originele audit
+
+**Delivery 57 — donation_campaigns legacy cent-velden volledig verwijderd**
+
+De volgende velden uit categorie B (toen "legacy maar nog nodig als fallback") zijn nu **volledig verwijderd uit Directus, types, code en publieke whitelists**:
+
+- `goal_amount` (cents)
+- `goal_amount_display` (string)
+- `raised_amount` (cents)
+- `raised_amount_display` (string)
+
+Frontend-fallbacks (`c.goal_amount ?? 0` in `app/page.tsx` en `app/doneren/page.tsx`) zijn vervangen door directe `goal_amount_eur`-leesoperaties. Klant bevestigde geen waardevolle data → cleanup uitgevoerd met veiligheidsnet (`FORCE_LEGACY_CLEANUP=true` env-var). DonationForm dropdown toont nu auto-format uit `goal_amount_eur` i.p.v. handmatig `goal_amount_display`-veld.
+
+**Delivery 58 — activities.registration_closes_at toegevoegd**
+
+Nieuw veld op `activities` voor automatische sluiting van inschrijfformulier. Server-side gate in `/api/inschrijven`, frontend-melding "Inschrijving is gesloten" op `/agenda/[slug]`. Voor recurring blijft het open tenzij expliciet ingesteld; voor eenmalige fallback naar `start_date`. `isFull` wint boven `isClosed`.
+
+Field-notes op `registration_enabled` en `max_registrations` ook bijgewerkt om de samenhang uit te leggen.
+
+**Delivery 58c — custom exports flow teruggedraaid (hotfix)**
+
+Een eerdere poging om custom CSV-exports te bouwen via `/check-in/organizer/exports` is teruggedraaid wegens security-concern (zelfde code als check-in). Alternatief: deelnemers exporteren gebeurt nu via **Directus admin standaard export** (⋮ → Export) door bevoegde beheerders (Activiteiten beheerder / Administrator).
+
+Geen aparte exportcode toegevoegd. Geen aparte export-cookie. Geen custom routes.
+
+**Delivery 59 — registrations admin-list verbeterd**
+
+Admin-list preset op `registrations` is aangepast naar voor-beide-flows relevante kolommen: naam, e-mail, telefoon, bron-titel, type, status, ingecheckt op, aangemeld op. Onderwijs-specifieke kolommen (`student_number`, `parent_*`) blijven beschikbaar via eigen layout-keuze.
+
+### Bijgewerkte categorie-overzicht
+
+| Cat. | Betekenis | Status mei 2026 (na 57–59) |
+|---|---|---|
+| A | Zeker actief gebruikt | ongewijzigd grootste deel |
+| B | Legacy maar nog nodig als fallback | **6 velden (donation_campaigns) → 0** na delivery 57. Site_settings homepage CTA (7+5 velden) blijft B want page_sections is nog steeds on hold |
+| C | Waarschijnlijk ongebruikt | 0 |
+| D | Kandidaat om te verbergen | 0 |
+| E | Kandidaat om later te verwijderen | 0 (de 4 die hier in zaten zijn nu in delivery 57 verwijderd) |
+
+### Bijgewerkte conclusie
+
+Het systeem is verder opgeschoond. Alle resterende legacy velden (`homepage_cta_*` en `homepage_whatsapp_cta_*` in site_settings) zijn nog steeds **actieve fallback** zolang stap 40 (page_sections) on-hold blijft, en horen daarom niet in een verwijder-categorie thuis.
+
+De originele scope van het auditrapport blijft daarmee inhoudelijk overeind: er is geen veld dat vandaag nog veilig verwijderd kan worden zonder code-aanpassing.
+
+**Stripe-aggregatie privacy** (vermeld in 4.4): nog steeds correct geïmplementeerd via `getCampaignProgress` met whitelist-velden — geen donor-PII naar publieke endpoints. `manual_raised_note` blijft uitgesloten van alle drie publieke whitelists (seed 02 + 52 + 54).
+
+### Beheerder-export via Directus
+
+Sinds delivery 58c is de aanbevolen workflow voor deelnemerslijsten:
+
+1. Directus admin → Registrations
+2. Filter op `source_collection=activities` en evt. `source_title`
+3. ⋮ → Export → CSV met `;` als scheidingsteken (Excel NL-locale)
+
+Zie `BEHEER_HANDLEIDING.md` sectie 7.8 voor de volledige stappen.
+
+---
+
+> 📜 *Het originele auditrapport hieronder is bewaard als historisch document. Lees het in context van bovenstaande update.*
+
+---
+
 ## 1. Methode
 
 Dit rapport is opgesteld door systematisch te zoeken in drie bronnen:
