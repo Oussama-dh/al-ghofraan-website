@@ -77,23 +77,46 @@ Daarnaast bestaan vanuit Directus:
 
 **Wanneer:** iemand komt erbij die maar één afdeling beheert.
 
+> **Werkwijze (sinds juni 2026)**: Directus invite-flow — de gebruiker stelt zelf een wachtwoord in via een eenmalige mail-link. Geen tijdelijke wachtwoorden meer delen. Voor troubleshooting: zie [`DIRECTUS_INVITE_FLOW.md`](DIRECTUS_INVITE_FLOW.md).
+
+### A.1 Invite-flow (standaard procedure)
+
 1. Log in als admin op Directus.
 2. Klik linksonder op het **tandwiel** (Settings).
 3. Ga naar **Access Control** → **Users**.
-4. Klik rechtsboven op **Create User** (+).
-5. Vul in:
-   - **First name** + **Last name**
-   - **Email** (dit wordt het inlog-adres)
-   - **Password** (laat de gebruiker dit later zelf wijzigen)
-   - **Role** — kies de juiste afdelingsrol uit de dropdown
-     (bv. "Content beheerder")
-   - **Status** — laat op **Active** staan
-6. Klik op **Save** (✓ rechtsboven).
-7. Stuur het inlog-adres + tijdelijk wachtwoord naar de gebruiker via
-   een veilig kanaal (geen e-mail met beide tegelijk).
+4. Klik op het **pijltje naast de "+"-knop** rechtsboven → kies **"Invite User"**.
 
-Klaar. Bij eerstvolgende login ziet de gebruiker alleen zijn eigen
-collecties.
+   > ⚠ NIET de "+"-knop zelf. Die maakt een Active user **zonder** mail te sturen. Alleen de "Invite User"-actie triggert de mail-flow. Dit is een veelvoorkomende vergissing.
+
+5. Vul in:
+   - **Email** (dit wordt het inlog-adres en het ontvangstadres van de invite-mail)
+   - **Role** — kies de juiste afdelingsrol uit de dropdown (bv. "Content beheerder")
+6. Klik op **Invite**.
+7. Directus maakt automatisch een user-record aan met status `invited` én stuurt een invite-mail vanaf `noreply@al-ghofraan.nl`.
+8. **Vertel de nieuwe beheerder vooraf**:
+   - Mail komt van `noreply@al-ghofraan.nl` met onderwerp `You've been invited to Directus`
+   - Mail kan in spam-folder belanden (vooral Outlook). Daar even checken
+   - **Wachtwoord moet minimaal 8 tekens hebben** (de huidige Directus `Auth Password Policy` is `Weak — Minimum 8 Characters`). Bij een korter wachtwoord toont Directus een algemene foutmelding zonder uitleg — dat is bekend gedrag
+   - Link is eenmalig en tijdsbeperkt — direct na ontvangst klikken
+
+De gebruiker klikt op de link → kiest zelf een wachtwoord (minstens 8 tekens) → wordt automatisch ingelogd. Bij eerstvolgende login ziet hij alleen zijn eigen collecties.
+
+### A.2 Noodprocedure — tijdelijk wachtwoord (alleen als invite-mail niet werkt)
+
+> ⚠️ Alleen door de hoofdbeheerder te gebruiken. Niet voor reguliere onboarding. Geldig bij: SMTP-uitval, gebruiker zonder werkende e-mail, of acute toegang nodig.
+
+1. Open Directus admin → Settings → Access Control → Users → klik op **"+"** (Create User, niet "Invite User"-actie).
+2. Vul in:
+   - **First name** + **Last name**
+   - **Email**
+   - **Role** — kies de juiste afdelingsrol
+   - **Status** = `Active` (laten staan op default)
+   - **Password** = vul een sterk tijdelijk wachtwoord in (minimaal 12 tekens, mix van letters/cijfers/symbolen)
+3. Klik op **Save**.
+4. Stuur het inlog-adres + tijdelijk wachtwoord naar de gebruiker via een **veilig kanaal** (niet per e-mail met beide tegelijk).
+5. **Belangrijk**: instrueer de gebruiker om bij eerstvolgende login direct **"Wachtwoord vergeten?"** te gebruiken om een eigen wachtwoord in te stellen — of via Profile → Reset Password als hij al is ingelogd.
+
+Het tijdelijk wachtwoord mag niet langer dan strikt nodig blijven bestaan. De flow uit `PASSWORD_RESET.md` werkt voor bestaande users en is de aangewezen route om dit zelf te resetten.
 
 ---
 
@@ -343,12 +366,8 @@ overdraagbaar.
    Users → gebruiker openen → Status checken. "Suspended" /
    "Draft" / "Invited" geven verschillende blocks.
 3. **Wachtwoord verkeerd of expired.** Twee opties:
-   - **Self-service** (sinds delivery `admin-password-reset-and-ahadieth-role`):
-     gebruiker klikt zelf op "Wachtwoord vergeten?" op de Directus
-     login en ontvangt een reset-mail. Zie
-     [`PASSWORD_RESET.md`](PASSWORD_RESET.md) voor configuratie.
-   - **Admin reset** (bestaande optie): admin opent User → Reset
-     Password en geeft het tijdelijke wachtwoord persoonlijk door.
+   - **Self-service (voorkeur)**: gebruiker klikt zelf op "Wachtwoord vergeten?" op de Directus login en ontvangt een reset-mail. Zie [`PASSWORD_RESET.md`](PASSWORD_RESET.md). Voor nieuwe gebruikers met status `Invited` werkt dezelfde mail-infrastructuur (zie sectie 7 in dat doc).
+   - **Admin reset (nood)**: admin opent User → Reset Password en geeft het tijdelijke wachtwoord persoonlijk door via een veilig kanaal. Alleen gebruiken als SMTP/mail-flow uitvalt.
 
 ### "De gebruiker ziet een collectie niet in het menu"
 

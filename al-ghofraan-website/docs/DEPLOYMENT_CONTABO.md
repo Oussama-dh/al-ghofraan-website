@@ -157,8 +157,8 @@ SMTP_SECURE=true
 SMTP_USER=noreply@al-ghofraan.nl
 SMTP_PASS=CPANEL_MAILBOX_WACHTWOORD
 
-# Directus password-reset afzender
-EMAIL_FROM=Al-Ghofraan CMS <noreply@al-ghofraan.nl>
+# Directus invite + password-reset afzender
+EMAIL_FROM=noreply@al-ghofraan.nl
 EMAIL_TRANSPORT=smtp
 ```
 
@@ -172,6 +172,50 @@ EMAIL_TRANSPORT=smtp
 ```bash
 chmod 600 .env
 ```
+
+### Verifieer email-config (vóór 1ste deploy)
+
+Voordat je verder gaat, controleer dat de mail-config volledig is. Een ontbrekende `EMAIL_FROM` of `EMAIL_TRANSPORT` is een veelvoorkomende oorzaak van stille mail-failures (Directus start zonder crash maar invite/reset werkt niet).
+
+```bash
+# Verwacht 8 niet-lege regels
+grep -E "^(SMTP_HOST|SMTP_PORT|SMTP_SECURE|SMTP_USER|SMTP_PASS|EMAIL_FROM|EMAIL_TRANSPORT|DIRECTUS_PUBLIC_URL)=" .env
+```
+
+**Checks:**
+
+- ✓ Alle 8 vars aanwezig, geen lege waarden
+- ✓ `DIRECTUS_PUBLIC_URL` is het echte productie-domein met `https://` (geen localhost, IP of trailing slash)
+- ✓ `SMTP_USER` en `EMAIL_FROM` verwijzen naar een **bestaande** cPanel-mailbox (anders weigert cPanel verzending)
+- ✓ Voor port 465: `SMTP_SECURE=true`; voor port 587: `SMTP_SECURE=false`
+- ✓ `EMAIL_FROM` is alleen het mail-adres, zonder display-name of hoeken-haken:
+  ```env
+  EMAIL_FROM=noreply@al-ghofraan.nl
+  ```
+  De mailbox moet bestaan in cPanel. Directus 11 parseert `EMAIL_FROM` als één string — een display-name format zoals `"Name <addr>"` werkt niet betrouwbaar voor alle mailclients (Gmail).
+
+Na opstart kun je via Directus-logs verifiëren dat SMTP werkt (zie [`DIRECTUS_INVITE_FLOW.md`](DIRECTUS_INVITE_FLOW.md) sectie 3.4). De `EMAIL_VERIFY_SETUP=true` flag in `docker-compose.yml` zorgt dat fouten zichtbaar zijn in `docker compose logs directus`.
+
+### Verifieer DNS records (na 1ste deploy)
+
+Mails kunnen aankomen maar in **spam-folder** belanden zonder correcte SPF/DKIM/DMARC records op `al-ghofraan.nl`. Dit is een aparte laag dan SMTP-config — de mail wordt wel verzonden, maar wordt door ontvangers (Outlook, Gmail) als onbetrouwbaar gemarkeerd.
+
+Korte PowerShell-check vanaf je werkstation:
+
+```powershell
+# SPF
+Resolve-DnsName -Name al-ghofraan.nl -Type TXT | Where-Object { $_.Strings -match "spf" }
+
+# DKIM (probeer default selector)
+Resolve-DnsName -Name default._domainkey.al-ghofraan.nl -Type TXT
+
+# DMARC
+Resolve-DnsName -Name _dmarc.al-ghofraan.nl -Type TXT
+```
+
+Geen output op één van deze = ontbrekend record → spam-classificatie waarschijnlijk.
+
+Voor de volledige procedure (theorie + fix-stappen via cPanel en DNS-host): zie [`EMAIL_DELIVERABILITY.md`](EMAIL_DELIVERABILITY.md).
 
 ## 6️⃣ Productie docker-compose
 

@@ -35,7 +35,24 @@ Deze handleiding legt uit hoe je de website beheert via **Directus** zonder dat 
 - **Directus admin (productie)**: https://cms.al-ghofraan.nl
 - **De website zelf**: https://al-ghofraan.nl
 
-Je inloggegevens krijg je van de hoofdbeheerder. Bewaar ze veilig en deel ze nooit.
+### Eerste keer inloggen — invite-mail
+
+Als je nieuw bent, krijg je een **invite-mail** van `noreply@al-ghofraan.nl` met als onderwerp "You've been invited to Directus". Klik op de **Join Directus**-knop in de mail → kies zelf een wachtwoord → je bent direct ingelogd.
+
+**Vier dingen om te weten**:
+
+1. Mail kan in je **spam-folder** belanden (vooral bij Outlook). Even checken daar als je hem niet ziet
+2. Wachtwoord moet **minimaal 8 tekens** zijn. Een korter wachtwoord geeft een algemene foutmelding zonder uitleg — kies dus meteen iets sterks
+3. De link is **eenmalig en tijdsbeperkt**. Klik direct na ontvangst
+4. Lukt het echt niet? Vraag de hoofdbeheerder om opnieuw te invitaten
+
+### Wachtwoord vergeten
+
+Klik onder het inlogformulier op **"Forgot Password?"** / **"Wachtwoord vergeten?"** → vul je e-mailadres in → je krijgt een reset-mail (zelfde afzender als invite-mail) met een link om een nieuw wachtwoord in te stellen.
+
+Ook hier: minimaal **8 tekens** voor het nieuwe wachtwoord.
+
+> Je inloggegevens deel je nooit met anderen. Voor extra beheerders vraag je de hoofdbeheerder om een eigen invite — dat is gratis en veilig.
 
 ### Drie status-waarden — onthoud deze goed
 
@@ -693,6 +710,11 @@ Een rol kan **meerdere rollen niet combineren** in Directus standaard — je heb
 **Symptoom**: "Mijn artikel kan niet meer gevonden worden via de oude link, en Google heeft 'm verloren."
 **Oplossing**: **Slug nooit wijzigen** na publicatie. Wijzig alleen vóór de eerste keer dat status=published is.
 
+### 13.11 Wachtwoord te kort bij invite-acceptatie
+**Symptoom**: "Ik kreeg een invite-mail, klikte op Join Directus, koos een wachtwoord, en kreeg een onduidelijke foutmelding."
+**Oorzaak**: De Directus `Auth Password Policy` staat op `Weak — Minimum 8 Characters`. Een wachtwoord korter dan 8 tekens wordt geweigerd, maar de foutmelding is generiek ("Couldn't save user" of vergelijkbaar) en zegt niet wat de eis is.
+**Oplossing**: Kies een wachtwoord van **minimaal 8 tekens**. Een combinatie van letters, cijfers en symbolen wordt aangeraden. Je krijgt geen specifieke fout te zien — gewoon opnieuw proberen met langer wachtwoord werkt.
+
 ---
 
 ## 14. Checklists per onderdeel
@@ -799,4 +821,4 @@ Als je twijfelt: **eerst draft maken, dan vragen**. Een artikel in draft kan gee
 
 ---
 
-**Versie**: mei 2026 — na delivery 59 (registrations admin-list + Directus-export workflow). Inclusief delivery 57 (legacy donation_campaigns cleanup), 58 (registration_closes_at), en 58c (custom export rollback).
+**Versie**: juni 2026 — invite-flow productie. Inclusief delivery 57 (legacy donation_campaigns cleanup), 58 (registration_closes_at), 58c (custom export rollback), 59 (registrations admin-list), en Directus invite-flow uitrol.
