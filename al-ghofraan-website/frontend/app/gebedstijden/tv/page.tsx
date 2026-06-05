@@ -181,10 +181,14 @@ export default async function GebedstijdenTvPage() {
     console.warn("TV gebedstijden laden mislukt:", e);
   }
 
-  // Subtitel: bv. "Gebedstijden 2026" (alleen als we een file hebben)
-  const subtitle = fileInfo
-    ? formatPrayerFileTitle(fileInfo.title, fileInfo.year)
-    : null;
+  // Subtitel: hardcoded "Moskee el Mouahidin" (klant-keuze juni 2026).
+  // Wordt onder "al-Ghofraan" in de TopBar getoond als context.
+  // Bewust niet uit fileInfo gehaald om consistent te zijn ongeacht welke
+  // prayer-times-file actief is. `fileInfo` blijft nog wel beschikbaar
+  // voor todayRow/tomorrowRow elders in de page logic.
+  const subtitle = "Moskee el Mouahidin";
+  void fileInfo; // benoemd om TS6133 te voorkomen indien niet elders gebruikt.
+  void formatPrayerFileTitle; // helper blijft beschikbaar voor evt. future re-enable.
 
   // ─── Delivery B — hadieth-series voor TV ────────────────────
   // Server-side ophalen met admin-token. Selectie hangt af van vandaag's

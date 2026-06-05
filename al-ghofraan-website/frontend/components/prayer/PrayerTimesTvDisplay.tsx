@@ -24,7 +24,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter }                    from "next/navigation";
-import { Sunrise, Sun, CloudSun, Sunset, Moon, MoonStar, Heart, Calendar, MapPin, BookOpen } from "lucide-react";
+import { Sunrise, Sun, CloudSun, Sunset, Moon, MoonStar, Heart, Calendar, MapPin, BookOpen, Hourglass } from "lucide-react";
 import type { LucideIcon }              from "lucide-react";
 import { cn, stripHtml }                from "@/lib/utils";
 import {
@@ -343,18 +343,21 @@ export default function PrayerTimesTvDisplay({
     // `tv-scope` pin de kleur-variabelen op de light-mode waardes
     // zodat /gebedstijden/tv er identiek uitziet onafhankelijk van
     // de bezoeker zijn theme-keuze (delivery 10-fix).
-    <div className="tv-scope fixed inset-0 z-50 bg-slate-mosque text-white overflow-hidden">
-      {/* Decoratieve achtergrond */}
+    //
+    // Restyling juni 2026: light-mode zandkleur palette (was dark slate-mosque).
+    // Tekst-default = text-ink (donker op licht), achtergrond = sand-50.
+    <div className="tv-scope fixed inset-0 z-50 bg-sand-50 text-ink overflow-hidden">
+      {/* Decoratieve achtergrond — subtiele gradient in zandkleuren */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-gradient-to-br from-slate-dark via-slate-mosque to-slate-dark"
+        className="absolute inset-0 bg-gradient-to-br from-sand-100 via-sand-50 to-sand-100"
       />
       <div
         aria-hidden="true"
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(circle at 20% 0%, rgba(255,255,255,0.06), transparent 50%), radial-gradient(circle at 80% 100%, rgba(255,255,255,0.05), transparent 50%)",
+            "radial-gradient(circle at 20% 0%, rgba(176,150,108,0.08), transparent 50%), radial-gradient(circle at 80% 100%, rgba(176,150,108,0.06), transparent 50%)",
         }}
       />
 
@@ -427,7 +430,7 @@ function TopBar({
   mounted:    boolean;
 }) {
   return (
-    <header className="flex items-center justify-between gap-4 px-6 md:px-10 lg:px-14 py-4 md:py-5 border-b border-white/10 bg-black/15 backdrop-blur-sm">
+    <header className="flex items-center justify-between gap-4 px-6 md:px-10 lg:px-14 py-4 md:py-5 border-b border-sand-300 bg-sand-100/40 backdrop-blur-sm">
       {/* Links: logo + naam */}
       <div className="flex items-center gap-3 md:gap-4 min-w-0">
         {logoUrl ? (
@@ -440,13 +443,13 @@ function TopBar({
             className="h-12 md:h-16 lg:h-20 w-auto max-w-[200px] object-contain shrink-0"
           />
         ) : (
-          // Fallback — zelfde mosque-SVG als Header/Footer, hier groter en lichter
-          // omdat we tegen een donkere TV-achtergrond staan.
+          // Fallback — zelfde mosque-SVG als Header/Footer.
+          // Light-mode (juni 2026): donker icoon op zandkleur tegel.
           <div
             aria-hidden="true"
-            className="h-12 w-12 md:h-16 md:w-16 lg:h-20 lg:w-20 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0"
+            className="h-12 w-12 md:h-16 md:w-16 lg:h-20 lg:w-20 rounded-2xl bg-sand-200 border border-sand-300 flex items-center justify-center shrink-0"
           >
-            <svg width="60%" height="60%" viewBox="0 0 24 24" fill="none" className="text-white">
+            <svg width="60%" height="60%" viewBox="0 0 24 24" fill="none" className="text-taupe-dark">
               <path d="M12 2l2 4h2l1 2H7l1-2h2l2-4z" fill="currentColor" opacity="0.9" />
               <rect x="9"  y="8"  width="6"  height="12" rx="1"   fill="currentColor" />
               <rect x="6"  y="18" width="12" height="2"  rx="0.5" fill="currentColor" />
@@ -455,10 +458,10 @@ function TopBar({
         )}
 
         <div className="min-w-0">
-          <div className="font-display text-2xl md:text-3xl lg:text-4xl xl:text-5xl tracking-tight truncate">
+          <div className="font-display text-2xl md:text-3xl lg:text-4xl xl:text-5xl tracking-tight truncate text-ink">
             {siteName}
           </div>
-          <div className="font-body text-sand/70 text-sm md:text-base lg:text-lg truncate flex items-center gap-2">
+          <div className="font-body text-taupe-dark text-sm md:text-base lg:text-lg truncate flex items-center gap-2">
             {subtitle && <span>{subtitle}</span>}
             {subtitle && dateString && <span aria-hidden="true">·</span>}
             <span className="capitalize">
@@ -470,8 +473,8 @@ function TopBar({
         </div>
       </div>
 
-      {/* Rechts: klok */}
-      <div className="font-display tabular-nums text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-white shrink-0">
+      {/* Rechts: klok — donker op zandkleur (light mode juni 2026) */}
+      <div className="font-display tabular-nums text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-taupe-dark shrink-0">
         {mounted ? clockHHMM : "\u00A0"}
       </div>
     </header>
@@ -521,29 +524,36 @@ function BottomBar({
   }
 
   return (
-    <footer className="border-t border-white/10 bg-black/20 backdrop-blur-sm px-6 md:px-10 lg:px-14 py-4 md:py-5 relative">
-      <div className="text-center font-body text-lg md:text-2xl lg:text-3xl">
+    <footer className="border-t border-slate-mosque bg-slate-mosque backdrop-blur-sm px-6 md:px-10 lg:px-14 py-4 md:py-5 relative">
+      <div className="flex items-center justify-center gap-3 md:gap-4 font-body text-lg md:text-2xl lg:text-3xl text-center">
         {mounted && nextPrayer && nextPrayerTime ? (
           <>
-            <span className="text-sand/70">Volgend gebed: </span>
-            <span className="text-white font-medium">{nextPrayer.label}</span>
-            {isTomorrow && (
-              <span className="text-sand/70"> morgen</span>
-            )}
-            {countdownText && (
-              <>
-                <span className="text-sand/70"> {countdownText}</span>
-                <span className="text-sand/50 ml-3 text-base md:text-xl lg:text-2xl tabular-nums hidden sm:inline">
-                  ({nextPrayerTime})
-                </span>
-              </>
-            )}
+            <Hourglass
+              aria-hidden="true"
+              className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-white/85 shrink-0"
+              strokeWidth={1.75}
+            />
+            <span>
+              <span className="text-white/85">Volgend gebed: </span>
+              <span className="text-white font-medium">{nextPrayer.label}</span>
+              {isTomorrow && (
+                <span className="text-white/85"> morgen</span>
+              )}
+              {countdownText && (
+                <>
+                  <span className="text-white/85"> {countdownText}</span>
+                  <span className="text-white/70 ml-3 text-base md:text-xl lg:text-2xl tabular-nums hidden sm:inline italic">
+                    ({nextPrayerTime})
+                  </span>
+                </>
+              )}
+            </span>
           </>
         ) : mounted ? (
           // Echt geen gebedstijden beschikbaar (geen vandaag, geen morgen)
           // — bv. CSV ontbreekt of stopt. Geen "tot morgen" tekst meer:
           // delivery 9 verwijdert die misleidende melding overal.
-          <span className="text-sand/60 italic">
+          <span className="text-white/75 italic">
             Gebedstijden zijn tijdelijk niet beschikbaar.
           </span>
         ) : (
@@ -551,7 +561,8 @@ function BottomBar({
         )}
       </div>
 
-      {/* Slide-indicator dots — alleen bij actieve rotatie */}
+      {/* Slide-indicator dots — alleen bij actieve rotatie.
+          Tegen de slate-mosque achtergrond: wit-tinten i.p.v. taupe-dark. */}
       {slides.length > 1 && (
         <div className="absolute left-1/2 -translate-x-1/2 -top-1 flex gap-1.5 pointer-events-none">
           {slides.map((_, i) => (
@@ -559,7 +570,7 @@ function BottomBar({
               key={i}
               className={cn(
                 "h-1 rounded-full transition-all duration-500",
-                i === slideIdx ? "w-6 bg-white/80" : "w-1 bg-white/25",
+                i === slideIdx ? "w-6 bg-white/80" : "w-1 bg-white/30",
               )}
             />
           ))}
@@ -585,8 +596,8 @@ function PrayerSlide({
 }) {
   if (!todayRow) {
     return (
-      <div className="w-full max-w-3xl bg-white/10 border border-white/20 rounded-3xl p-8 lg:p-14 text-center">
-        <p className="font-body text-2xl md:text-3xl lg:text-4xl text-sand/90">
+      <div className="w-full max-w-3xl bg-white/60 border border-sand-200 rounded-3xl p-8 lg:p-14 text-center shadow-sm">
+        <p className="font-body text-2xl md:text-3xl lg:text-4xl text-taupe-dark">
           Gebedstijden zijn tijdelijk niet beschikbaar.
         </p>
       </div>
@@ -646,15 +657,15 @@ function PrayerSlide({
                 ? "p-6 md:p-9 lg:p-7 xl:p-8 2xl:p-9  min-h-[220px] md:min-h-[300px]"
                 : "p-4 md:p-6 lg:p-5 xl:p-5 2xl:p-7  min-h-[170px] md:min-h-[230px]",
               isNext
-                ? "bg-white text-slate-mosque ring-4 ring-white/40 shadow-2xl shadow-black/30"
-                : "bg-white/10 border-2 border-white/20 text-white",
+                ? "bg-white text-taupe-dark ring-2 ring-sand-300 shadow-2xl shadow-taupe/20"
+                : "bg-sand-100/80 border border-sand-300 text-taupe-dark",
             )}
           >
             {/* Icoon — bovenaan, klein subtiel zoals op /gebedstijden */}
             <div
               className={cn(
                 "flex justify-center",
-                isNext ? "text-slate-mosque/80" : "text-sand/80",
+                isNext ? "text-taupe-dark/90" : "text-taupe-dark/80",
               )}
             >
               <gebed.Icon
@@ -677,7 +688,7 @@ function PrayerSlide({
                 isNext
                   ? "text-2xl md:text-4xl lg:text-3xl xl:text-4xl 2xl:text-5xl"
                   : "text-xl  md:text-3xl lg:text-2xl xl:text-3xl 2xl:text-4xl",
-                isNext ? "text-slate-mosque/80" : "text-sand/85",
+                isNext ? "text-taupe-dark/90" : "text-taupe-dark/85",
               )}
               lang="ar"
               dir="rtl"
@@ -693,7 +704,7 @@ function PrayerSlide({
                 isNext
                   ? "text-sm md:text-lg lg:text-base xl:text-lg 2xl:text-xl"
                   : "text-xs md:text-sm lg:text-sm  xl:text-base 2xl:text-lg",
-                isNext ? "text-slate-mosque/70" : "text-sand/80",
+                isNext ? "text-taupe-dark/80" : "text-taupe-dark/75",
               )}
             >
               {gebed.label}
@@ -709,7 +720,7 @@ function PrayerSlide({
                 isNext
                   ? "text-4xl md:text-6xl lg:text-5xl xl:text-6xl 2xl:text-7xl"
                   : "text-3xl md:text-5xl lg:text-4xl xl:text-5xl 2xl:text-6xl",
-                isNext ? "text-slate-mosque" : "text-white",
+                "text-taupe-dark",
               )}
             >
               {todayRow[gebed.key as keyof PrayerTimeRow] || "—"}
@@ -717,7 +728,7 @@ function PrayerSlide({
 
             {/* Volgende-tag (alleen op highlighted vakje) */}
             {isNext && (
-              <div className="font-body uppercase tracking-widest text-slate-mosque/70 text-xs md:text-sm lg:text-base font-medium">
+              <div className="font-body uppercase tracking-widest text-taupe-dark/75 text-xs md:text-sm lg:text-base font-medium">
                 Volgende
               </div>
             )}
@@ -765,7 +776,7 @@ function ItemSlide({ item }: { item: TvAnnouncement }) {
           {item.arabic_text && (
             <div
               className={cn(
-                "font-arabic text-sand/95 max-w-[1400px] overflow-hidden",
+                "font-arabic text-taupe-dark max-w-[1400px] overflow-hidden",
                 // Forse Arabische typografie + ruime regelafstand
                 "text-4xl md:text-6xl lg:text-7xl xl:text-8xl",
                 "leading-[1.7] md:leading-[1.7] lg:leading-[1.7]",
@@ -785,7 +796,7 @@ function ItemSlide({ item }: { item: TvAnnouncement }) {
           {/* Optionele titel — kleiner dan Arabisch want context */}
           {item.title && (
             <h2
-              className="font-display text-xl md:text-2xl lg:text-3xl text-sand/80 leading-tight max-w-4xl overflow-hidden"
+              className="font-display text-xl md:text-2xl lg:text-3xl text-taupe-dark/80 leading-tight max-w-4xl overflow-hidden"
               style={{
                 display:           "-webkit-box",
                 WebkitLineClamp:   2,
@@ -799,7 +810,7 @@ function ItemSlide({ item }: { item: TvAnnouncement }) {
           {/* Vertaling onder Arabisch — substantieel, maar kleiner dan arabic_text */}
           {(item.translation || item.body) && (
             <p
-              className="font-body text-white/90 leading-relaxed max-w-5xl overflow-hidden text-2xl md:text-3xl lg:text-4xl"
+              className="font-body text-ink/90 leading-relaxed max-w-5xl overflow-hidden text-2xl md:text-3xl lg:text-4xl"
               style={{
                 display:           "-webkit-box",
                 WebkitLineClamp:   4,
@@ -812,7 +823,7 @@ function ItemSlide({ item }: { item: TvAnnouncement }) {
 
           {/* Bron / referentie / grade — klein onderaan */}
           {(item.source || item.reference || item.grade) && (
-            <div className="font-body text-base md:text-lg lg:text-xl text-sand/70 italic mt-2">
+            <div className="font-body text-base md:text-lg lg:text-xl text-taupe-dark/70 italic mt-2">
               {[item.source, item.reference].filter(Boolean).join(" — ")}
               {item.grade && (
                 <span className="ml-3 not-italic font-medium">[{item.grade}]</span>
@@ -824,7 +835,7 @@ function ItemSlide({ item }: { item: TvAnnouncement }) {
         <>
           {/* Voor andere types: titel groot, body eronder */}
           <h2
-            className="font-display text-white leading-tight max-w-[1400px] overflow-hidden text-4xl md:text-6xl lg:text-7xl xl:text-8xl"
+            className="font-display text-ink leading-tight max-w-[1400px] overflow-hidden text-4xl md:text-6xl lg:text-7xl xl:text-8xl"
             style={{
               display:           "-webkit-box",
               WebkitLineClamp:   3,
@@ -836,7 +847,7 @@ function ItemSlide({ item }: { item: TvAnnouncement }) {
 
           {item.arabic_text && (
             <div
-              className="font-arabic text-sand/90 leading-relaxed max-w-4xl overflow-hidden text-2xl md:text-3xl lg:text-4xl"
+              className="font-arabic text-taupe-dark/85 leading-relaxed max-w-4xl overflow-hidden text-2xl md:text-3xl lg:text-4xl"
               lang="ar"
               dir="rtl"
               style={{
@@ -851,7 +862,7 @@ function ItemSlide({ item }: { item: TvAnnouncement }) {
 
           {(item.translation || item.body) && (
             <p
-              className="font-body text-white/90 leading-relaxed max-w-5xl overflow-hidden text-xl md:text-2xl lg:text-3xl xl:text-4xl"
+              className="font-body text-ink/85 leading-relaxed max-w-5xl overflow-hidden text-xl md:text-2xl lg:text-3xl xl:text-4xl"
               style={{
                 display:           "-webkit-box",
                 WebkitLineClamp:   6,
@@ -869,34 +880,35 @@ function ItemSlide({ item }: { item: TvAnnouncement }) {
 
 // ─── Type-meta (label + accentkleur per slide-type) ───────────
 // Houdt elk type een rustige eigen identiteit — geen drukke palette.
+// Light-mode (juni 2026): zandkleur badges met taupe-dark accenten.
 const META_BY_TYPE: Record<
   TvAnnouncement["type"],
   { label: string; badge: string; dot: string }
 > = {
   hadith: {
     label: "Hadieth",
-    badge: "bg-white/10 border-sand/40 text-sand/95",
-    dot:   "bg-sand",
+    badge: "bg-white/60 border-sand-200 text-taupe-dark",
+    dot:   "bg-taupe-dark/70",
   },
   reminder: {
     label: "Herinnering",
-    badge: "bg-white/10 border-sand/40 text-sand/95",
-    dot:   "bg-sand",
+    badge: "bg-white/60 border-sand-200 text-taupe-dark",
+    dot:   "bg-taupe-dark/70",
   },
   announcement: {
     label: "Mededeling",
-    badge: "bg-white/15 border-white/40 text-white",
-    dot:   "bg-white",
+    badge: "bg-white/70 border-sand-200 text-ink",
+    dot:   "bg-taupe-dark",
   },
   event: {
     label: "Evenement",
-    badge: "bg-white/15 border-white/40 text-white",
-    dot:   "bg-white",
+    badge: "bg-white/70 border-sand-200 text-ink",
+    dot:   "bg-taupe-dark",
   },
   donation: {
     label: "Donatie",
-    badge: "bg-white/15 border-white/40 text-white",
-    dot:   "bg-white",
+    badge: "bg-white/70 border-sand-200 text-ink",
+    dot:   "bg-taupe-dark",
   },
 };
 
@@ -954,7 +966,7 @@ function DonationSlide({ data }: { data: TvDonationSlideData }) {
   return (
     <div className="w-full max-w-[1500px] flex flex-col items-center gap-6 lg:gap-10">
       {/* Type-label — consistent met andere item-slides */}
-      <div className="inline-flex items-center gap-3 lg:gap-5 rounded-full px-6 md:px-8 lg:px-10 py-2 md:py-3 lg:py-4 border-2 bg-white/15 border-white/40 text-white">
+      <div className="inline-flex items-center gap-3 lg:gap-5 rounded-full px-6 md:px-8 lg:px-10 py-2 md:py-3 lg:py-4 border-2 bg-white/70 border-sand-200 text-ink">
         <Heart
           aria-hidden="true"
           className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7"
@@ -973,7 +985,7 @@ function DonationSlide({ data }: { data: TvDonationSlideData }) {
         <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left gap-4 lg:gap-6 max-w-[700px]">
           {/* Titel */}
           <h2
-            className="font-display text-white leading-tight text-4xl md:text-5xl lg:text-6xl xl:text-7xl overflow-hidden"
+            className="font-display text-ink leading-tight text-4xl md:text-5xl lg:text-6xl xl:text-7xl overflow-hidden"
             style={{
               display:         "-webkit-box",
               WebkitLineClamp: 3,
@@ -986,7 +998,7 @@ function DonationSlide({ data }: { data: TvDonationSlideData }) {
           {/* Short text — fallback naar description als short_text leeg is */}
           {(campaign.short_text || campaign.description) && (
             <p
-              className="font-body text-sand/90 leading-relaxed text-xl md:text-2xl lg:text-3xl overflow-hidden"
+              className="font-body text-taupe-dark/85 leading-relaxed text-xl md:text-2xl lg:text-3xl overflow-hidden"
               style={{
                 display:         "-webkit-box",
                 WebkitLineClamp: 3,
@@ -1001,24 +1013,24 @@ function DonationSlide({ data }: { data: TvDonationSlideData }) {
           {showProgressBlock && (
             <div className="w-full max-w-[520px] flex flex-col gap-2 mt-2">
               <div className="flex items-baseline justify-between gap-4 font-display tabular-nums">
-                <span className="text-white text-3xl md:text-4xl lg:text-5xl">
+                <span className="text-ink text-3xl md:text-4xl lg:text-5xl">
                   {fmtEur(raisedEur)}
                 </span>
-                <span className="text-sand/70 text-xl md:text-2xl lg:text-3xl">
+                <span className="text-taupe-dark/70 text-xl md:text-2xl lg:text-3xl">
                   van {fmtEur(goalEur)}
                 </span>
               </div>
               {/* Balk — visuele clamp op 100, geen percentage-tekst om
                   niet competitief over te komen ("100% =klaar") en om
                   net-boven-100 niet aanstootgevend te tonen. */}
-              <div className="w-full h-3 lg:h-4 rounded-full bg-white/10 border border-white/15 overflow-hidden">
+              <div className="w-full h-3 lg:h-4 rounded-full bg-sand-200/60 border border-sand-200 overflow-hidden">
                 <div
-                  className="h-full bg-white/85 transition-all duration-500"
+                  className="h-full bg-taupe-dark/75 transition-all duration-500"
                   style={{ width: `${pctClamped}%` }}
                 />
               </div>
               {monthlyDonors > 0 && (
-                <div className="font-body text-sand/75 text-base md:text-lg lg:text-xl mt-1">
+                <div className="font-body text-taupe-dark/75 text-base md:text-lg lg:text-xl mt-1">
                   {monthlyDonors === 1
                     ? "1 maandelijkse donateur"
                     : `${monthlyDonors} maandelijkse donateurs`}
@@ -1028,7 +1040,7 @@ function DonationSlide({ data }: { data: TvDonationSlideData }) {
           )}
 
           {/* CTA-tekst onder info — verwijst naar QR rechts */}
-          <p className="font-body text-white/90 text-lg md:text-xl lg:text-2xl mt-2">
+          <p className="font-body text-ink/85 text-lg md:text-xl lg:text-2xl mt-2">
             Scan de QR-code voor directe donatie
           </p>
         </div>
@@ -1037,7 +1049,7 @@ function DonationSlide({ data }: { data: TvDonationSlideData }) {
         {qrSvg && (
           <div className="shrink-0 flex flex-col items-center gap-3">
             <div
-              className="bg-white rounded-2xl p-4 md:p-5 lg:p-6 shadow-2xl shadow-black/40"
+              className="bg-white rounded-2xl p-4 md:p-5 lg:p-6 shadow-2xl shadow-taupe/20 border border-sand-200"
               style={{
                 // Vaste pixel-afmetingen zorgen dat QR groot genoeg
                 // is om vanaf 4-5 meter te scannen. Op kleinere
@@ -1051,7 +1063,7 @@ function DonationSlide({ data }: { data: TvDonationSlideData }) {
               dangerouslySetInnerHTML={{ __html: qrSvg }}
             />
             {/* URL-fallback onder QR — voor wie geen telefoon bij zich heeft */}
-            <p className="font-body tabular-nums text-sand/75 text-base md:text-lg text-center max-w-[320px] break-all">
+            <p className="font-body tabular-nums text-taupe-dark/75 text-base md:text-lg text-center max-w-[320px] break-all">
               al-ghofraan.nl/doneren
             </p>
           </div>
@@ -1109,7 +1121,7 @@ function ActivitySlide({ data }: { data: TvActivitySlideData }) {
   return (
     <div className="w-full max-w-[1500px] flex flex-col items-center text-center gap-6 lg:gap-10">
       {/* Type-label */}
-      <div className="inline-flex items-center gap-3 lg:gap-5 rounded-full px-6 md:px-8 lg:px-10 py-2 md:py-3 lg:py-4 border-2 bg-white/15 border-white/40 text-white">
+      <div className="inline-flex items-center gap-3 lg:gap-5 rounded-full px-6 md:px-8 lg:px-10 py-2 md:py-3 lg:py-4 border-2 bg-white/70 border-sand-200 text-ink">
         <Calendar
           aria-hidden="true"
           className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7"
@@ -1122,7 +1134,7 @@ function ActivitySlide({ data }: { data: TvActivitySlideData }) {
 
       {/* Titel — leidend, groot */}
       <h2
-        className="font-display text-white leading-tight max-w-[1400px] overflow-hidden text-4xl md:text-6xl lg:text-7xl xl:text-8xl"
+        className="font-display text-ink leading-tight max-w-[1400px] overflow-hidden text-4xl md:text-6xl lg:text-7xl xl:text-8xl"
         style={{
           display:         "-webkit-box",
           WebkitLineClamp: 3,
@@ -1137,17 +1149,17 @@ function ActivitySlide({ data }: { data: TvActivitySlideData }) {
       {(dateLabel || activity.location) && (
         <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6">
           {dateLabel && (
-            <div className="inline-flex items-center gap-2 md:gap-3 rounded-full px-5 md:px-6 py-2 md:py-3 bg-white/10 border border-white/20">
+            <div className="inline-flex items-center gap-2 md:gap-3 rounded-full px-5 md:px-6 py-2 md:py-3 bg-white/55 border border-sand-200">
               <Calendar
                 aria-hidden="true"
-                className="w-5 h-5 md:w-6 md:h-6 text-sand/85"
+                className="w-5 h-5 md:w-6 md:h-6 text-taupe-dark/85"
                 strokeWidth={1.75}
               />
-              <span className="font-body text-white text-xl md:text-2xl lg:text-3xl capitalize">
+              <span className="font-body text-ink text-xl md:text-2xl lg:text-3xl capitalize">
                 {dateLabel}
                 {timeLabel && (
                   <>
-                    <span className="text-sand/60 mx-2">·</span>
+                    <span className="text-taupe-dark/60 mx-2">·</span>
                     <span className="tabular-nums">{timeLabel}</span>
                   </>
                 )}
@@ -1155,13 +1167,13 @@ function ActivitySlide({ data }: { data: TvActivitySlideData }) {
             </div>
           )}
           {activity.location && (
-            <div className="inline-flex items-center gap-2 md:gap-3 rounded-full px-5 md:px-6 py-2 md:py-3 bg-white/10 border border-white/20">
+            <div className="inline-flex items-center gap-2 md:gap-3 rounded-full px-5 md:px-6 py-2 md:py-3 bg-white/55 border border-sand-200">
               <MapPin
                 aria-hidden="true"
-                className="w-5 h-5 md:w-6 md:h-6 text-sand/85"
+                className="w-5 h-5 md:w-6 md:h-6 text-taupe-dark/85"
                 strokeWidth={1.75}
               />
-              <span className="font-body text-white text-xl md:text-2xl lg:text-3xl">
+              <span className="font-body text-ink text-xl md:text-2xl lg:text-3xl">
                 {activity.location}
               </span>
             </div>
@@ -1179,7 +1191,7 @@ function ActivitySlide({ data }: { data: TvActivitySlideData }) {
         if (!plain) return null;
         return (
           <p
-            className="font-body text-white/90 leading-relaxed max-w-5xl text-xl md:text-2xl lg:text-3xl xl:text-4xl overflow-hidden"
+            className="font-body text-ink/85 leading-relaxed max-w-5xl text-xl md:text-2xl lg:text-3xl xl:text-4xl overflow-hidden"
             style={{
               display:         "-webkit-box",
               WebkitLineClamp: 4,
@@ -1211,7 +1223,7 @@ function SeriesSlide({ data }: { data: TvSeriesSlideData }) {
         className={cn(
           "inline-flex items-center gap-3 lg:gap-5 rounded-full",
           "px-6 md:px-8 lg:px-10 py-2 md:py-3 lg:py-4",
-          "border-2 border-sand/50 bg-sand/15 text-sand",
+          "border-2 border-sand-200 bg-white/60 text-taupe-dark",
         )}
       >
         <BookOpen
@@ -1228,7 +1240,7 @@ function SeriesSlide({ data }: { data: TvSeriesSlideData }) {
       {item.arabic_text && (
         <div
           className={cn(
-            "font-arabic text-sand/95 max-w-[1400px] overflow-hidden",
+            "font-arabic text-taupe-dark max-w-[1400px] overflow-hidden",
             "text-4xl md:text-6xl lg:text-7xl xl:text-8xl",
             "leading-[1.7] md:leading-[1.7] lg:leading-[1.7]",
           )}
@@ -1246,7 +1258,7 @@ function SeriesSlide({ data }: { data: TvSeriesSlideData }) {
 
       {/* ─── Nederlandse vertaling (vereist) ─────────────────── */}
       <p
-        className="font-body text-white/90 leading-relaxed max-w-5xl overflow-hidden text-2xl md:text-3xl lg:text-4xl"
+        className="font-body text-ink/90 leading-relaxed max-w-5xl overflow-hidden text-2xl md:text-3xl lg:text-4xl"
         style={{
           display:         "-webkit-box",
           WebkitLineClamp: 4,
@@ -1258,7 +1270,7 @@ function SeriesSlide({ data }: { data: TvSeriesSlideData }) {
 
       {/* ─── Bron + authenticiteit klein onderaan ───────────── */}
       {(item.source || item.authenticity) && (
-        <div className="font-body text-base md:text-lg lg:text-xl text-sand/70 italic mt-2">
+        <div className="font-body text-base md:text-lg lg:text-xl text-taupe-dark/70 italic mt-2">
           {item.source}
           {item.authenticity && (
             <span className="ml-3 not-italic font-medium">[{item.authenticity}]</span>
