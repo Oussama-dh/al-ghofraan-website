@@ -295,7 +295,7 @@ export default async function ActivityDetailPage({ params }: Props) {
             // Flyer-presentatie: object-contain + aspect-ratio met max-h zorgt dat
             // verticale flyers/posters volledig zichtbaar blijven zonder de pagina
             // op te blazen op grote schermen (delivery 12).
-            <div className="relative w-full aspect-[4/5] sm:aspect-[3/4] max-h-[70vh] rounded-2xl overflow-hidden mb-8 shadow-md bg-sand-100">
+            <div className="relative w-full aspect-[4/5] sm:aspect-[3/4] max-h-[70vh] mb-8">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={imageUrl} alt={activity.title} className="absolute inset-0 w-full h-full object-contain" />
             </div>
