@@ -1,6 +1,7 @@
 // lib/quranRegistration.ts
 //
-// Koranonderwijs-inschrijving — gedeelde constanten, types en validatie.
+// Hifdh programma-inschrijving — gedeelde constanten, types en validatie.
+// (Bestandsnaam en interne namen blijven `quran*`; zie docs bij de migratie.)
 //
 // Deze module heeft GEEN server- of browser-afhankelijkheden en wordt
 // door zowel het formulier (client) als de API-route (server) gebruikt.
@@ -56,6 +57,9 @@ export const SPECIAL_CONSIDERATIONS_HINT =
 export const CONSENT_TEXT =
   "Ik verklaar dat bovenstaande gegevens naar waarheid zijn ingevuld en geef toestemming om deze gegevens te gebruiken voor de inschrijving en begeleiding binnen het onderwijs van Al-Ghofraan.";
 
+/** Maximum aantal kinderen in één inschrijving (misbruikpreventie, geen inhoudelijke limiet). */
+export const MAX_CHILDREN = 10;
+
 export const LEVEL_MIN = 1;
 export const LEVEL_MAX = 10;
 export const LEVELS: readonly number[] = Array.from(
@@ -99,12 +103,25 @@ export const LIMITS = {
 
 export type QuranRegistrationRaw = Record<string, unknown>;
 
-export interface QuranRegistrationData {
-  child_first_name:  string;
-  child_last_name:   string;
-  child_birth_date:  string; // YYYY-MM-DD
-  child_gender:      ChildGender;
+/** Eén kind binnen een inschrijving (record in quran_registration_children). */
+export interface ChildData {
+  first_name:  string;
+  last_name:   string;
+  birth_date:  string; // YYYY-MM-DD
+  gender:      ChildGender;
 
+  reading_level: number;
+  reading_notes: string | null;
+  writing_level: number;
+  writing_notes: string | null;
+
+  /** true = bijzonderheden waar tijdens de lessen rekening mee moet worden gehouden. */
+  special_considerations:       boolean;
+  special_considerations_notes: string | null;
+}
+
+/** Gezins-/inschrijvingsgegevens (record in quran_registrations) + kinderen. */
+export interface QuranRegistrationData {
   involved_guardians:       InvolvedGuardians;
   involved_guardians_other: string | null;
 
@@ -122,20 +139,14 @@ export interface QuranRegistrationData {
   secondary_contact_phone:          string | null;
   secondary_contact_email:          string | null;
 
-  reading_level: number;
-  reading_notes: string | null;
-  writing_level: number;
-  writing_notes: string | null;
-
-  /** true = er zijn bijzonderheden waar tijdens de lessen rekening mee moet worden gehouden. */
-  special_considerations:       boolean;
-  special_considerations_notes: string | null;
-
   payment_frequency: PaymentFrequency;
 
   additional_notes: string | null;
 
   consent_given: true;
+
+  /** Minimaal 1, maximaal MAX_CHILDREN. */
+  children: ChildData[];
 }
 
 export type FieldErrors = Record<string, string>;
@@ -296,12 +307,107 @@ function parseLevel(v: unknown): number | null {
   return Number.isInteger(n) && n >= LEVEL_MIN && n <= LEVEL_MAX ? n : null;
 }
 
+// ─── Kind-validatie ──────────────────────────────────────────
+
+/** Sleutel van een kindveld in FieldErrors: children.<index>.<veld>. */
+export function childErrorKey(index: number, field: string): string {
+  return `children.${index}.${field}`;
+}
+
+/**
+ * Valideert één kind. Foutmeldingen noemen het kind bij nummer zodra er
+ * meer dan één kind is ("Vul de voornaam van kind 2 in."). Retourneert
+ * null als er fouten zijn (die zijn dan aan `errors` toegevoegd).
+ */
+function validateChild(rawChild: unknown, index: number, total: number, errors: FieldErrors): ChildData | null {
+  if (!rawChild || typeof rawChild !== "object" || Array.isArray(rawChild)) {
+    errors[`children.${index}`] = `Kind ${index + 1} is ongeldig.`;
+    return null;
+  }
+  const c = rawChild as Record<string, unknown>;
+  const who = total === 1 ? "het kind" : `kind ${index + 1}`;
+  const local: FieldErrors = {};
+  const k = (f: string) => childErrorKey(index, f);
+
+  const first = cleanLine(c.first_name);
+  if (!first) local[k("first_name")] = `Vul de voornaam van ${who} in.`;
+  else if (first.length < LIMITS.nameMin || first.length > LIMITS.nameMax)
+    local[k("first_name")] = `De voornaam van ${who} moet tussen ${LIMITS.nameMin} en ${LIMITS.nameMax} tekens lang zijn.`;
+
+  const last = cleanLine(c.last_name);
+  if (!last) local[k("last_name")] = `Vul de achternaam van ${who} in.`;
+  else if (last.length < LIMITS.nameMin || last.length > LIMITS.nameMax)
+    local[k("last_name")] = `De achternaam van ${who} moet tussen ${LIMITS.nameMin} en ${LIMITS.nameMax} tekens lang zijn.`;
+
+  const birthRaw = str(c.birth_date).trim();
+  let birthDate = "";
+  if (!birthRaw) {
+    local[k("birth_date")] = `Vul de geboortedatum van ${who} in.`;
+  } else {
+    const dt = parseIsoDate(birthRaw);
+    if (!dt) local[k("birth_date")] = `Vul een geldige geboortedatum in voor ${who}.`;
+    else if (birthRaw > todayIsoAmsterdam()) local[k("birth_date")] = `De geboortedatum van ${who} mag niet in de toekomst liggen.`;
+    else if (birthRaw < minBirthDateIso()) local[k("birth_date")] = `Controleer de geboortedatum van ${who}; deze ligt te ver in het verleden.`;
+    else birthDate = birthRaw;
+  }
+
+  const gender = oneOf(CHILD_GENDER_OPTIONS, c.gender);
+  if (!gender) local[k("gender")] = `Kies of ${who} een jongen of een meisje is.`;
+
+  const reading = parseLevel(c.reading_level);
+  if (reading === null)
+    local[k("reading_level")] = `Kies een leesniveau van ${LEVEL_MIN} tot en met ${LEVEL_MAX} voor ${who}.`;
+  const writing = parseLevel(c.writing_level);
+  if (writing === null)
+    local[k("writing_level")] = `Kies een schrijfniveau van ${LEVEL_MIN} tot en met ${LEVEL_MAX} voor ${who}.`;
+
+  const readingNotes = optionalNotes(c.reading_notes, LIMITS.levelNotesMax, k("reading_notes"), local);
+  const writingNotes = optionalNotes(c.writing_notes, LIMITS.levelNotesMax, k("writing_notes"), local);
+
+  // Bijzonderheden: strikt boolean; null/undefined = nog niet gekozen.
+  let special: boolean | null = null;
+  if (c.special_considerations === true) special = true;
+  else if (c.special_considerations === false) special = false;
+
+  let specialNotes: string | null = null;
+  if (special === null) {
+    local[k("special_considerations")] =
+      `Geef aan of er bijzonderheden zijn waar wij tijdens de lessen rekening mee moeten houden bij ${who}.`;
+  } else if (special) {
+    const t = cleanMultiline(c.special_considerations_notes);
+    if (!t) local[k("special_considerations_notes")] = `Licht de bijzonderheden van ${who} kort toe.`;
+    else if (t.length > LIMITS.notesMax)
+      local[k("special_considerations_notes")] = `De toelichting bij ${who} is te lang (maximaal ${LIMITS.notesMax} tekens).`;
+    else specialNotes = t;
+  }
+  // special === false: eventuele toelichting wordt genegeerd en niet opgeslagen.
+
+  if (Object.keys(local).length > 0) {
+    Object.assign(errors, local);
+    return null;
+  }
+
+  return {
+    first_name: first,
+    last_name:  last,
+    birth_date: birthDate,
+    gender:     gender!,
+    reading_level: reading!,
+    reading_notes: readingNotes,
+    writing_level: writing!,
+    writing_notes: writingNotes,
+    special_considerations:       special!,
+    special_considerations_notes: specialNotes,
+  };
+}
+
 // ─── Hoofdvalidatie ──────────────────────────────────────────
 
 /**
- * Valideert de volledige inschrijving. Verzamelt ALLE fouten (per
- * veldnaam) zodat het formulier ze inline kan tonen. Bij ok:true is
- * `data` volledig genormaliseerd en bevat het alleen bekende velden —
+ * Valideert de volledige inschrijving (gedeelde gegevens + kinderen).
+ * Verzamelt ALLE fouten (per veldnaam) zodat het formulier ze inline kan
+ * tonen; kindvelden hebben de sleutel children.<index>.<veld>. Bij ok:true
+ * is `data` volledig genormaliseerd en bevat het alleen bekende velden —
  * onbekende sleutels in `raw` worden genegeerd.
  */
 export function validateQuranRegistration(raw: unknown): ValidationResult {
@@ -311,38 +417,7 @@ export function validateQuranRegistration(raw: unknown): ValidationResult {
       : {};
   const errors: FieldErrors = {};
 
-  // ── 1. Kind ────────────────────────────────────────────────
-  const childFirst = cleanLine(r.child_first_name);
-  if (!childFirst) errors.child_first_name = "Vul de voornaam van het kind in.";
-  else if (childFirst.length < LIMITS.nameMin || childFirst.length > LIMITS.nameMax)
-    errors.child_first_name = `De voornaam moet tussen ${LIMITS.nameMin} en ${LIMITS.nameMax} tekens lang zijn.`;
-
-  const childLast = cleanLine(r.child_last_name);
-  if (!childLast) errors.child_last_name = "Vul de achternaam van het kind in.";
-  else if (childLast.length < LIMITS.nameMin || childLast.length > LIMITS.nameMax)
-    errors.child_last_name = `De achternaam moet tussen ${LIMITS.nameMin} en ${LIMITS.nameMax} tekens lang zijn.`;
-
-  const birthRaw = str(r.child_birth_date).trim();
-  let birthDate = "";
-  if (!birthRaw) {
-    errors.child_birth_date = "Vul de geboortedatum van het kind in.";
-  } else {
-    const dt = parseIsoDate(birthRaw);
-    if (!dt) {
-      errors.child_birth_date = "Vul een geldige geboortedatum in.";
-    } else if (birthRaw > todayIsoAmsterdam()) {
-      errors.child_birth_date = "De geboortedatum mag niet in de toekomst liggen.";
-    } else if (birthRaw < minBirthDateIso()) {
-      errors.child_birth_date = "Controleer de geboortedatum; deze ligt te ver in het verleden.";
-    } else {
-      birthDate = birthRaw;
-    }
-  }
-
-  const childGender = oneOf(CHILD_GENDER_OPTIONS, r.child_gender);
-  if (!childGender) errors.child_gender = "Kies of het kind een jongen of een meisje is.";
-
-  // ── 2. Betrokken ouders/verzorgers ─────────────────────────
+  // ── Betrokken ouders/verzorgers ────────────────────────────
   const involved = oneOf(INVOLVED_GUARDIANS_OPTIONS, r.involved_guardians);
   let involvedOther: string | null = null;
   if (!involved) {
@@ -355,9 +430,8 @@ export function validateQuranRegistration(raw: unknown): ValidationResult {
       errors.involved_guardians_other = `Dit veld moet tussen ${LIMITS.otherMin} en ${LIMITS.otherMax} tekens lang zijn.`;
     else involvedOther = t;
   }
-  // involved !== "other": eventuele toelichting wordt genegeerd en niet opgeslagen.
 
-  // ── 3. Eerste contactpersoon (verplicht) ───────────────────
+  // ── Eerste contactpersoon (verplicht) ──────────────────────
   const c1Name = cleanLine(r.contact_1_name);
   if (!c1Name) errors.contact_1_name = "Vul de naam van de eerste contactpersoon in.";
   else if (c1Name.length < LIMITS.nameMin || c1Name.length > LIMITS.nameMax)
@@ -388,7 +462,7 @@ export function validateQuranRegistration(raw: unknown): ValidationResult {
   if (!c1Email) errors.contact_1_email = "Vul het e-mailadres van de eerste contactpersoon in.";
   else if (!isValidEmail(c1Email)) errors.contact_1_email = "Vul een geldig e-mailadres in.";
 
-  // ── 4. Tweede contactpersoon (optioneel) ───────────────────
+  // ── Tweede contactpersoon (optioneel) ──────────────────────
   const noSecond = r.secondary_contact_absent === true;
   const c2NameRaw     = cleanLine(r.secondary_contact_name);
   const c2RelationRaw = str(r.secondary_contact_relation).trim();
@@ -436,38 +510,21 @@ export function validateQuranRegistration(raw: unknown): ValidationResult {
     else c2Email = c2EmailRaw;
   }
 
-  // ── 5. Niveau Arabisch (lezen + schrijven, 1 t/m 10, verplicht) ──
-  const reading = parseLevel(r.reading_level);
-  if (reading === null)
-    errors.reading_level = `Kies een leesniveau van ${LEVEL_MIN} tot en met ${LEVEL_MAX}.`;
-  const writing = parseLevel(r.writing_level);
-  if (writing === null)
-    errors.writing_level = `Kies een schrijfniveau van ${LEVEL_MIN} tot en met ${LEVEL_MAX}.`;
-
-  // Toelichtingen zijn optioneel: leeg = null.
-  const readingNotes = optionalNotes(r.reading_notes, LIMITS.levelNotesMax, "reading_notes", errors);
-  const writingNotes = optionalNotes(r.writing_notes, LIMITS.levelNotesMax, "writing_notes", errors);
-
-  // ── 6. Bijzonderheden ──────────────────────────────────────
-  // Strikt boolean: null/undefined = nog niet gekozen.
-  let special: boolean | null = null;
-  if (r.special_considerations === true) special = true;
-  else if (r.special_considerations === false) special = false;
-
-  let specialNotes: string | null = null;
-  if (special === null) {
-    errors.special_considerations =
-      "Geef aan of er bijzonderheden zijn waar wij tijdens de lessen rekening mee moeten houden.";
-  } else if (special) {
-    const t = cleanMultiline(r.special_considerations_notes);
-    if (!t) errors.special_considerations_notes = "Licht de bijzonderheden kort toe.";
-    else if (t.length > LIMITS.notesMax)
-      errors.special_considerations_notes = `De toelichting is te lang (maximaal ${LIMITS.notesMax} tekens).`;
-    else specialNotes = t;
+  // ── Kinderen (1..MAX_CHILDREN) ─────────────────────────────
+  const rawChildren = r.children;
+  const children: ChildData[] = [];
+  if (!Array.isArray(rawChildren) || rawChildren.length === 0) {
+    errors.children = "Voeg minimaal één kind toe.";
+  } else if (rawChildren.length > MAX_CHILDREN) {
+    errors.children = `U kunt maximaal ${MAX_CHILDREN} kinderen in één inschrijving opgeven.`;
+  } else {
+    rawChildren.forEach((rc, i) => {
+      const child = validateChild(rc, i, rawChildren.length, errors);
+      if (child) children.push(child);
+    });
   }
-  // special === false: eventuele toelichting wordt genegeerd en niet opgeslagen.
 
-  // ── 7. Betaling en afronding ───────────────────────────────
+  // ── Betaling en afronding ──────────────────────────────────
   const payment = oneOf(PAYMENT_FREQUENCY_OPTIONS, r.payment_frequency);
   if (!payment) errors.payment_frequency = "Kies een betalingsperiode.";
 
@@ -481,11 +538,6 @@ export function validateQuranRegistration(raw: unknown): ValidationResult {
   return {
     ok: true,
     data: {
-      child_first_name:  childFirst,
-      child_last_name:   childLast,
-      child_birth_date:  birthDate,
-      child_gender:      childGender!,
-
       involved_guardians:       involved!,
       involved_guardians_other: involvedOther,
 
@@ -502,19 +554,13 @@ export function validateQuranRegistration(raw: unknown): ValidationResult {
       secondary_contact_phone:          c2Phone,
       secondary_contact_email:          c2Email,
 
-      reading_level: reading!,
-      reading_notes: readingNotes,
-      writing_level: writing!,
-      writing_notes: writingNotes,
-
-      special_considerations:       special!,
-      special_considerations_notes: specialNotes,
-
       payment_frequency: payment!,
 
       additional_notes: additionalNotes,
 
       consent_given: true,
+
+      children,
     },
   };
 }

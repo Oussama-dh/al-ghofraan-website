@@ -91,27 +91,30 @@ export interface ActivityNotificationData {
 }
 
 /**
- * Koranonderwijs-inschrijving. Bewust ZONDER de vrije-tekst toelichtingen
- * (bijzonderheden, lees-/schrijftoelichting, aanvullende opmerkingen):
- * die staan alleen in Directus (privacy — het gaat om informatie over een
- * kind). De mail meldt alleen ja/nee en verwijst naar Directus.
+ * Hifdh programma-inschrijving (één gezin, 1..n kinderen). Bewust ZONDER de
+ * vrije-tekst toelichtingen (bijzonderheden, lees-/schrijftoelichting,
+ * aanvullende opmerkingen): die staan alleen in Directus (privacy — het
+ * gaat om informatie over kinderen). De mail meldt alleen ja/nee en
+ * verwijst naar Directus.
  */
 export interface QuranRegistrationNotificationData {
   /** Directus-id van het aangemaakte record (om de inschrijving terug te vinden). */
   registrationId?:  string | number | null;
   submittedAt:      string;
-  childName:        string;
-  childBirthDate:   string;
-  childGender:      string;
   contact1: { name: string; relation: string; phone: string; email: string };
   contact2: { name: string; relation: string; phone: string; email: string } | null;
-  readingLevel:     number;
-  writingLevel:     number;
-  hasReadingNotes:  boolean;
-  hasWritingNotes:  boolean;
-  hasSpecialConsiderations: boolean;
+  children: Array<{
+    name:                     string;
+    birthDate:                string;
+    gender:                   string;
+    readingLevel:             number;
+    writingLevel:             number;
+    hasReadingNotes:          boolean;
+    hasWritingNotes:          boolean;
+    hasSpecialConsiderations: boolean;
+  }>;
   hasAdditionalNotes: boolean;
-  paymentFrequency: string;
+  paymentFrequency:   string;
 }
 
 // ─── Public API ──────────────────────────────────────────────
@@ -120,8 +123,11 @@ export async function notifyQuranRegistration(
   settings: SiteSettings | null,
   data:     QuranRegistrationNotificationData,
 ): Promise<void> {
-  await prepare(settings, "education", "koranonderwijs", () => ({
-    subject: `Nieuwe inschrijving Koranonderwijs: ${data.childName}`,
+  await prepare(settings, "education", "hifdh-programma", () => ({
+    subject:
+      data.children.length === 1
+        ? `Nieuwe inschrijving Hifdh programma: ${data.children[0].name}`
+        : `Nieuwe inschrijving Hifdh programma (${data.children.length} kinderen): ${data.contact1.name}`,
     body:    buildQuranBody(data),
   }));
 }
@@ -421,16 +427,13 @@ function buildActivityBody(d: ActivityNotificationData): string {
 }
 
 function buildQuranBody(d: QuranRegistrationNotificationData): string {
+  const n = d.children.length;
   const lines = [
-    "Er is een nieuwe inschrijving voor Koranonderwijs binnengekomen.",
+    "Er is een nieuwe inschrijving voor het Hifdh programma binnengekomen.",
     "",
-    `Ontvangen     : ${d.submittedAt}`,
-    ...(d.registrationId != null ? [`Referentie    : #${d.registrationId} (Directus)`] : []),
-    "",
-    "Kind:",
-    `  Naam          : ${d.childName}`,
-    `  Geboortedatum : ${d.childBirthDate}`,
-    `  Geslacht      : ${d.childGender}`,
+    `Ontvangen         : ${d.submittedAt}`,
+    ...(d.registrationId != null ? [`Referentie        : #${d.registrationId} (Directus)`] : []),
+    `Aantal kinderen   : ${n}`,
     "",
     "Eerste contactpersoon:",
     `  Naam     : ${d.contact1.name} (${d.contact1.relation})`,
@@ -446,16 +449,20 @@ function buildQuranBody(d: QuranRegistrationNotificationData): string {
       `  E-mail   : ${d.contact2.email}`,
     );
   }
+  lines.push("", n === 1 ? "Kind:" : "Kinderen:");
+  d.children.forEach((c, i) => {
+    lines.push(
+      `  ${i + 1}. ${c.name} — ${c.gender}, geboren ${c.birthDate}`,
+      `     Lezen: ${c.readingLevel}/10${c.hasReadingNotes ? " (met toelichting)" : ""} · Schrijven: ${c.writingLevel}/10${c.hasWritingNotes ? " (met toelichting)" : ""} · Bijzonderheden: ${c.hasSpecialConsiderations ? "Ja" : "Nee"}`,
+    );
+  });
   lines.push(
     "",
-    `Leesniveau Arabisch    : ${d.readingLevel}/10${d.hasReadingNotes ? " (met toelichting)" : ""}`,
-    `Schrijfniveau Arabisch : ${d.writingLevel}/10${d.hasWritingNotes ? " (met toelichting)" : ""}`,
-    `Bijzonderheden         : ${d.hasSpecialConsiderations ? "Ja" : "Nee"}`,
+    `Betalingsperiode       : ${d.paymentFrequency}`,
     `Aanvullende opmerkingen: ${d.hasAdditionalNotes ? "Ja" : "Nee"}`,
-    `Betalingsfrequentie    : ${d.paymentFrequency}`,
     "",
     "Om privacyredenen staan toelichtingen en opmerkingen niet in deze mail.",
-    "Bekijk de volledige inschrijving en beheer de status in Directus onder 'Quran Registrations'.",
+    "Bekijk de volledige inschrijving (inclusief de kinderen) en beheer de status in Directus onder 'Quran Registrations'.",
   );
   return lines.join("\n");
 }

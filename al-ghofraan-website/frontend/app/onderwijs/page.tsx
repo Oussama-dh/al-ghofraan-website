@@ -22,6 +22,7 @@ import {
   getAssetUrl,
 } from "@/lib/directus";
 import { formatDate, cn } from "@/lib/utils";
+import { getFixedEducationRoute } from "@/lib/educationRoutes";
 import type { EducationProgram } from "@/types/directus";
 
 export const dynamic = "force-dynamic";
@@ -179,6 +180,10 @@ function ProgramCard({ program }: { program: EducationProgram }) {
     typeof program.image === "string" ? program.image : program.image?.id;
   const imageUrl = imageId ? getAssetUrl(imageId) : null;
 
+  // Vaste inschrijfroute (bv. Hifdh programma): eigen actielabel. De link
+  // /onderwijs/<slug> resolvet vanzelf naar de vaste pagina.
+  const fixedRoute = getFixedEducationRoute(program.slug);
+
   const startDate = program.start_date
     ? formatDate(program.start_date, "d MMM yyyy")
     : null;
@@ -235,7 +240,7 @@ function ProgramCard({ program }: { program: EducationProgram }) {
         )}
 
         <div className="mt-4 flex items-center text-slate-mosque text-sm font-medium font-body group-hover:gap-2 transition-all">
-          <span>Bekijk programma</span>
+          <span>{fixedRoute?.ctaLabel ?? "Bekijk programma"}</span>
           <ArrowRight className="ml-1 w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </div>
       </div>

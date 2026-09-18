@@ -2,14 +2,20 @@
 
 // components/registration/QuranRegistrationForm.tsx
 //
-// Inschrijfformulier Koranonderwijs (/onderwijs/inschrijven).
+// Inschrijfformulier Hifdh programma (/onderwijs/hifdhprogramma).
 // Eén pagina met genummerde secties (cards), in dezelfde stijl als
 // RegistrationForm/ContactForm: inputClass/labelClass, rood sterretje
-// voor verplicht, <Button variant="primary">, foutkaart met role="alert".
+// voor verplicht, <Button>, foutkaart met role="alert".
+//
+// Eén inschrijving = gedeelde ouder-/contactgegevens + 1..MAX_CHILDREN
+// kinderen (dynamische array). Kinderen krijgen een stabiele client-key,
+// zodat verwijderen de invoer van de overige kinderen niet door elkaar haalt;
+// de zichtbare nummering ("Kind 1, Kind 2, …") volgt de positie.
 //
 // Validatie: dezelfde functie als de server (lib/quranRegistration.ts) —
 // de server blijft de autoriteit. Fouten verschijnen inline na de eerste
-// verzendpoging en verdwijnen live zodra ze zijn opgelost.
+// verzendpoging en verdwijnen live zodra ze zijn opgelost; foutsleutels
+// voor kinderen zijn children.<index>.<veld>.
 // Bij een mislukte verzending blijft ALLE invoer behouden.
 
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
@@ -18,13 +24,15 @@ import { cn } from "@/lib/utils";
 import {
   CHILD_GENDER_OPTIONS,
   CONSENT_TEXT,
-  SPECIAL_CONSIDERATIONS_HINT,
   INVOLVED_GUARDIANS_OPTIONS,
   LEVELS,
   LEVEL_EXPLANATION,
   LIMITS,
+  MAX_CHILDREN,
   PAYMENT_FREQUENCY_OPTIONS,
   RELATION_OPTIONS,
+  SPECIAL_CONSIDERATIONS_HINT,
+  childErrorKey,
   minBirthDateIso,
   todayIsoAmsterdam,
   validateQuranRegistration,
@@ -34,12 +42,23 @@ import {
 
 // ─── State ───────────────────────────────────────────────────
 
-interface FormState {
-  child_first_name: string;
-  child_last_name: string;
-  child_birth_date: string;
-  child_gender: string;
+interface ChildState {
+  /** Stabiele client-only sleutel (niet naar de server). */
+  key: string;
+  first_name: string;
+  last_name: string;
+  birth_date: string;
+  gender: string;
+  reading_level: string;
+  reading_notes: string;
+  writing_level: string;
+  writing_notes: string;
+  /** "" = nog niet gekozen */
+  special_considerations: "" | "yes" | "no";
+  special_considerations_notes: string;
+}
 
+interface FormState {
   involved_guardians: string;
   involved_guardians_other: string;
 
@@ -56,14 +75,7 @@ interface FormState {
   secondary_contact_phone: string;
   secondary_contact_email: string;
 
-  reading_level: string;
-  reading_notes: string;
-  writing_level: string;
-  writing_notes: string;
-
-  /** "" = nog niet gekozen */
-  special_considerations: "" | "yes" | "no";
-  special_considerations_notes: string;
+  children: ChildState[];
 
   payment_frequency: string;
   additional_notes: string;
@@ -73,54 +85,77 @@ interface FormState {
   website: string;
 }
 
-const INITIAL: FormState = {
-  child_first_name: "",
-  child_last_name: "",
-  child_birth_date: "",
-  child_gender: "",
-  involved_guardians: "",
-  involved_guardians_other: "",
-  contact_1_name: "",
-  contact_1_relation: "",
-  contact_1_relation_other: "",
-  contact_1_phone: "",
-  contact_1_email: "",
-  secondary_contact_absent: false,
-  secondary_contact_name: "",
-  secondary_contact_relation: "",
-  secondary_contact_relation_other: "",
-  secondary_contact_phone: "",
-  secondary_contact_email: "",
-  reading_level: "",
-  reading_notes: "",
-  writing_level: "",
-  writing_notes: "",
-  special_considerations: "",
-  special_considerations_notes: "",
-  payment_frequency: "",
-  additional_notes: "",
-  consent: false,
-  website: "",
-};
+function makeChild(key: string): ChildState {
+  return {
+    key,
+    first_name: "", last_name: "", birth_date: "", gender: "",
+    reading_level: "", reading_notes: "",
+    writing_level: "", writing_notes: "",
+    special_considerations: "", special_considerations_notes: "",
+  };
+}
 
-/** Volgorde waarin fouten voorkomen in het formulier (voor focus op eerste fout). */
-const FIELD_ORDER = [
-  "child_first_name", "child_last_name", "child_birth_date", "child_gender",
-  "involved_guardians", "involved_guardians_other",
-  "contact_1_name", "contact_1_relation", "contact_1_relation_other",
-  "contact_1_phone", "contact_1_email",
-  "secondary_contact_name", "secondary_contact_relation", "secondary_contact_relation_other",
-  "secondary_contact_phone", "secondary_contact_email",
+function makeInitial(firstKey: string): FormState {
+  return {
+    involved_guardians: "",
+    involved_guardians_other: "",
+    contact_1_name: "",
+    contact_1_relation: "",
+    contact_1_relation_other: "",
+    contact_1_phone: "",
+    contact_1_email: "",
+    secondary_contact_absent: false,
+    secondary_contact_name: "",
+    secondary_contact_relation: "",
+    secondary_contact_relation_other: "",
+    secondary_contact_phone: "",
+    secondary_contact_email: "",
+    children: [makeChild(firstKey)],
+    payment_frequency: "",
+    additional_notes: "",
+    consent: false,
+    website: "",
+  };
+}
+
+const CHILD_FIELDS = [
+  "first_name", "last_name", "birth_date", "gender",
   "reading_level", "reading_notes", "writing_level", "writing_notes",
   "special_considerations", "special_considerations_notes",
-  "payment_frequency", "additional_notes", "consent",
-];
+] as const;
+
+/** Volgorde waarin fouten voorkomen in het formulier (voor focus op eerste fout). */
+function fieldOrder(childCount: number): string[] {
+  const order = [
+    "involved_guardians", "involved_guardians_other",
+    "contact_1_name", "contact_1_relation", "contact_1_relation_other",
+    "contact_1_phone", "contact_1_email",
+    "secondary_contact_name", "secondary_contact_relation", "secondary_contact_relation_other",
+    "secondary_contact_phone", "secondary_contact_email",
+  ];
+  for (let i = 0; i < childCount; i += 1) {
+    order.push(`children.${i}`);
+    for (const f of CHILD_FIELDS) order.push(childErrorKey(i, f));
+  }
+  order.push("children", "payment_frequency", "additional_notes", "consent");
+  return order;
+}
+
+/** Foutsleutel → DOM-id. children.2.first_name → child-2-first_name */
+function toDomId(key: string): string {
+  const m = /^children\.(\d+)\.(.+)$/.exec(key);
+  return m ? `child-${m[1]}-${m[2]}` : key;
+}
+const cid = (index: number, field: string) => `child-${index}-${field}`;
 
 function toPayload(s: FormState) {
   return {
     ...s,
-    special_considerations:
-      s.special_considerations === "yes" ? true : s.special_considerations === "no" ? false : null,
+    children: s.children.map(({ key: _key, special_considerations, ...rest }) => ({
+      ...rest,
+      special_considerations:
+        special_considerations === "yes" ? true : special_considerations === "no" ? false : null,
+    })),
   };
 }
 
@@ -137,7 +172,7 @@ const labelClass = "block font-body text-sm font-medium text-ink mb-1.5";
 
 const SUCCESS_TITLE = "Inschrijving ontvangen";
 const SUCCESS_TEXT =
-  "Djazaak Allaahoe khayran. De inschrijving is succesvol ontvangen. Wij nemen contact met u op zodra de inschrijving is beoordeeld.";
+  "Djazaak Allaahoe khayran. De inschrijving voor het Hifdh programma is succesvol ontvangen. Wij nemen contact met u op zodra de inschrijving is beoordeeld.";
 
 // ─── Kleine presentatiecomponenten (buiten de hoofdcomponent) ─
 
@@ -372,14 +407,166 @@ function NotesField({
   );
 }
 
+/** Alle velden van één kind. Eigen component zodat de ids/namen per kind uniek zijn. */
+function ChildCard({
+  index, child, errors, today, minBirth, onChange, onRemove,
+}: {
+  index: number;
+  child: ChildState;
+  errors: FieldErrors;
+  today: string;
+  minBirth: string;
+  onChange: <K extends keyof ChildState>(key: K, value: ChildState[K]) => void;
+  onRemove: () => void;
+}) {
+  const err = (f: string) => errors[childErrorKey(index, f)];
+  const n = index + 1;
+  return (
+    <div
+      id={`child-${index}`}
+      tabIndex={-1}
+      aria-labelledby={`child-${index}-title`}
+      className="rounded-xl border border-sand-200 bg-sand-50/50 p-4 sm:p-5 space-y-5 focus:outline-none"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h3 id={`child-${index}-title`} className="font-display text-lg text-ink">
+          Kind {n}
+        </h3>
+        {index > 0 && (
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label={`Kind verwijderen (kind ${n})`}
+            className="inline-flex min-h-[44px] items-center rounded-lg px-3 font-body text-sm text-red-700 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+          >
+            Kind verwijderen
+          </button>
+        )}
+      </div>
+      {errors[`children.${index}`] && (
+        <p className="font-body text-sm text-red-700">{errors[`children.${index}`]}</p>
+      )}
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <TextField
+          id={cid(index, "first_name")} label="Voornaam" required error={err("first_name")}
+          inputProps={{
+            type: "text", autoComplete: "off", maxLength: LIMITS.nameMax,
+            value: child.first_name,
+            onChange: (e) => onChange("first_name", e.target.value),
+          }}
+        />
+        <TextField
+          id={cid(index, "last_name")} label="Achternaam" required error={err("last_name")}
+          inputProps={{
+            type: "text", autoComplete: "off", maxLength: LIMITS.nameMax,
+            value: child.last_name,
+            onChange: (e) => onChange("last_name", e.target.value),
+          }}
+        />
+        <TextField
+          id={cid(index, "birth_date")} label="Geboortedatum" required error={err("birth_date")}
+          inputProps={{
+            type: "date", min: minBirth, max: today, autoComplete: "off",
+            value: child.birth_date,
+            onChange: (e) => onChange("birth_date", e.target.value),
+            suppressHydrationWarning: true,
+          }}
+        />
+      </div>
+      <RadioCards
+        id={cid(index, "gender")} legend="Geslacht" required options={CHILD_GENDER_OPTIONS}
+        value={child.gender} onChange={(v) => onChange("gender", v)}
+        error={err("gender")}
+      />
+
+      <div className="space-y-4">
+        <LevelPicker
+          id={cid(index, "reading_level")}
+          legend="Hoe beoordeelt u het huidige leesniveau van uw kind in het Arabisch?"
+          value={child.reading_level}
+          onChange={(v) => onChange("reading_level", v)}
+          error={err("reading_level")}
+        />
+        <NotesField
+          id={cid(index, "reading_notes")}
+          label="Eventuele toelichting"
+          placeholder="Bijvoorbeeld: kent alleen losse letters, kan al woorden lezen, leest uit de Qur'an."
+          max={LIMITS.levelNotesMax}
+          value={child.reading_notes}
+          onChange={(v) => onChange("reading_notes", v)}
+          error={err("reading_notes")}
+        />
+      </div>
+      <div className="space-y-4">
+        <LevelPicker
+          id={cid(index, "writing_level")}
+          legend="Hoe beoordeelt u het huidige schrijfniveau van uw kind in het Arabisch?"
+          value={child.writing_level}
+          onChange={(v) => onChange("writing_level", v)}
+          error={err("writing_level")}
+        />
+        <NotesField
+          id={cid(index, "writing_notes")}
+          label="Eventuele toelichting"
+          max={LIMITS.levelNotesMax}
+          value={child.writing_notes}
+          onChange={(v) => onChange("writing_notes", v)}
+          error={err("writing_notes")}
+        />
+      </div>
+
+      <RadioCards
+        id={cid(index, "special_considerations")}
+        legend="Zijn er bijzonderheden waar wij tijdens de lessen rekening mee moeten houden?"
+        required
+        options={[
+          { value: "no", label: "Nee" },
+          { value: "yes", label: "Ja" },
+        ]}
+        value={child.special_considerations}
+        onChange={(v) => onChange("special_considerations", v)}
+        error={err("special_considerations")}
+      />
+      {child.special_considerations === "yes" && (
+        <NotesField
+          id={cid(index, "special_considerations_notes")}
+          label="Toelichting"
+          required
+          rows={4}
+          max={LIMITS.notesMax}
+          value={child.special_considerations_notes}
+          onChange={(v) => onChange("special_considerations_notes", v)}
+          error={err("special_considerations_notes")}
+          hint={
+            <>
+              <p>{SPECIAL_CONSIDERATIONS_HINT}</p>
+              <p>
+                Vul alleen informatie in die relevant is voor de begeleiding tijdens het onderwijs.
+                Diagnoses of medische gegevens die daarvoor niet nodig zijn hoeft u niet te vermelden.
+              </p>
+            </>
+          }
+        />
+      )}
+    </div>
+  );
+}
+
 // ─── Hoofdcomponent ──────────────────────────────────────────
 
 export default function QuranRegistrationForm({ className }: { className?: string }) {
-  const [form, setForm] = useState<FormState>(INITIAL);
+  // Sleutelteller voor kinderen (client-only). Start op 1 omdat "c0" het eerste kind is.
+  const nextKey = useRef(1);
+  const newKey = () => `c${nextKey.current++}`;
+
+  const [form, setForm] = useState<FormState>(() => makeInitial("c0"));
   const [status, setStatus] = useState<"idle" | "submitting" | "success">("idle");
   const [attempted, setAttempted] = useState(false);
   const [serverErrors, setServerErrors] = useState<FieldErrors>({});
   const [banner, setBanner] = useState<string>("");
+  /** Index van een zojuist toegevoegd kind: krijgt focus op zijn eerste veld. */
+  const [focusChild, setFocusChild] = useState<number | null>(null);
 
   // Synchrone guard tegen dubbel verzenden (state-updates zijn asynchroon).
   const inFlight = useRef(false);
@@ -389,15 +576,48 @@ export default function QuranRegistrationForm({ className }: { className?: strin
   const today = useMemo(() => todayIsoAmsterdam(), []);
   const minBirth = useMemo(() => minBirthDateIso(), []);
 
+  function clearServerErrors() {
+    setServerErrors((e) => (Object.keys(e).length ? {} : e));
+  }
+
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
     // Een verse wijziging maakt oude serverfouten voor dat veld ongeldig.
     setServerErrors((e) => {
       if (!(key in e)) return e;
       const rest = { ...e };
-      delete rest[key];
+      delete rest[key as string];
       return rest;
     });
+  }
+
+  function setChild<K extends keyof ChildState>(index: number, key: K, value: ChildState[K]) {
+    setForm((f) => ({
+      ...f,
+      children: f.children.map((c, i) => (i === index ? { ...c, [key]: value } : c)),
+    }));
+    setServerErrors((e) => {
+      const k = childErrorKey(index, key as string);
+      if (!(k in e)) return e;
+      const rest = { ...e };
+      delete rest[k];
+      return rest;
+    });
+  }
+
+  function addChild() {
+    if (form.children.length >= MAX_CHILDREN) return;
+    const index = form.children.length;
+    setForm((f) => ({ ...f, children: [...f.children, makeChild(newKey())] }));
+    clearServerErrors(); // indexen verschuiven niet bij toevoegen, maar houd het simpel
+    setFocusChild(index);
+  }
+
+  function removeChild(index: number) {
+    if (index === 0) return; // het eerste kind kan niet worden verwijderd
+    setForm((f) => ({ ...f, children: f.children.filter((_, i) => i !== index) }));
+    // Serverfouten zijn per index en zouden bij een ander kind terechtkomen.
+    setServerErrors({});
   }
 
   const clientErrors = useMemo<FieldErrors>(() => {
@@ -416,10 +636,21 @@ export default function QuranRegistrationForm({ className }: { className?: strin
     }
   }, [status]);
 
+  // Focus op het eerste veld van een nieuw kind
+  useEffect(() => {
+    if (focusChild === null) return;
+    const el = document.getElementById(cid(focusChild, "first_name"));
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      (el as HTMLElement).focus({ preventScroll: true });
+    }
+    setFocusChild(null);
+  }, [focusChild]);
+
   function focusFirstError(errs: FieldErrors) {
-    const first = FIELD_ORDER.find((k) => errs[k]);
+    const first = fieldOrder(form.children.length).find((k) => errs[k]);
     if (!first) return;
-    const el = document.getElementById(first);
+    const el = document.getElementById(toDomId(first));
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
       (el as HTMLElement).focus({ preventScroll: true });
@@ -468,7 +699,7 @@ export default function QuranRegistrationForm({ className }: { className?: strin
         return;
       }
 
-      setForm(INITIAL);
+      setForm(makeInitial(newKey()));
       setAttempted(false);
       setStatus("success");
     } catch {
@@ -503,6 +734,7 @@ export default function QuranRegistrationForm({ className }: { className?: strin
 
   const submitting = status === "submitting";
   const showSecond = !form.secondary_contact_absent;
+  const canAddChild = form.children.length < MAX_CHILDREN;
 
   // ─── Formulier ─────────────────────────────────────────────
   return (
@@ -521,45 +753,8 @@ export default function QuranRegistrationForm({ className }: { className?: strin
         />
       </div>
 
-      {/* ── 1. Gegevens kind ── */}
-      <Section number={1} title="Gegevens kind">
-        <div className="grid gap-5 sm:grid-cols-2">
-          <TextField
-            id="child_first_name" label="Voornaam" required error={errors.child_first_name}
-            inputProps={{
-              type: "text", autoComplete: "off", maxLength: LIMITS.nameMax,
-              value: form.child_first_name,
-              onChange: (e) => set("child_first_name", e.target.value),
-            }}
-          />
-          <TextField
-            id="child_last_name" label="Achternaam" required error={errors.child_last_name}
-            inputProps={{
-              type: "text", autoComplete: "off", maxLength: LIMITS.nameMax,
-              value: form.child_last_name,
-              onChange: (e) => set("child_last_name", e.target.value),
-            }}
-          />
-          <TextField
-            id="child_birth_date" label="Geboortedatum" required error={errors.child_birth_date}
-            className="sm:col-span-1"
-            inputProps={{
-              type: "date", min: minBirth, max: today, autoComplete: "off",
-              value: form.child_birth_date,
-              onChange: (e) => set("child_birth_date", e.target.value),
-              suppressHydrationWarning: true,
-            }}
-          />
-        </div>
-        <RadioCards
-          id="child_gender" legend="Geslacht" required options={CHILD_GENDER_OPTIONS}
-          value={form.child_gender} onChange={(v) => set("child_gender", v)}
-          error={errors.child_gender}
-        />
-      </Section>
-
-      {/* ── 2. Ouder(s) / verzorger(s) ── */}
-      <Section number={2} title="Ouder(s) / verzorger(s)">
+      {/* ── 1. Ouder(s) / verzorger(s) ── */}
+      <Section number={1} title="Ouder(s) / verzorger(s)">
         <RadioCards
           id="involved_guardians"
           legend="Welke ouder(s) of verzorger(s) zijn betrokken bij de opvoeding en het onderwijs van het kind?"
@@ -583,9 +778,9 @@ export default function QuranRegistrationForm({ className }: { className?: strin
         )}
       </Section>
 
-      {/* ── 3. Contactgegevens ── */}
+      {/* ── 2. Contactgegevens ── */}
       <Section
-        number={3}
+        number={2}
         title="Contactgegevens"
         description="Wij nemen contact op met de eerste contactpersoon. Een tweede contactpersoon is optioneel."
       >
@@ -706,84 +901,40 @@ export default function QuranRegistrationForm({ className }: { className?: strin
         </div>
       </Section>
 
-      {/* ── 4. Niveau Arabisch ── */}
-      <Section number={4} title="Niveau Arabisch">
-        <div className="space-y-4">
-          <LevelPicker
-            id="reading_level"
-            legend="Hoe beoordeelt u het huidige leesniveau van uw kind in het Arabisch?"
-            value={form.reading_level}
-            onChange={(v) => set("reading_level", v)}
-            error={errors.reading_level}
+      {/* ── 3. Kinderen ── */}
+      <Section
+        number={3}
+        title="Kinderen"
+        description="Vul de gegevens per kind in. U kunt meerdere kinderen in één inschrijving opgeven."
+      >
+        {form.children.map((child, index) => (
+          <ChildCard
+            key={child.key}
+            index={index}
+            child={child}
+            errors={errors}
+            today={today}
+            minBirth={minBirth}
+            onChange={(k, v) => setChild(index, k, v)}
+            onRemove={() => removeChild(index)}
           />
-          <NotesField
-            id="reading_notes"
-            label="Eventuele toelichting"
-            placeholder="Bijvoorbeeld: kent alleen losse letters, kan al woorden lezen, leest uit de Qur'an."
-            max={LIMITS.levelNotesMax}
-            value={form.reading_notes}
-            onChange={(v) => set("reading_notes", v)}
-            error={errors.reading_notes}
-          />
-        </div>
-        <div className="space-y-4">
-          <LevelPicker
-            id="writing_level"
-            legend="Hoe beoordeelt u het huidige schrijfniveau van uw kind in het Arabisch?"
-            value={form.writing_level}
-            onChange={(v) => set("writing_level", v)}
-            error={errors.writing_level}
-          />
-          <NotesField
-            id="writing_notes"
-            label="Eventuele toelichting"
-            max={LIMITS.levelNotesMax}
-            value={form.writing_notes}
-            onChange={(v) => set("writing_notes", v)}
-            error={errors.writing_notes}
-          />
-        </div>
-      </Section>
-
-      {/* ── 5. Bijzonderheden ── */}
-      <Section number={5} title="Bijzonderheden">
-        <RadioCards
-          id="special_considerations"
-          legend="Zijn er bijzonderheden waar wij tijdens de lessen rekening mee moeten houden?"
-          required
-          options={[
-            { value: "no", label: "Nee" },
-            { value: "yes", label: "Ja" },
-          ]}
-          value={form.special_considerations}
-          onChange={(v) => set("special_considerations", v)}
-          error={errors.special_considerations}
-        />
-        {form.special_considerations === "yes" && (
-          <NotesField
-            id="special_considerations_notes"
-            label="Toelichting"
-            required
-            rows={4}
-            max={LIMITS.notesMax}
-            value={form.special_considerations_notes}
-            onChange={(v) => set("special_considerations_notes", v)}
-            error={errors.special_considerations_notes}
-            hint={
-              <>
-                <p>{SPECIAL_CONSIDERATIONS_HINT}</p>
-                <p>
-                  Vul alleen informatie in die relevant is voor de begeleiding tijdens het onderwijs.
-                  Diagnoses of medische gegevens die daarvoor niet nodig zijn hoeft u niet te vermelden.
-                </p>
-              </>
-            }
-          />
+        ))}
+        {errors.children && (
+          <p id="children-error" className="font-body text-sm text-red-700">{errors.children}</p>
+        )}
+        {/* Technisch maximum (MAX_CHILDREN) wordt server-side afgedwongen; de
+            knop verdwijnt bij het maximum zonder extra uitleg aan de gebruiker. */}
+        {canAddChild && (
+          <div>
+            <Button type="button" variant="outline" onClick={addChild} className="w-full sm:w-auto">
+              + Kind toevoegen
+            </Button>
+          </div>
         )}
       </Section>
 
-      {/* ── 6. Betaling ── */}
-      <Section number={6} title="Betaling">
+      {/* ── 4. Betaling ── */}
+      <Section number={4} title="Betaling">
         <RadioCards
           id="payment_frequency"
           legend="Welke betalingsperiode heeft uw voorkeur?"
@@ -796,8 +947,8 @@ export default function QuranRegistrationForm({ className }: { className?: strin
         />
       </Section>
 
-      {/* ── 7. Afronding ── */}
-      <Section number={7} title="Afronding">
+      {/* ── 5. Afronding ── */}
+      <Section number={5} title="Afronding">
         <NotesField
           id="additional_notes"
           label="Heeft u nog vragen, opmerkingen of informatie die voor ons belangrijk kan zijn?"
@@ -858,7 +1009,7 @@ export default function QuranRegistrationForm({ className }: { className?: strin
 
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
           <Button type="submit" variant="primary" disabled={submitting} className="w-full sm:w-auto">
-            {submitting ? "Bezig met versturen…" : "Inschrijving versturen"}
+            {submitting ? "Bezig met versturen…" : "Inschrijven Hifdh programma"}
           </Button>
           <p className="font-body text-xs text-taupe-dark/80">
             Velden met <span className="text-red-600">*</span> zijn verplicht.

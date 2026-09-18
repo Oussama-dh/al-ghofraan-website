@@ -29,6 +29,17 @@ const nextConfig = {
   experimental: {
     typedRoutes: false,
   },
+
+  // Oude inschrijfroute Koranonderwijs → Hifdh programma (permanent, 308).
+  async redirects() {
+    return [
+      {
+        source: '/onderwijs/inschrijven',
+        destination: '/onderwijs/hifdhprogramma',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

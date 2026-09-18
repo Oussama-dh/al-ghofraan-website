@@ -21,6 +21,7 @@
 import type { MetadataRoute } from "next";
 import { getSiteUrl }         from "@/lib/utils";
 import { isReservedSlug }     from "@/lib/reservedSlugs";
+import { isReservedEducationSlug } from "@/lib/educationRoutes";
 import {
   getAllPageContentSlugs,
   getActivitySlugsForSitemap,
@@ -67,7 +68,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/",
     "/dawahcommissie",
     "/onderwijs",
-    "/onderwijs/inschrijven",
+    "/onderwijs/hifdhprogramma",
     "/artikelen",
     "/agenda",
     "/agenda/overzicht",
@@ -106,11 +107,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const activityPaths  = activitySlugs.map((e) => `/agenda/${e.slug}`);
   const vacancyPaths   = vacancySlugs.map((e) => `/vacatures/${e.slug}`);
   const articlePaths   = articleSlugs.map((slug) => `/artikelen/${slug}`);
-  // "inschrijven" is een vaste route (Koranonderwijs-formulier) en wint
-  // van /onderwijs/[slug]; een programma met die slug zou er onbereikbaar
-  // achter zitten en hoort dus niet dubbel in de sitemap.
+  // Vaste routes (Hifdh programma) winnen van /onderwijs/[slug] en staan al
+  // in staticPaths; de oude "inschrijven" is een redirect. Niet dubbel opnemen.
   const educationPaths = educationSlugs
-    .filter((slug) => slug !== "inschrijven")
+    .filter((slug) => !isReservedEducationSlug(slug))
     .map((slug) => `/onderwijs/${slug}`);
 
   const allPaths = [

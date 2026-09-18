@@ -1,15 +1,18 @@
 // app/api/onderwijs/inschrijven/route.ts
 //
-// Koranonderwijs-inschrijving. Schrijft één record naar de
-// `quran_registrations` collectie via het server-side Directus-token
-// (DIRECTUS_TOKEN) — dezelfde architectuur als /api/inschrijven.
+// Hifdh programma-inschrijving (één gezin, 1..n kinderen). Schrijft één
+// record naar `quran_registrations` met de kinderen als geneste
+// `children` (→ quran_registration_children), via het server-side
+// Directus-token (DIRECTUS_TOKEN) — dezelfde architectuur als /api/inschrijven.
 // De Public-rol in Directus heeft GEEN rechten op deze collectie.
 //
 // Flow:
 //   1. Body-grootte + JSON-parse (onvertrouwd)
 //   2. Honeypot (bots) → stil "succes", niets opslaan
 //   3. Volledige server-side validatie (lib/quranRegistration.ts)
-//   4. createItem met status "new"
+//   4. ÉÉN createItem met status "new" en geneste children. Directus voert
+//      geneste creates uit in één databasetransactie: mislukt een kind,
+//      dan wordt ook de hoofdregistratie teruggedraaid (geen halve inschrijving).
 //   5. Fail-soft admin-mail (mag het opslaan nooit laten falen)
 //
 // Logging: technische details (status/code/Directus-foutcodes), maar
@@ -31,7 +34,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const LOG = "[onderwijs/inschrijven]";
-const MAX_BODY_BYTES = 20_000;
+const MAX_BODY_BYTES = 100_000; // tot MAX_CHILDREN kinderen met toelichtingen
 const DIRECTUS_TIMEOUT_MS = 15_000;
 
 const MSG_GENERIC =
@@ -128,15 +131,18 @@ export async function POST(request: Request) {
   }
   const d = result.data;
 
-  // ── 4. Opslaan ─────────────────────────────────────────────
+  // ── 4. Opslaan (atomair: hoofdregistratie + kinderen in één request) ──
+  const { children, ...family } = d;
   let createdId: string | number | null = null;
   try {
     const created = await timeout(
       directusServer.request(
         createItem("quran_registrations", {
-          ...d,
+          ...family,
           status: "new",
-        }),
+          // Directus maakt geneste O2M-items aan binnen dezelfde transactie.
+          children: children.map((c, i) => ({ ...c, sort: i + 1 })),
+        } as never),
       ),
       DIRECTUS_TIMEOUT_MS,
     );
@@ -148,7 +154,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: MSG_UNAVAILABLE }, { status: 503 });
     }
     // Directus-validatie/permissie-fout betekent meestal een schema- of
-    // rechtenprobleem aan onze kant (seed-stap 60 niet gedraaid) — niet
+    // rechtenprobleem aan onze kant (seed-stap 60/61 niet gedraaid) — niet
     // iets dat de gebruiker kan oplossen.
     return NextResponse.json({ error: MSG_GENERIC }, { status: 500 });
   }
@@ -161,9 +167,6 @@ export async function POST(request: Request) {
       submittedAt:    new Intl.DateTimeFormat("nl-NL", {
         timeZone: "Europe/Amsterdam", dateStyle: "long", timeStyle: "short",
       }).format(new Date()),
-      childName:      `${d.child_first_name} ${d.child_last_name}`,
-      childBirthDate: d.child_birth_date,
-      childGender:    labelFor(CHILD_GENDER_OPTIONS, d.child_gender),
       contact1: {
         name:     d.contact_1_name,
         relation: d.contact_1_relation === "other"
@@ -182,13 +185,18 @@ export async function POST(request: Request) {
             email: d.secondary_contact_email ?? "",
           }
         : null,
-      readingLevel:     d.reading_level,
-      writingLevel:     d.writing_level,
-      hasReadingNotes:  d.reading_notes !== null,
-      hasWritingNotes:  d.writing_notes !== null,
-      hasSpecialConsiderations: d.special_considerations,
+      children: children.map((c) => ({
+        name:                     `${c.first_name} ${c.last_name}`,
+        birthDate:                c.birth_date,
+        gender:                   labelFor(CHILD_GENDER_OPTIONS, c.gender),
+        readingLevel:             c.reading_level,
+        writingLevel:             c.writing_level,
+        hasReadingNotes:          c.reading_notes !== null,
+        hasWritingNotes:          c.writing_notes !== null,
+        hasSpecialConsiderations: c.special_considerations,
+      })),
       hasAdditionalNotes: d.additional_notes !== null,
-      paymentFrequency: labelFor(PAYMENT_FREQUENCY_OPTIONS, d.payment_frequency),
+      paymentFrequency:   labelFor(PAYMENT_FREQUENCY_OPTIONS, d.payment_frequency),
     });
   } catch (notifyErr) {
     const msg = notifyErr instanceof Error ? notifyErr.message : String(notifyErr);

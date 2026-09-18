@@ -1031,16 +1031,38 @@ export interface HadiethSeriesItem {
 }
 
 // ─── SDK Schema ──────────────────────────────────────────────
-// ─── quran_registrations (Koranonderwijs-inschrijving) ───────
-// Aparte collectie: één record per kind. Statuswaarden delen de
-// conventie van `registrations` (RegistrationStatus). Zie
-// lib/quranRegistration.ts voor de toegestane keuzewaarden.
+// ─── Hifdh programma-inschrijving (relationeel model) ────────
+// quran_registrations = één record per inschrijving/gezin (ouders,
+// contactpersonen, betaling, toestemming, status). De kinderen staan in
+// quran_registration_children (M2O `registration`, O2M-alias `children`).
+// Statuswaarden delen de conventie van `registrations` (RegistrationStatus).
+// Zie lib/quranRegistration.ts voor de toegestane keuzewaarden.
+//
+// LEGACY: productie had eerst één kind per record (child_first_name,
+// reading_level, …). Die kolommen blijven bestaan (nullable + verborgen)
+// en worden door seed-stap 61 naar kind-records gekopieerd; nieuwe code
+// leest/schrijft ze niet meer.
+export interface QuranRegistrationChild {
+  id: number;
+  registration: number | QuranRegistration;
+  sort?: number | null;
+  first_name: string;
+  last_name: string;
+  birth_date: string;                 // YYYY-MM-DD
+  gender: Gender;
+  reading_level: number;              // 1..10 (1–4 zwak, 5 voldoende, 6–10 goed)
+  reading_notes?: string | null;
+  writing_level: number;              // 1..10 (1–4 zwak, 5 voldoende, 6–10 goed)
+  writing_notes?: string | null;
+  /** true = bijzonderheden waar tijdens de lessen rekening mee moet worden gehouden. */
+  special_considerations: boolean;
+  special_considerations_notes?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
 export interface QuranRegistration {
-  id: string;
-  child_first_name: string;
-  child_last_name: string;
-  child_birth_date: string;           // YYYY-MM-DD
-  child_gender: Gender;
+  id: number;
   involved_guardians: "both" | "one" | "other";
   involved_guardians_other?: string | null;
   contact_1_name: string;
@@ -1055,19 +1077,14 @@ export interface QuranRegistration {
   secondary_contact_relation_other?: string | null;
   secondary_contact_phone?: string | null;
   secondary_contact_email?: string | null;
-  reading_level: number;              // 1..10 (1–4 zwak, 5 voldoende, 6–10 goed)
-  reading_notes?: string | null;
-  writing_level: number;              // 1..10 (1–4 zwak, 5 voldoende, 6–10 goed)
-  writing_notes?: string | null;
-  /** true = bijzonderheden waar tijdens de lessen rekening mee moet worden gehouden. */
-  special_considerations: boolean;
-  special_considerations_notes?: string | null;
   payment_frequency: "monthly" | "quarterly" | "semiannual" | "yearly";
   additional_notes?: string | null;
   consent_given: boolean;
   status: RegistrationStatus;
   created_at?: string | null;
   updated_at?: string | null;
+  /** O2M naar quran_registration_children (bij nested create: array van kind-objecten zonder id). */
+  children?: Array<number | Partial<QuranRegistrationChild>>;
 }
 
 export interface DirectusSchema {
@@ -1083,6 +1100,7 @@ export interface DirectusSchema {
   education_programs: EducationProgram[];
   registrations: Registration[];
   quran_registrations: QuranRegistration[];
+  quran_registration_children: QuranRegistrationChild[];
   donations: Donation[];
   donation_campaigns: DonationCampaign[];
   articles: Article[];
