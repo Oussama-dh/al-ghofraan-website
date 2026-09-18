@@ -68,7 +68,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/",
     "/dawahcommissie",
     "/onderwijs",
-    "/onderwijs/hifdhprogramma",
     "/artikelen",
     "/agenda",
     "/agenda/overzicht",
@@ -107,8 +106,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const activityPaths  = activitySlugs.map((e) => `/agenda/${e.slug}`);
   const vacancyPaths   = vacancySlugs.map((e) => `/vacatures/${e.slug}`);
   const articlePaths   = articleSlugs.map((slug) => `/artikelen/${slug}`);
-  // Vaste routes (Hifdh programma) winnen van /onderwijs/[slug] en staan al
-  // in staticPaths; de oude "inschrijven" is een redirect. Niet dubbel opnemen.
+  // Hifdh programma komt (als gewoon programma) vanzelf mee via de slugs;
+  // de oude "inschrijven"-route is een redirect en hoort niet in de sitemap.
   const educationPaths = educationSlugs
     .filter((slug) => !isReservedEducationSlug(slug))
     .map((slug) => `/onderwijs/${slug}`);

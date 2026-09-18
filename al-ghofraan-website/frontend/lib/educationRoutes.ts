@@ -1,32 +1,33 @@
 // lib/educationRoutes.ts
 //
-// Vaste onderwijsroutes (onder /onderwijs) die een eigen pagina hebben en
-// daarom WINNEN van de dynamische /onderwijs/[slug]. Een programma in
-// `education_programs` met dezelfde slug wordt op /onderwijs als gewone
-// kaart getoond; de kaart linkt vanzelf naar de vaste route, en krijgt
-// hier zijn eigen actielabel.
-
-export interface FixedEducationRoute {
-  /** Actielabel op de programmakaart op /onderwijs. */
-  ctaLabel: string;
-}
+// Hifdh programma is een GEWOON onderwijsprogramma in `education_programs`
+// (slug `hifdhprogramma`) en wordt dus door /onderwijs/[slug] gerenderd met
+// dezelfde blokken als alle andere programma's (docent, doelgroep, planning,
+// locatie, beschrijving, flyer, inschrijven-flow). Alleen het formulier zelf
+// is Hifdh-specifiek (meerdere kinderen, niveaus, betaling) — zie
+// components/registration/QuranRegistrationForm.tsx.
 
 export const HIFDH_PROGRAM_SLUG = "hifdhprogramma";
 export const HIFDH_PROGRAM_TITLE = "Hifdh programma";
-export const HIFDH_PROGRAM_PATH = `/onderwijs/${HIFDH_PROGRAM_SLUG}`;
+export const HIFDH_PROGRAM_CTA = "Inschrijven Hifdh programma";
 
-export const FIXED_EDUCATION_ROUTES: Record<string, FixedEducationRoute> = {
-  [HIFDH_PROGRAM_SLUG]: { ctaLabel: "Inschrijven Hifdh programma" },
-};
-
-/** Oude vaste routes die nu een permanente redirect zijn (zie next.config.mjs). */
-export const REDIRECTED_EDUCATION_SLUGS: readonly string[] = ["inschrijven"];
-
-export function getFixedEducationRoute(slug: string): FixedEducationRoute | null {
-  return FIXED_EDUCATION_ROUTES[slug] ?? null;
+export function isHifdhProgram(slug: string | null | undefined): boolean {
+  return slug === HIFDH_PROGRAM_SLUG;
 }
 
-/** Slugs die nooit als /onderwijs/[slug]-detailpagina in de sitemap horen. */
+/** Actielabel op de programmakaart op /onderwijs (standaard: "Bekijk programma"). */
+const PROGRAM_CARD_CTA: Record<string, string> = {
+  [HIFDH_PROGRAM_SLUG]: HIFDH_PROGRAM_CTA,
+};
+
+export function getProgramCardCta(slug: string): string | null {
+  return PROGRAM_CARD_CTA[slug] ?? null;
+}
+
+/** Oude route /onderwijs/inschrijven is een permanente redirect (next.config.mjs). */
+export const REDIRECTED_EDUCATION_SLUGS: readonly string[] = ["inschrijven"];
+
+/** Slugs die niet als /onderwijs/[slug]-detailpagina in de sitemap horen. */
 export function isReservedEducationSlug(slug: string): boolean {
-  return slug in FIXED_EDUCATION_ROUTES || REDIRECTED_EDUCATION_SLUGS.includes(slug);
+  return REDIRECTED_EDUCATION_SLUGS.includes(slug);
 }

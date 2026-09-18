@@ -21,7 +21,14 @@
 //      verwijderd.
 //   4. Kopieert bestaande één-kind-inschrijvingen naar kind-records (alleen
 //      records die nog geen kinderen hebben → herhaalbaar zonder duplicaten).
-//   5. Werkt de collectie-weergave en lijstpreset bij (kinderen tonen).
+//   5. Admin-weergave in Directus (idempotent, ook op bestaande installaties):
+//        - Nederlandse collectienamen en veldlabels (translations)
+//        - veldvolgorde: status, Kinderen, contactgegevens, betaling, …
+//        - O2M-interface 'Kinderen' als tabel (naam, geboortedatum, geslacht,
+//          leesniveau, schrijfniveau, bijzonderheden) direct op de inschrijving
+//        - lijstpresets: kolommen staan in layout_query.tabular.fields (dáár
+//          leest Directus ze); verwijdert oude kind-kolommen ook uit
+//          gebruikersspecifieke presets
 //   6. Rechten: Onderwijs beheerder = read + update op de kinderen (alle
 //      velden, geen create/delete) — gelijk aan quran_registrations.
 //      Public krijgt niets.
@@ -157,6 +164,20 @@ const CHILD_FIELDS = [
   },
 ];
 
+// O2M-interface: kinderen als tabel direct op de inschrijving. Aanmaken en
+// koppelen van bestaande kinderen is uitgeschakeld (kinderen komen uit het
+// formulier); bewerken via de rij blijft mogelijk.
+const CHILDREN_INTERFACE_OPTIONS = {
+  layout: "table",
+  fields: [
+    "first_name", "last_name", "birth_date", "gender",
+    "reading_level", "writing_level", "special_considerations",
+  ],
+  enableCreate: false,
+  enableSelect: false,
+  limit: 20,
+};
+
 // Alias-veld op de inschrijving: toont de kinderen in Directus.
 const CHILDREN_ALIAS = {
   field: "children",
@@ -167,19 +188,97 @@ const CHILDREN_ALIAS = {
     interface: "list-o2m",
     special: ["o2m"],
     note: "Kinderen bij deze inschrijving",
-    options: {
-      template: "{{first_name}} {{last_name}} — lezen {{reading_level}}/10, schrijven {{writing_level}}/10",
-    },
+    options: CHILDREN_INTERFACE_OPTIONS,
     display: "related-values",
     display_options: { template: "{{first_name}} {{last_name}}" },
   },
 };
 
+// Kinderen als geneste kolommen (children.first_name → "Yusuf, Amina"): de kale
+// O2M-kolom "children" toont in de lijst alleen een telling ("2 Kinderen").
+const CHILDREN_LIST_COLUMNS = ["children.first_name", "children.last_name"];
+
 const LIST_FIELDS = [
-  "children",
+  ...CHILDREN_LIST_COLUMNS,
   "contact_1_name", "contact_1_phone",
   "payment_frequency",
   "status", "created_at",
+];
+
+const CHILD_LIST_FIELDS = [
+  "first_name", "last_name", "birth_date", "gender",
+  "reading_level", "writing_level", "special_considerations",
+  "registration",
+];
+
+// Nederlandse namen in Directus (translations). Voor zowel nl-NL als en-US, zodat
+// het ook klopt als het admin-account op Engels staat. Technische veldnamen blijven Engels.
+const LANGS = ["nl-NL", "en-US"];
+
+const COLLECTION_LABELS = {
+  [FAMILY]:   { translation: "Hifdh inschrijvingen", singular: "Hifdh inschrijving", plural: "Hifdh inschrijvingen" },
+  [CHILDREN]: { translation: "Hifdh kinderen",       singular: "Kind",               plural: "Kinderen" },
+};
+
+const FAMILY_LABELS = {
+  status: "Status",
+  children: "Kinderen",
+  involved_guardians: "Betrokken ouder(s)/verzorger(s)",
+  involved_guardians_other: "Betrokken — namelijk",
+  contact_1_name: "Eerste contactpersoon — naam",
+  contact_1_relation: "Eerste contactpersoon — relatie",
+  contact_1_relation_other: "Eerste contactpersoon — relatie (toelichting)",
+  contact_1_phone: "Eerste contactpersoon — telefoon",
+  contact_1_email: "Eerste contactpersoon — e-mail",
+  secondary_contact_absent: "Geen tweede contactpersoon",
+  secondary_contact_name: "Tweede contactpersoon — naam",
+  secondary_contact_relation: "Tweede contactpersoon — relatie",
+  secondary_contact_relation_other: "Tweede contactpersoon — relatie (toelichting)",
+  secondary_contact_phone: "Tweede contactpersoon — telefoon",
+  secondary_contact_email: "Tweede contactpersoon — e-mail",
+  payment_frequency: "Betalingsperiode",
+  additional_notes: "Aanvullende opmerkingen",
+  consent_given: "Toestemming gegeven",
+  created_at: "Ingeschreven op",
+  updated_at: "Laatst gewijzigd",
+};
+
+const CHILD_LABELS = {
+  registration: "Inschrijving",
+  sort: "Volgorde",
+  first_name: "Voornaam",
+  last_name: "Achternaam",
+  birth_date: "Geboortedatum",
+  gender: "Geslacht",
+  reading_level: "Leesniveau Arabisch",
+  reading_notes: "Toelichting leesniveau",
+  writing_level: "Schrijfniveau Arabisch",
+  writing_notes: "Toelichting schrijfniveau",
+  special_considerations: "Bijzonderheden",
+  special_considerations_notes: "Toelichting bijzonderheden",
+  created_at: "Aangemaakt",
+  updated_at: "Laatst gewijzigd",
+};
+
+// Volgorde in het Directus-formulier (lager = hoger). Kinderen direct onder de status;
+// legacy-velden (verborgen) onderaan.
+const FAMILY_ORDER = [
+  "id", "status", "children",
+  "involved_guardians", "involved_guardians_other",
+  "contact_1_name", "contact_1_relation", "contact_1_relation_other", "contact_1_phone", "contact_1_email",
+  "secondary_contact_absent", "secondary_contact_name", "secondary_contact_relation",
+  "secondary_contact_relation_other", "secondary_contact_phone", "secondary_contact_email",
+  "payment_frequency", "additional_notes", "consent_given",
+  "created_at", "updated_at",
+  ...LEGACY_FIELDS,
+];
+
+const CHILD_ORDER = [
+  "id", "registration", "sort",
+  "first_name", "last_name", "birth_date", "gender",
+  "reading_level", "reading_notes", "writing_level", "writing_notes",
+  "special_considerations", "special_considerations_notes",
+  "created_at", "updated_at",
 ];
 
 export async function setupHifdhChildrenModel(client) {
@@ -217,8 +316,9 @@ export async function setupHifdhChildrenModel(client) {
   // 4. Data migreren
   await migrateLegacyRows(client);
 
-  // 5. Weergave + lijstpreset
+  // 5. Weergave: collectienamen, labels, volgorde, O2M-interface, presets
   await updateFamilyPresentation(client);
+  await updateAdminPresentation(client);
 
   // 6. Rechten
   await setupPermissions(client);
@@ -310,13 +410,13 @@ async function migrateLegacyRows(client) {
   console.log(`  ✓ migratie: ${migrated} inschrijving(en) naar kind-record gekopieerd, ${skipped} overgeslagen (al gemigreerd)`);
 }
 
-// ─── Weergave + lijstpreset ──────────────────────────────────
+// ─── Weergave: collectie-instellingen ────────────────────────
 
 async function updateFamilyPresentation(client) {
   // Collectie-weergave: op naam eerste contactpersoon i.p.v. de (legacy) kindnaam.
   const wanted = {
     display_template: "{{contact_1_name}}",
-    note: "Inschrijvingen Hifdh programma (/onderwijs/hifdhprogramma). Eén record per inschrijving; de kinderen staan in het veld 'Kinderen'. Medewerkers volgen op via de status.",
+    note: "Inschrijvingen Hifdh programma. Eén record per inschrijving; de kinderen staan direct onder de status in het veld 'Kinderen'. Medewerkers volgen op via de status.",
   };
   const cur = (await client.get(`/collections/${FAMILY}`))?.data?.meta || {};
   if (cur.display_template !== wanted.display_template || cur.note !== wanted.note) {
@@ -325,36 +425,149 @@ async function updateFamilyPresentation(client) {
   } else {
     console.log(`  · ${FAMILY}: collectie-weergave al up-to-date`);
   }
+}
 
-  // Globale lijstpreset
+// ─── Admin-weergave: labels, volgorde, O2M-interface, presets ─
+
+const sameJson = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+const translationsFor = (text) => LANGS.map((language) => ({ language, translation: text }));
+
+async function updateAdminPresentation(client) {
+  // 1. Collectienamen (Nederlands)
+  for (const [collection, l] of Object.entries(COLLECTION_LABELS)) {
+    const wanted = LANGS.map((language) => ({ language, translation: l.translation, singular: l.singular, plural: l.plural }));
+    const cur = (await client.get(`/collections/${collection}`))?.data?.meta?.translations;
+    if (!sameJson(cur, wanted)) {
+      await client.patch(`/collections/${collection}`, { meta: { translations: wanted } });
+      console.log(`  ↻ ${collection}: Nederlandse collectienaam`);
+    } else {
+      console.log(`  · ${collection}: collectienaam al up-to-date`);
+    }
+  }
+
+  // 2. Veldlabels
+  await ensureLabels(client, FAMILY, FAMILY_LABELS);
+  await ensureLabels(client, CHILDREN, CHILD_LABELS);
+
+  // 3. O2M-interface 'Kinderen' als tabel
+  const alias = (await client.get(`/fields/${FAMILY}/children`))?.data;
+  if (alias && !sameJson(alias.meta?.options, CHILDREN_INTERFACE_OPTIONS)) {
+    await client.patch(`/fields/${FAMILY}/children`, {
+      type: alias.type,
+      meta: { options: CHILDREN_INTERFACE_OPTIONS, interface: "list-o2m", width: "full" },
+    });
+    console.log(`  ↻ ${FAMILY}.children: O2M-interface als tabel`);
+  } else {
+    console.log(`  · ${FAMILY}.children: O2M-interface al up-to-date`);
+  }
+
+  // 4. Veldvolgorde
+  await ensureOrder(client, FAMILY, FAMILY_ORDER);
+  await ensureOrder(client, CHILDREN, CHILD_ORDER);
+
+  // 5. Lijstpresets (kolommen horen in layout_query.tabular.fields)
+  await ensureGlobalPreset(client, FAMILY, LIST_FIELDS, ["-created_at"]);
+  await ensureGlobalPreset(client, CHILDREN, CHILD_LIST_FIELDS, ["-registration", "sort"]);
+  await sanitizeUserPresets(client, FAMILY, LIST_FIELDS);
+}
+
+async function ensureLabels(client, collection, labels) {
+  let changed = 0;
+  for (const [field, text] of Object.entries(labels)) {
+    let existing;
+    try {
+      existing = (await client.get(`/fields/${collection}/${field}`))?.data;
+    } catch (err) {
+      if (/→\s*40[34]/.test(err.message || "")) continue;
+      throw err;
+    }
+    const wanted = translationsFor(text);
+    if (sameJson(existing?.meta?.translations, wanted)) continue;
+    await client.patch(`/fields/${collection}/${field}`, { type: existing.type, meta: { translations: wanted } });
+    changed += 1;
+  }
+  console.log(changed ? `  ↻ ${collection}: ${changed} veldlabel(s) Nederlands` : `  · ${collection}: veldlabels al up-to-date`);
+}
+
+async function ensureOrder(client, collection, order) {
+  const fields = (await client.get(`/fields/${collection}`))?.data || [];
+  const current = Object.fromEntries(fields.map((f) => [f.field, f.meta?.sort ?? null]));
+  const updates = [];
+  order.forEach((field, i) => {
+    if (field in current && current[field] !== i + 1) updates.push({ field, meta: { sort: i + 1 } });
+  });
+  if (updates.length === 0) {
+    console.log(`  · ${collection}: veldvolgorde al up-to-date`);
+    return;
+  }
+  await client.patch(`/fields/${collection}`, updates);
+  console.log(`  ↻ ${collection}: veldvolgorde bijgewerkt (${updates.length} velden)`);
+}
+
+async function ensureGlobalPreset(client, collection, fields, sort) {
   const search = await client.get(
-    `/presets?filter[collection][_eq]=${encodeURIComponent(FAMILY)}` +
+    `/presets?filter[collection][_eq]=${encodeURIComponent(collection)}` +
       `&filter[role][_null]=true&filter[user][_null]=true&limit=1`,
   );
   const existing = search?.data?.[0];
+  // Directus leest de kolommen uit layout_query.tabular.fields (niet uit layout_options).
   const payload = {
-    collection: FAMILY,
+    collection,
     role: null,
     user: null,
     layout: "tabular",
-    layout_query: { tabular: { sort: ["-created_at"] } },
-    layout_options: { tabular: { fields: LIST_FIELDS } },
+    layout_query: { tabular: { fields, sort } },
+    layout_options: { tabular: {} },
   };
   if (!existing) {
     await client.post("/presets", payload);
-    console.log(`  ✓ ${FAMILY}: lijstpreset aangemaakt`);
-  } else {
-    const same =
-      existing.layout === payload.layout &&
-      JSON.stringify(existing.layout_options) === JSON.stringify(payload.layout_options) &&
-      JSON.stringify(existing.layout_query) === JSON.stringify(payload.layout_query);
-    if (same) {
-      console.log(`  · ${FAMILY}: lijstpreset al up-to-date`);
-    } else {
-      await client.patch(`/presets/${existing.id}`, payload);
-      console.log(`  ↻ ${FAMILY}: lijstpreset bijgewerkt`);
-    }
+    console.log(`  ✓ ${collection}: lijstpreset aangemaakt`);
+    return;
   }
+  const same =
+    existing.layout === payload.layout &&
+    sameJson(existing.layout_query, payload.layout_query) &&
+    sameJson(existing.layout_options, payload.layout_options);
+  if (same) {
+    console.log(`  · ${collection}: lijstpreset al up-to-date`);
+  } else {
+    await client.patch(`/presets/${existing.id}`, payload);
+    console.log(`  ↻ ${collection}: lijstpreset bijgewerkt (kolommen in layout_query)`);
+  }
+}
+
+/**
+ * Gebruikers- of rolspecifieke presets (Directus maakt die automatisch aan zodra
+ * iemand de lijst bekijkt) kunnen de oude kind-kolommen nog bevatten en winnen van
+ * de globale preset. Verwijder alleen de legacy-kolommen; overige eigen keuzes
+ * van de gebruiker blijven staan.
+ */
+async function sanitizeUserPresets(client, collection, defaultFields) {
+  const presets = (await client.get(
+    `/presets?filter[collection][_eq]=${encodeURIComponent(collection)}&limit=-1`,
+  ))?.data || [];
+  let fixed = 0;
+  for (const p of presets) {
+    if (p.role === null && p.user === null) continue; // globale preset: al afgehandeld
+    const q = p.layout_query?.tabular || {};
+    const o = p.layout_options?.tabular || {};
+    const fromQuery = Array.isArray(q.fields) ? q.fields : null;
+    const fromOptions = Array.isArray(o.fields) ? o.fields : null;
+    const current = fromQuery || fromOptions;
+    const usesLegacy = current && current.some((f) => LEGACY_FIELDS.includes(f));
+    const sortLegacy = Array.isArray(q.sort) && q.sort.some((f) => LEGACY_FIELDS.includes(String(f).replace(/^-/, "")));
+    if (!usesLegacy && !sortLegacy) continue;
+    let fields = (current || defaultFields).filter((f) => !LEGACY_FIELDS.includes(f));
+    // Kale "children"-kolom (telling) vervangen door de geneste kindnamen.
+    fields = fields.flatMap((f) => (f === "children" ? CHILDREN_LIST_COLUMNS : [f]));
+    if (!fields.some((f) => f.startsWith("children."))) fields = [...CHILDREN_LIST_COLUMNS, ...fields];
+    const query = { ...(p.layout_query || {}), tabular: { ...q, fields, sort: sortLegacy ? ["-created_at"] : q.sort } };
+    await client.patch(`/presets/${p.id}`, { layout_query: query });
+    fixed += 1;
+  }
+  console.log(fixed
+    ? `  ↻ ${collection}: ${fixed} gebruikerspreset(s) ontdaan van oude kind-kolommen`
+    : `  · ${collection}: geen gebruikerspresets met oude kind-kolommen`);
 }
 
 // ─── Rechten ─────────────────────────────────────────────────

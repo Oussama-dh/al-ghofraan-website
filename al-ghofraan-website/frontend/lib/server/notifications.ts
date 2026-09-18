@@ -462,7 +462,7 @@ function buildQuranBody(d: QuranRegistrationNotificationData): string {
     `Aanvullende opmerkingen: ${d.hasAdditionalNotes ? "Ja" : "Nee"}`,
     "",
     "Om privacyredenen staan toelichtingen en opmerkingen niet in deze mail.",
-    "Bekijk de volledige inschrijving (inclusief de kinderen) en beheer de status in Directus onder 'Quran Registrations'.",
+    "Bekijk de volledige inschrijving (inclusief de kinderen) en beheer de status in Directus onder 'Hifdh inschrijvingen'.",
   );
   return lines.join("\n");
 }

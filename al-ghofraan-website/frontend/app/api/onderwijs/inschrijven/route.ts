@@ -10,6 +10,9 @@
 //   1. Body-grootte + JSON-parse (onvertrouwd)
 //   2. Honeypot (bots) → stil "succes", niets opslaan
 //   3. Volledige server-side validatie (lib/quranRegistration.ts)
+//   3b. Programma-check: Hifdh programma moet in education_programs bestaan,
+//      gepubliceerd zijn en `registration_enabled` hebben (zelfde schakelaar als
+//      het algemene onderwijsformulier: 'Inschrijven gesloten' sluit ook de API)
 //   4. ÉÉN createItem met status "new" en geneste children. Directus voert
 //      geneste creates uit in één databasetransactie: mislukt een kind,
 //      dan wordt ook de hoofdregistratie teruggedraaid (geen halve inschrijving).
@@ -19,9 +22,10 @@
 // nooit namen, telefoonnummers, e-mailadressen of de toelichting.
 
 import { NextResponse } from "next/server";
-import { createItem } from "@directus/sdk";
+import { createItem, readItems } from "@directus/sdk";
 import { directusServer, getSiteSettings } from "@/lib/directus";
 import { notifyQuranRegistration } from "@/lib/server/notifications";
+import { HIFDH_PROGRAM_SLUG } from "@/lib/educationRoutes";
 import {
   CHILD_GENDER_OPTIONS,
   PAYMENT_FREQUENCY_OPTIONS,
@@ -130,6 +134,33 @@ export async function POST(request: Request) {
     );
   }
   const d = result.data;
+
+  // ── 3b. Programma open voor inschrijving? ─────────────────
+  try {
+    const rows = (await timeout(
+      directusServer.request(
+        readItems("education_programs", {
+          filter: { slug: { _eq: HIFDH_PROGRAM_SLUG }, status: { _eq: "published" } } as never,
+          fields: ["id", "registration_enabled"] as never,
+          limit: 1,
+        }),
+      ),
+      DIRECTUS_TIMEOUT_MS,
+    )) as unknown as Array<{ registration_enabled?: boolean }>;
+    if (!rows[0] || rows[0].registration_enabled !== true) {
+      return NextResponse.json(
+        { error: "Inschrijven voor het Hifdh programma is momenteel gesloten." },
+        { status: 403 },
+      );
+    }
+  } catch (err) {
+    const { kind, detail } = describeError(err);
+    console.error(`${LOG} programma-check mislukt (${kind}): ${detail}`);
+    return NextResponse.json(
+      { error: kind === "unreachable" || kind === "timeout" ? MSG_UNAVAILABLE : MSG_GENERIC },
+      { status: kind === "unreachable" || kind === "timeout" ? 503 : 500 },
+    );
+  }
 
   // ── 4. Opslaan (atomair: hoofdregistratie + kinderen in één request) ──
   const { children, ...family } = d;

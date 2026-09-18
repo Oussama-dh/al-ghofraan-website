@@ -5,6 +5,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
+import { inputClass, labelClass } from "./formStyles";
 import type {
   Gender,
   RegistrationType,
@@ -414,15 +415,6 @@ export default function RegistrationForm({
       </div>
     );
   }
-
-  const inputClass =
-    "w-full rounded-lg border border-sand-200 bg-white px-4 py-2.5 " +
-    "font-body text-base text-ink placeholder:text-taupe/60 " +
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-mosque " +
-    "focus-visible:border-slate-mosque transition-colors " +
-    "disabled:bg-sand-100 disabled:cursor-not-allowed";
-
-  const labelClass = "block font-body text-sm font-medium text-ink mb-1.5";
 
   // ─── Render ──────────────────────────────────────────────
   return (

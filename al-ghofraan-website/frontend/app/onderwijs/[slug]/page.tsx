@@ -7,6 +7,8 @@ import Button            from "@/components/ui/Button";
 import { Icon }          from "@/lib/icons";
 import RegistrationForm  from "@/components/registration/RegistrationForm";
 import RegistrationFormReveal from "@/components/registration/RegistrationFormReveal";
+import QuranRegistrationForm from "@/components/registration/QuranRegistrationForm";
+import { isHifdhProgram } from "@/lib/educationRoutes";
 import {
   getEducationProgramBySlug,
   getAssetUrl,
@@ -60,25 +62,38 @@ export default async function EducationProgramDetailPage({ params }: Props) {
   // Het inschrijfformulier — wordt gebruikt in beide takken (direct of na
   // reveal). We renderen het hier één keer als JSX-tree zodat de
   // RegistrationFormReveal-wrapper hem als children kan ontvangen.
+  // Hifdh programma gebruikt dezelfde pagina en dezelfde inschrijf-flow (reveal,
+  // teksten, gesloten-state), maar met het Hifdh-formulier (meerdere kinderen,
+  // niveaus, betaling) i.p.v. het algemene RegistrationForm.
+  const contentTexts = {
+    intro_title:     program.registration_intro_title,
+    intro_text:      program.registration_intro_text,
+    button_text:     program.registration_button_text,
+    success_message: program.registration_success_message,
+    extra_note:      program.registration_extra_note,
+  };
   const formNode = program.registration_enabled ? (
+    isHifdhProgram(program.slug) ? (
+      <QuranRegistrationForm
+        sourceSlug={program.slug}
+        sourceTitle={program.title}
+        anchorId="inschrijven"
+        contentTexts={contentTexts}
+      />
+    ) : (
     <RegistrationForm
       type="education"
       sourceSlug={program.slug}
       sourceTitle={program.title}
       targetGender={program.target_gender ?? null}
       anchorId="inschrijven"
-      contentTexts={{
-        intro_title:     program.registration_intro_title,
-        intro_text:      program.registration_intro_text,
-        button_text:     program.registration_button_text,
-        success_message: program.registration_success_message,
-        extra_note:      program.registration_extra_note,
-      }}
+      contentTexts={contentTexts}
       termsUrl={settings?.registration_terms_url ?? null}
       termsLabel={settings?.registration_terms_label ?? null}
       requireTermsAcceptance={requireTerms}
       allowMultipleStudents={allowMultipleStudents}
     />
+    )
   ) : null;
 
   return (
