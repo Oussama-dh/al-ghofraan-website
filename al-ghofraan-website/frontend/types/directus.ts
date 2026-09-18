@@ -1031,6 +1031,45 @@ export interface HadiethSeriesItem {
 }
 
 // ─── SDK Schema ──────────────────────────────────────────────
+// ─── quran_registrations (Koranonderwijs-inschrijving) ───────
+// Aparte collectie: één record per kind. Statuswaarden delen de
+// conventie van `registrations` (RegistrationStatus). Zie
+// lib/quranRegistration.ts voor de toegestane keuzewaarden.
+export interface QuranRegistration {
+  id: string;
+  child_first_name: string;
+  child_last_name: string;
+  child_birth_date: string;           // YYYY-MM-DD
+  child_gender: Gender;
+  involved_guardians: "both" | "one" | "other";
+  involved_guardians_other?: string | null;
+  contact_1_name: string;
+  contact_1_relation: "father" | "mother" | "guardian" | "other";
+  contact_1_relation_other?: string | null;
+  contact_1_phone: string;
+  contact_1_email: string;
+  /** true = geen tweede contactpersoon opgegeven. */
+  secondary_contact_absent: boolean;
+  secondary_contact_name?: string | null;
+  secondary_contact_relation?: "father" | "mother" | "guardian" | "other" | null;
+  secondary_contact_relation_other?: string | null;
+  secondary_contact_phone?: string | null;
+  secondary_contact_email?: string | null;
+  reading_level: number;              // 1..10 (1–4 zwak, 5 voldoende, 6–10 goed)
+  reading_notes?: string | null;
+  writing_level: number;              // 1..10 (1–4 zwak, 5 voldoende, 6–10 goed)
+  writing_notes?: string | null;
+  /** true = bijzonderheden waar tijdens de lessen rekening mee moet worden gehouden. */
+  special_considerations: boolean;
+  special_considerations_notes?: string | null;
+  payment_frequency: "monthly" | "quarterly" | "semiannual" | "yearly";
+  additional_notes?: string | null;
+  consent_given: boolean;
+  status: RegistrationStatus;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
 export interface DirectusSchema {
   activities: Activity[];
   prayer_time_files: PrayerTimeFile[];
@@ -1043,6 +1082,7 @@ export interface DirectusSchema {
   page_section_items: PageSectionItem[];
   education_programs: EducationProgram[];
   registrations: Registration[];
+  quran_registrations: QuranRegistration[];
   donations: Donation[];
   donation_campaigns: DonationCampaign[];
   articles: Article[];

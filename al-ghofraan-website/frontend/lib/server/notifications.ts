@@ -90,7 +90,41 @@ export interface ActivityNotificationData {
   occurrenceLabel?: string | null;
 }
 
+/**
+ * Koranonderwijs-inschrijving. Bewust ZONDER de vrije-tekst toelichtingen
+ * (bijzonderheden, lees-/schrijftoelichting, aanvullende opmerkingen):
+ * die staan alleen in Directus (privacy — het gaat om informatie over een
+ * kind). De mail meldt alleen ja/nee en verwijst naar Directus.
+ */
+export interface QuranRegistrationNotificationData {
+  /** Directus-id van het aangemaakte record (om de inschrijving terug te vinden). */
+  registrationId?:  string | number | null;
+  submittedAt:      string;
+  childName:        string;
+  childBirthDate:   string;
+  childGender:      string;
+  contact1: { name: string; relation: string; phone: string; email: string };
+  contact2: { name: string; relation: string; phone: string; email: string } | null;
+  readingLevel:     number;
+  writingLevel:     number;
+  hasReadingNotes:  boolean;
+  hasWritingNotes:  boolean;
+  hasSpecialConsiderations: boolean;
+  hasAdditionalNotes: boolean;
+  paymentFrequency: string;
+}
+
 // ─── Public API ──────────────────────────────────────────────
+
+export async function notifyQuranRegistration(
+  settings: SiteSettings | null,
+  data:     QuranRegistrationNotificationData,
+): Promise<void> {
+  await prepare(settings, "education", "koranonderwijs", () => ({
+    subject: `Nieuwe inschrijving Koranonderwijs: ${data.childName}`,
+    body:    buildQuranBody(data),
+  }));
+}
 
 export async function notifyContact(
   settings: SiteSettings | null,
@@ -383,6 +417,46 @@ function buildActivityBody(d: ActivityNotificationData): string {
   lines.push(`Status     : ${d.status}`);
   lines.push("");
   lines.push("Bekijk de inschrijvingen in Directus onder 'Registrations' (filter type=activity).");
+  return lines.join("\n");
+}
+
+function buildQuranBody(d: QuranRegistrationNotificationData): string {
+  const lines = [
+    "Er is een nieuwe inschrijving voor Koranonderwijs binnengekomen.",
+    "",
+    `Ontvangen     : ${d.submittedAt}`,
+    ...(d.registrationId != null ? [`Referentie    : #${d.registrationId} (Directus)`] : []),
+    "",
+    "Kind:",
+    `  Naam          : ${d.childName}`,
+    `  Geboortedatum : ${d.childBirthDate}`,
+    `  Geslacht      : ${d.childGender}`,
+    "",
+    "Eerste contactpersoon:",
+    `  Naam     : ${d.contact1.name} (${d.contact1.relation})`,
+    `  Telefoon : ${d.contact1.phone}`,
+    `  E-mail   : ${d.contact1.email}`,
+  ];
+  if (d.contact2) {
+    lines.push(
+      "",
+      "Tweede contactpersoon:",
+      `  Naam     : ${d.contact2.name} (${d.contact2.relation})`,
+      `  Telefoon : ${d.contact2.phone}`,
+      `  E-mail   : ${d.contact2.email}`,
+    );
+  }
+  lines.push(
+    "",
+    `Leesniveau Arabisch    : ${d.readingLevel}/10${d.hasReadingNotes ? " (met toelichting)" : ""}`,
+    `Schrijfniveau Arabisch : ${d.writingLevel}/10${d.hasWritingNotes ? " (met toelichting)" : ""}`,
+    `Bijzonderheden         : ${d.hasSpecialConsiderations ? "Ja" : "Nee"}`,
+    `Aanvullende opmerkingen: ${d.hasAdditionalNotes ? "Ja" : "Nee"}`,
+    `Betalingsfrequentie    : ${d.paymentFrequency}`,
+    "",
+    "Om privacyredenen staan toelichtingen en opmerkingen niet in deze mail.",
+    "Bekijk de volledige inschrijving en beheer de status in Directus onder 'Quran Registrations'.",
+  );
   return lines.join("\n");
 }
 

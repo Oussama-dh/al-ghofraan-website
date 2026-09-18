@@ -67,6 +67,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/",
     "/dawahcommissie",
     "/onderwijs",
+    "/onderwijs/inschrijven",
     "/artikelen",
     "/agenda",
     "/agenda/overzicht",
@@ -105,7 +106,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const activityPaths  = activitySlugs.map((e) => `/agenda/${e.slug}`);
   const vacancyPaths   = vacancySlugs.map((e) => `/vacatures/${e.slug}`);
   const articlePaths   = articleSlugs.map((slug) => `/artikelen/${slug}`);
-  const educationPaths = educationSlugs.map((slug) => `/onderwijs/${slug}`);
+  // "inschrijven" is een vaste route (Koranonderwijs-formulier) en wint
+  // van /onderwijs/[slug]; een programma met die slug zou er onbereikbaar
+  // achter zitten en hoort dus niet dubbel in de sitemap.
+  const educationPaths = educationSlugs
+    .filter((slug) => slug !== "inschrijven")
+    .map((slug) => `/onderwijs/${slug}`);
 
   const allPaths = [
     ...staticPaths,
