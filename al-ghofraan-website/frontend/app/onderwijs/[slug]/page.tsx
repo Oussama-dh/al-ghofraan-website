@@ -11,9 +11,11 @@ import QuranRegistrationForm from "@/components/registration/QuranRegistrationFo
 import { isHifdhProgram } from "@/lib/educationRoutes";
 import {
   getEducationProgramBySlug,
+  getEducationProgramFaqs,
   getAssetUrl,
   getSiteSettings,
 } from "@/lib/directus";
+import FaqSection       from "@/components/sections/FaqSection";
 import { formatDate }    from "@/lib/utils";
 
 interface Props {
@@ -40,6 +42,9 @@ export default async function EducationProgramDetailPage({ params }: Props) {
   ]);
 
   if (!program) notFound();
+
+  // Alleen gepubliceerde FAQ's; FaqSection rendert niets bij een lege lijst.
+  const faqs = await getEducationProgramFaqs(program.id);
 
   const imageId =
     typeof program.image === "string" ? program.image : program.image?.id;
@@ -243,6 +248,16 @@ export default async function EducationProgramDetailPage({ params }: Props) {
           </div>
         </Container>
       </section>
+
+      <FaqSection
+        items={faqs.map((f) => ({
+          id:        String(f.id),
+          question:  f.question,
+          answer:    f.answer,
+          sort:      f.sort,
+          published: true,
+        }))}
+      />
     </>
   );
 }

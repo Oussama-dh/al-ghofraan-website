@@ -86,6 +86,7 @@ import { setupRegistrationsAdminList }         from "./steps/59-registrations-ad
 import { setupQuranRegistrations }            from "./steps/60-quran-registrations.mjs";
 import { setupHifdhChildrenModel }            from "./steps/61-hifdh-children-model.mjs";
 import { setupHifdhProgram }                  from "./steps/62-hifdh-program.mjs";
+import { setupEducationProgramFaqs }          from "./steps/63-education-program-faqs.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -197,6 +198,7 @@ const STEPS = [
   { id: "60",  label: "quran_registrations (Koranonderwijs-inschrijving + lijst + rechten)", run: setupQuranRegistrations },
   { id: "61",  label: "Hifdh programma: kinderen-model (quran_registration_children) + migratie", run: setupHifdhChildrenModel },
   { id: "62",  label: "Hifdh programma in education_programs (kaart op /onderwijs)",          run: setupHifdhProgram },
+  { id: "63",  label: "Veelgestelde vragen per onderwijsprogramma (education_program_faqs)",  run: setupEducationProgramFaqs },
 ];
 
 // ─── CLI-argument parsing ──────────────────────────────────────

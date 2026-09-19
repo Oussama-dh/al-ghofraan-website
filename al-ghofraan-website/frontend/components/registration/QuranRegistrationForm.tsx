@@ -169,18 +169,20 @@ const CHILD_FIELDS = [
 
 /** Volgorde waarin fouten voorkomen in het formulier (voor focus op eerste fout). */
 function fieldOrder(childCount: number): string[] {
-  const order = [
+  const order: string[] = [];
+  for (let i = 0; i < childCount; i += 1) {
+    order.push(`children.${i}`);
+    for (const f of CHILD_FIELDS) order.push(childErrorKey(i, f));
+  }
+  order.push(
+    "children",
     "involved_guardians", "involved_guardians_other",
     "contact_1_name", "contact_1_relation", "contact_1_relation_other",
     "contact_1_phone", "contact_1_email",
     "secondary_contact_name", "secondary_contact_relation", "secondary_contact_relation_other",
     "secondary_contact_phone", "secondary_contact_email",
-  ];
-  for (let i = 0; i < childCount; i += 1) {
-    order.push(`children.${i}`);
-    for (const f of CHILD_FIELDS) order.push(childErrorKey(i, f));
-  }
-  order.push("children", "payment_frequency", "additional_notes", "consent");
+    "payment_frequency", "additional_notes", "consent",
+  );
   return order;
 }
 
@@ -817,6 +819,39 @@ export default function QuranRegistrationForm({
         )}
       </p>
 
+      {/* ── Kind(eren) ── */}
+      <fieldset className="mb-6">
+        <legend className={legendClass}>Kind(eren)</legend>
+        <div className="space-y-4">
+          {form.children.map((child, index) => (
+            <ChildBlock
+              key={child.key}
+              index={index}
+              child={child}
+              errors={errors}
+              today={today}
+              minBirth={minBirth}
+              onChange={(k, v) => setChild(index, k, v)}
+              onRemove={() => removeChild(index)}
+            />
+          ))}
+        </div>
+        {errors.children && (
+          <p id="children-error" className="mt-2 font-body text-sm text-red-700">{errors.children}</p>
+        )}
+        {/* Technisch maximum (MAX_CHILDREN) wordt server-side afgedwongen; de knop
+            verdwijnt bij het maximum zonder extra uitleg aan de gebruiker. */}
+        {canAddChild && (
+          <button
+            type="button"
+            onClick={addChild}
+            className="mt-3 inline-flex min-h-[44px] items-center font-body text-sm text-slate-mosque hover:text-slate-dark underline underline-offset-2"
+          >
+            + Kind toevoegen
+          </button>
+        )}
+      </fieldset>
+
       {/* ── Ouder(s) / verzorger(s) ── */}
       <fieldset className="mb-6">
         <legend className={legendClass}>Ouder(s) / verzorger(s)</legend>
@@ -964,39 +999,6 @@ export default function QuranRegistrationForm({
             )}
           </div>
         </div>
-      </fieldset>
-
-      {/* ── Kind(eren) ── */}
-      <fieldset className="mb-6">
-        <legend className={legendClass}>Kind(eren)</legend>
-        <div className="space-y-4">
-          {form.children.map((child, index) => (
-            <ChildBlock
-              key={child.key}
-              index={index}
-              child={child}
-              errors={errors}
-              today={today}
-              minBirth={minBirth}
-              onChange={(k, v) => setChild(index, k, v)}
-              onRemove={() => removeChild(index)}
-            />
-          ))}
-        </div>
-        {errors.children && (
-          <p id="children-error" className="mt-2 font-body text-sm text-red-700">{errors.children}</p>
-        )}
-        {/* Technisch maximum (MAX_CHILDREN) wordt server-side afgedwongen; de knop
-            verdwijnt bij het maximum zonder extra uitleg aan de gebruiker. */}
-        {canAddChild && (
-          <button
-            type="button"
-            onClick={addChild}
-            className="mt-3 inline-flex min-h-[44px] items-center font-body text-sm text-slate-mosque hover:text-slate-dark underline underline-offset-2"
-          >
-            + Kind toevoegen
-          </button>
-        )}
       </fieldset>
 
       {/* ── Betaling ── */}

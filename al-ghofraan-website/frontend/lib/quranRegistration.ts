@@ -55,7 +55,7 @@ export const SPECIAL_CONSIDERATIONS_HINT =
 
 /** Exacte toestemmingstekst bij de verplichte checkbox. */
 export const CONSENT_TEXT =
-  "Ik verklaar dat bovenstaande gegevens naar waarheid zijn ingevuld en geef toestemming om deze gegevens te gebruiken voor de inschrijving en begeleiding binnen het onderwijs van Al-Ghofraan.";
+  "Ik verklaar dat bovenstaande gegevens naar waarheid zijn ingevuld en geef toestemming om deze gegevens te gebruiken voor de inschrijving en begeleiding binnen het onderwijs van al-Ghofraan.";
 
 /** Maximum aantal kinderen in één inschrijving (misbruikpreventie, geen inhoudelijke limiet). */
 export const MAX_CHILDREN = 10;

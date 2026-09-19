@@ -20,6 +20,7 @@ import type {
   PageSection,
   PageSectionItem,
   EducationProgram,
+  EducationProgramFaq,
   EducationCategory,
   DonationCampaign,
   Article,
@@ -298,6 +299,30 @@ export async function getEducationProgramBySlug(
     },
     `getEducationProgramBySlug(${slug})`,
     null
+  );
+}
+
+/** Gepubliceerde FAQ's van één programma, oplopend op `sort` (dan id). */
+export async function getEducationProgramFaqs(
+  programId: string | number
+): Promise<EducationProgramFaq[]> {
+  return safe(
+    async () => {
+      const result = await directusServer.request(
+        readItems("education_program_faqs", {
+          filter: {
+            program: { _eq: programId },
+            status:  { _eq: "published" },
+          } as never,
+          sort:   ["sort", "id"],
+          limit:  -1,
+          fields: ["id", "question", "answer", "sort", "status", "program"] as never,
+        })
+      );
+      return result as unknown as EducationProgramFaq[];
+    },
+    `getEducationProgramFaqs(${programId})`,
+    []
   );
 }
 

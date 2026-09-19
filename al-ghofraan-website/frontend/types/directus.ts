@@ -439,6 +439,22 @@ export interface EducationProgram {
    * `target_group` (vrije tekst) blijft daarnaast als badge zichtbaar.
    */
   category_ref?: number | EducationCategory | null;
+  /** O2M naar education_program_faqs (alleen aanwezig als expliciet opgevraagd). */
+  faqs?: number[] | EducationProgramFaq[] | null;
+}
+
+// ─── education_program_faqs ──────────────────────────────────
+/** Veelgestelde vraag bij een onderwijsprogramma (alleen "published" is publiek leesbaar). */
+export interface EducationProgramFaq {
+  id: number;
+  program: number | EducationProgram;
+  question: string;
+  /** HTML (rich-text) */
+  answer: string;
+  sort?: number | null;
+  status: "draft" | "published" | "archived";
+  date_created?: string | null;
+  date_updated?: string | null;
 }
 
 // ─── education_categories ────────────────────────────────────
@@ -1098,6 +1114,7 @@ export interface DirectusSchema {
   page_sections: PageSection[];
   page_section_items: PageSectionItem[];
   education_programs: EducationProgram[];
+  education_program_faqs: EducationProgramFaq[];
   registrations: Registration[];
   quran_registrations: QuranRegistration[];
   quran_registration_children: QuranRegistrationChild[];

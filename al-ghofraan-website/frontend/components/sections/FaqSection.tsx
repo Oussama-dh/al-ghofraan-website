@@ -41,7 +41,7 @@ export default function FaqSection({
               className="group bg-sand-50 border border-sand-200 rounded-2xl px-5 py-4 open:bg-white open:shadow-sm transition-all"
               open={idx === 0}
             >
-              <summary className="flex items-center justify-between gap-4 cursor-pointer list-none">
+              <summary className="flex items-center justify-between gap-4 cursor-pointer list-none min-h-[44px]">
                 <span className="flex items-center gap-3 font-body font-semibold text-ink text-base sm:text-lg pr-4">
                   <Icon
                     name={faq.icon || defaultIcon}

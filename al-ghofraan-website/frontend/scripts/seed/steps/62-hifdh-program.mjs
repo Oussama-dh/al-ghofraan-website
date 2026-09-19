@@ -32,7 +32,7 @@ export async function setupHifdhProgram(client) {
     status: "published",
     registration_enabled: true,
     // Zelfde veld stuurt de reveal-knop op de programmapagina én het verzendlabel.
-    registration_button_text: "Inschrijven Hifdh programma",
+    registration_button_text: "Hifdh oel-Quraan",
   };
 
   const search = await client.get(
