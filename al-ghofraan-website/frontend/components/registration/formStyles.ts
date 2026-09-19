@@ -34,3 +34,7 @@ export const errorBannerClass =
 /** Succeskaart na versturen. */
 export const successCardClass =
   "p-6 bg-slate-mosque/10 border border-slate-mosque/20 rounded-2xl text-center";
+
+/** Kleine onderdeelkop binnen een blok (bv. "Leesniveau" binnen een kind). */
+export const subHeadingClass =
+  "font-body text-xs font-semibold text-taupe-dark uppercase tracking-wider";

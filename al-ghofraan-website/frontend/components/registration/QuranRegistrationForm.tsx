@@ -34,6 +34,7 @@ import {
   labelClass,
   legendClass,
   memberBlockClass,
+  subHeadingClass,
   successCardClass,
 } from "./formStyles";
 import { HIFDH_PROGRAM_CTA } from "@/lib/educationRoutes";
@@ -479,6 +480,7 @@ function ChildBlock({
         <p className="font-body text-sm text-red-700">{errors[`children.${index}`]}</p>
       )}
 
+      <h5 className={subHeadingClass}>Gegevens kind</h5>
       <div className="grid sm:grid-cols-2 gap-3">
         <TextField
           id={cid(index, "first_name")} label="Voornaam" required error={err("first_name")}
@@ -512,6 +514,7 @@ function ChildBlock({
         />
       </div>
 
+      <h5 className={subHeadingClass}>Leesniveau</h5>
       <div className="space-y-3">
         <LevelPicker
           id={cid(index, "reading_level")}
@@ -523,13 +526,14 @@ function ChildBlock({
         <NotesField
           id={cid(index, "reading_notes")}
           label="Eventuele toelichting"
-          placeholder="Bijvoorbeeld: kent alleen losse letters, kan al woorden lezen, leest uit de Qur'an."
+          placeholder="Bijvoorbeeld: kent alleen losse letters, kan woorden lezen of leest al uit de Qur’an."
           max={LIMITS.levelNotesMax}
           value={child.reading_notes}
           onChange={(v) => onChange("reading_notes", v)}
           error={err("reading_notes")}
         />
       </div>
+      <h5 className={subHeadingClass}>Schrijfniveau</h5>
       <div className="space-y-3">
         <LevelPicker
           id={cid(index, "writing_level")}
@@ -548,6 +552,7 @@ function ChildBlock({
         />
       </div>
 
+      <h5 className={subHeadingClass}>Bijzonderheden</h5>
       <RadioCards
         id={cid(index, "special_considerations")}
         legend="Zijn er bijzonderheden waar wij tijdens de lessen rekening mee moeten houden?"
@@ -824,7 +829,7 @@ export default function QuranRegistrationForm({
             value={form.involved_guardians}
             onChange={(v) => set("involved_guardians", v)}
             error={errors.involved_guardians}
-            hint="Deze informatie helpt ons om te weten met wie wij kunnen communiceren over het onderwijs en de ontwikkeling van uw kind."
+            hint="Deze informatie helpt ons om te weten met wie wij kunnen communiceren over het onderwijs en de ontwikkeling van uw kind(eren)."
             columns={3}
           />
           {form.involved_guardians === "other" && (
@@ -874,7 +879,7 @@ export default function QuranRegistrationForm({
             )}
             <div className="grid sm:grid-cols-2 gap-3">
               <TextField
-                id="contact_1_phone" label="Telefoon" required error={errors.contact_1_phone}
+                id="contact_1_phone" label="Telefoonnummer" required error={errors.contact_1_phone}
                 hint="Bijvoorbeeld 06 12345678 of +31 6 12345678"
                 inputProps={{
                   type: "tel", inputMode: "tel", autoComplete: "tel", maxLength: 30,
@@ -934,7 +939,7 @@ export default function QuranRegistrationForm({
                 )}
                 <div className="grid sm:grid-cols-2 gap-3">
                   <TextField
-                    id="secondary_contact_phone" label="Telefoon" error={errors.secondary_contact_phone}
+                    id="secondary_contact_phone" label="Telefoonnummer" error={errors.secondary_contact_phone}
                     hint="Bijvoorbeeld 06 12345678 of +31 6 12345678"
                     inputProps={{
                       type: "tel", inputMode: "tel", autoComplete: "off", maxLength: 30,
