@@ -158,10 +158,10 @@ const FIELDS = [
   textField("secondary_contact_phone", "Tweede contactpersoon — telefoon", { required: false }),
   textField("secondary_contact_email", "Tweede contactpersoon — e-mailadres", { required: false }),
 
-  // 5. Niveau Arabisch (1 t/m 10: 1–4 zwak · 5 voldoende · 6–10 goed)
-  levelField("reading_level", "Leesniveau Arabisch, 1 t/m 10 (1–4 zwak · 5 voldoende · 6–10 goed)"),
+  // 5. Niveau Arabisch (1 t/m 10: 1–2 zeer zwak · 3–4 zwak/matig · 5 voldoende · 6–7 goed · 8–10 zeer goed tot uitstekend)
+  levelField("reading_level", "Leesniveau Arabisch, 1 t/m 10 (1–2 zeer zwak · 3–4 zwak/matig · 5 voldoende · 6–7 goed · 8–10 zeer goed tot uitstekend)"),
   longTextField("reading_notes", "Eventuele toelichting bij het leesniveau (optioneel)"),
-  levelField("writing_level", "Schrijfniveau Arabisch, 1 t/m 10 (1–4 zwak · 5 voldoende · 6–10 goed)"),
+  levelField("writing_level", "Schrijfniveau Arabisch, 1 t/m 10 (1–2 zeer zwak · 3–4 zwak/matig · 5 voldoende · 6–7 goed · 8–10 zeer goed tot uitstekend)"),
   longTextField("writing_notes", "Eventuele toelichting bij het schrijfniveau (optioneel)"),
 
   // 6. Bijzonderheden

@@ -424,7 +424,7 @@ Directus → **Education Programs** → klik **+** rechtsboven:
 
 | Veld                   | Toelichting                                                              |
 |------------------------|--------------------------------------------------------------------------|
-| `title`                | Titel zoals zichtbaar op de site (bv. "Qur'aan-recitatie voor beginners")|
+| `title`                | Titel zoals zichtbaar op de site (bv. "Qoraan-recitatie voor beginners")|
 | `slug`                 | URL-segment, automatisch uit titel — wordt `/onderwijs/<slug>`          |
 | `description`          | Rich text — verschijnt op de detailpagina                                |
 | `teacher`              | Naam van de docent (optioneel)                                           |

@@ -528,7 +528,7 @@ function ChildBlock({
         <NotesField
           id={cid(index, "reading_notes")}
           label="Eventuele toelichting"
-          placeholder="Bijvoorbeeld: kent alleen losse letters, kan woorden lezen of leest al uit de Qur’an."
+          placeholder="Bijvoorbeeld: kent alleen losse letters, kan woorden lezen of leest al uit de Qoraan."
           max={LIMITS.levelNotesMax}
           value={child.reading_notes}
           onChange={(v) => onChange("reading_notes", v)}

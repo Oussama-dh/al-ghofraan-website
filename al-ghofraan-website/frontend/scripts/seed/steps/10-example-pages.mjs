@@ -137,7 +137,7 @@ export async function seedExamplePages(client) {
   await upsertSectionItem(client, {
     page_slug:   "jongeren",
     section_key: "activities",
-    title:       "Qur'aan-cursus",
+    title:       "Qoraan-cursus",
     description: "Recitatie en uitleg van betekenissen voor beginners en gevorderden.",
     icon:        "book-open",
     sort:        20,

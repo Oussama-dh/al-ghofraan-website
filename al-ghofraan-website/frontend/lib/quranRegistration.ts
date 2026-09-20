@@ -47,7 +47,7 @@ export const PAYMENT_FREQUENCY_OPTIONS = [
 ] as const satisfies readonly Option[];
 
 /** Uitleg bij de niveauschaal 1 t/m 10 (lezen én schrijven). */
-export const LEVEL_EXPLANATION = "1–4: zwak · 5: voldoende · 6–10: goed";
+export const LEVEL_EXPLANATION = "1–2: zeer zwak · 3–4: zwak/matig · 5: voldoende · 6–7: goed · 8–10: zeer goed tot uitstekend";
 
 /** Toelichting die verschijnt zodra bij bijzonderheden "Ja" is gekozen. */
 export const SPECIAL_CONSIDERATIONS_HINT =

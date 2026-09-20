@@ -151,7 +151,7 @@ export async function setupEducationPrograms(client) {
   const examples = [
     {
       slug:        "quraan-recitatie-beginners",
-      title:       "Qur'aan-recitatie voor beginners",
+      title:       "Qoraan-recitatie voor beginners",
       description:
         "<p>Een toegankelijke cursus waarin we de basis van Tajweed leren — " +
         "uitspraak van letters, tekens en de regels voor een correcte recitatie. " +

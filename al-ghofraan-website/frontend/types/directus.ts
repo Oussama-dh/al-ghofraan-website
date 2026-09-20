@@ -404,6 +404,8 @@ export interface EducationProgram {
   target_group?: string | null;
   schedule?: string | null;
   location?: string | null;
+  /** Vrije tekst, bv. "€ 25 per maand" — kaart "Prijs" op /onderwijs/[slug]. */
+  price?: string | null;
   start_date?: string | null;
   end_date?: string | null;
   image?: string | DirectusFile | null;
@@ -1066,9 +1068,9 @@ export interface QuranRegistrationChild {
   last_name: string;
   birth_date: string;                 // YYYY-MM-DD
   gender: Gender;
-  reading_level: number;              // 1..10 (1–4 zwak, 5 voldoende, 6–10 goed)
+  reading_level: number;              // 1..10 (1–2 zeer zwak, 3–4 zwak/matig, 5 voldoende, 6–7 goed, 8–10 zeer goed tot uitstekend)
   reading_notes?: string | null;
-  writing_level: number;              // 1..10 (1–4 zwak, 5 voldoende, 6–10 goed)
+  writing_level: number;              // 1..10 (1–2 zeer zwak, 3–4 zwak/matig, 5 voldoende, 6–7 goed, 8–10 zeer goed tot uitstekend)
   writing_notes?: string | null;
   /** true = bijzonderheden waar tijdens de lessen rekening mee moet worden gehouden. */
   special_considerations: boolean;

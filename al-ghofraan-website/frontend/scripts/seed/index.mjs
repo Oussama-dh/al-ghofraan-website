@@ -87,6 +87,8 @@ import { setupQuranRegistrations }            from "./steps/60-quran-registratio
 import { setupHifdhChildrenModel }            from "./steps/61-hifdh-children-model.mjs";
 import { setupHifdhProgram }                  from "./steps/62-hifdh-program.mjs";
 import { setupEducationProgramFaqs }          from "./steps/63-education-program-faqs.mjs";
+import { setupEducationProgramPrice }         from "./steps/64-education-program-price.mjs";
+import { migrateQoraanSpelling }              from "./steps/65-qoraan-spelling-migration.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -161,6 +163,7 @@ const STEPS = [
   { id: "11c", label: "Onderwijs-flow toggles op education_programs",           run: setupEducationFlowFields },
   { id: "8",   label: "Icon-settings",                                          run: seedIconSettings },
   { id: "9",   label: "Voorbeeld-secties (page_sections)",                      run: seedPageSections },
+  { id: "65",  label: "Spelling Qoraan: migratie bestaande content (vóór stap 10)",         run: migrateQoraanSpelling },
   { id: "10",  label: "Voorbeeld dynamische pagina",                            run: seedExamplePages },
   { id: "26",  label: "Admin-lijst layouts",                                    run: setupAdminListLayouts },
   { id: "27",  label: "Rich-text WYSIWYG toolbar",                              run: setupRichTextToolbar },
@@ -199,6 +202,7 @@ const STEPS = [
   { id: "61",  label: "Hifdh programma: kinderen-model (quran_registration_children) + migratie", run: setupHifdhChildrenModel },
   { id: "62",  label: "Hifdh programma in education_programs (kaart op /onderwijs)",          run: setupHifdhProgram },
   { id: "63",  label: "Veelgestelde vragen per onderwijsprogramma (education_program_faqs)",  run: setupEducationProgramFaqs },
+  { id: "64",  label: "Prijs-veld voor onderwijsprogramma's (education_programs.price)",        run: setupEducationProgramPrice },
 ];
 
 // ─── CLI-argument parsing ──────────────────────────────────────

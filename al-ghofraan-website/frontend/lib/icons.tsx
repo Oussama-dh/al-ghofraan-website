@@ -40,6 +40,7 @@ import {
   Check,
   Compass,
   Lightbulb,
+  Euro,
   type LucideIcon,
   type LucideProps,
 } from "lucide-react";
@@ -96,6 +97,7 @@ export const ICON_MAP = {
   check:             Check,
   compass:           Compass,
   lightbulb:         Lightbulb,
+  euro:              Euro,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICON_MAP;

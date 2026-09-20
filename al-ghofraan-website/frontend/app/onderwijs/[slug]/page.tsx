@@ -175,7 +175,7 @@ export default async function EducationProgramDetailPage({ params }: Props) {
             </div>
           )}
 
-          {/* Detail-grid: docent, doelgroep, planning, locatie */}
+          {/* Detail-grid: docent, doelgroep, planning, locatie, prijs */}
           <div className="grid sm:grid-cols-2 gap-4 mb-10">
             {program.teacher && (
               <DetailItem icon="user" label="Docent" value={program.teacher} />
@@ -188,6 +188,9 @@ export default async function EducationProgramDetailPage({ params }: Props) {
             )}
             {program.location && (
               <DetailItem icon="map-pin" label="Locatie" value={program.location} />
+            )}
+            {program.price && (
+              <DetailItem icon="euro" label="Prijs" value={program.price} />
             )}
           </div>
 

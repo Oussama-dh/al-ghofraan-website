@@ -11,12 +11,21 @@
 //
 // Idempotent en niet-destructief: bestaat het item niet, dan wordt het aangemaakt;
 // bestaat het wel, dan worden ALLEEN lege velden aangevuld (bv. de knoptekst).
-// Ingevulde velden (docent, doelgroep, planning, locatie, beschrijving, status, …)
+// Enige uitzondering: een knoptekst die exact een oude standaardwaarde is
+// (LEGACY_BUTTON_TEXTS, bv. "Hifdh oel-Quraan") wordt naar "Hifdh oel-Qoraan"
+// gemigreerd. Ingevulde velden (docent, doelgroep, planning, locatie, beschrijving, status, …)
 // worden nooit overschreven. Geen schema-, permissie- of rolwijzigingen.
 //
 // Het programma toont op /onderwijs/hifdhprogramma dezelfde blokken als elk
 // ander onderwijsprogramma (Docent, Doelgroep, Planning, Locatie, beschrijving,
 // flyer). Die gegevens vult een beheerder in Directus in (education_programs).
+
+// Eerdere standaardknopteksten (spelling vóór "Qoraan"). Worden gemigreerd.
+const LEGACY_BUTTON_TEXTS = new Set([
+  "Hifdh oel-Quraan",
+  "Hifdh oel-Qur'aan",
+  "Hifdh oel-Qur’aan",
+]);
 
 export async function setupHifdhProgram(client) {
   console.log("\n📖 Stap 62 · Hifdh programma in education_programs");
@@ -32,7 +41,7 @@ export async function setupHifdhProgram(client) {
     status: "published",
     registration_enabled: true,
     // Zelfde veld stuurt de reveal-knop op de programmapagina én het verzendlabel.
-    registration_button_text: "Hifdh oel-Quraan",
+    registration_button_text: "Hifdh oel-Qoraan",
   };
 
   const search = await client.get(
@@ -48,6 +57,14 @@ export async function setupHifdhProgram(client) {
     const patch = {};
     for (const [k, v] of Object.entries(DEFAULTS)) {
       if (empty(existing[k])) patch[k] = v;
+    }
+
+    // Migratie van eerdere standaardwaarden naar de huidige schrijfwijze.
+    // ALLEEN een exacte match met een oude standaard wordt vervangen; elke
+    // andere (handmatig aangepaste) waarde blijft onaangeraakt.
+    const cur = existing.registration_button_text;
+    if (typeof cur === "string" && LEGACY_BUTTON_TEXTS.has(cur.trim())) {
+      patch.registration_button_text = DEFAULTS.registration_button_text;
     }
     if (Object.keys(patch).length > 0) {
       await client.patch(`/items/education_programs/${existing.id}`, patch);

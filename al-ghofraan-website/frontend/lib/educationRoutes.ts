@@ -9,7 +9,7 @@
 
 export const HIFDH_PROGRAM_SLUG = "hifdhprogramma";
 export const HIFDH_PROGRAM_TITLE = "Hifdh programma";
-export const HIFDH_PROGRAM_CTA = "Hifdh oel-Quraan";
+export const HIFDH_PROGRAM_CTA = "Hifdh oel-Qoraan";
 
 export function isHifdhProgram(slug: string | null | undefined): boolean {
   return slug === HIFDH_PROGRAM_SLUG;

@@ -58,7 +58,7 @@ export async function seedPageContent(client) {
         <h2>Wat wij doen</h2>
         <ul>
           <li><strong>Wekelijkse lezingen</strong> &mdash; toegankelijke lezingen na de vrijdagsalaat</li>
-          <li><strong>Islamitische cursussen</strong> &mdash; Tawheed, Fiqh, Arabisch, Qur'aanrecitatie</li>
+          <li><strong>Islamitische cursussen</strong> &mdash; Tawheed, Fiqh, Arabisch, Qoraanrecitatie</li>
           <li><strong>Open dagen</strong> &mdash; voor niet-moslims en geïnteresseerden</li>
           <li><strong>Jeugdprogramma's</strong> &mdash; speciaal voor jongeren</li>
         </ul>
@@ -132,7 +132,7 @@ export async function seedPageContent(client) {
         <h2>Onderwijs en activiteiten</h2>
         <p>Vanuit Al-Ghofraan organiseren wij wekelijkse lezingen,
         islamitische cursussen (Tawheed, Fiqh, Arabisch,
-        Qur'aanrecitatie) en speciale jeugdprogramma's. Een actueel
+        Qoraanrecitatie) en speciale jeugdprogramma's. Een actueel
         overzicht vindt u op <a href="/agenda">de agenda-pagina</a>
         en bij <a href="/onderwijs">onderwijs</a>.</p>
 
