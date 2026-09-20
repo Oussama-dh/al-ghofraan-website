@@ -17,15 +17,18 @@
 //      geneste creates uit in één databasetransactie: mislukt een kind,
 //      dan wordt ook de hoofdregistratie teruggedraaid (geen halve inschrijving).
 //   5. Fail-soft admin-mail (mag het opslaan nooit laten falen)
+//   6. Fail-soft bevestigingsmail (HTML, huisstijl) naar contactpersoon 1;
+//      gestuurd wanneer de bevestigingsschakelaar voor onderwijs aan staat
 //
 // Logging: technische details (status/code/Directus-foutcodes), maar
 // nooit namen, telefoonnummers, e-mailadressen of de toelichting.
 
 import { NextResponse } from "next/server";
 import { createItem, readItems } from "@directus/sdk";
-import { directusServer, getSiteSettings } from "@/lib/directus";
-import { notifyQuranRegistration } from "@/lib/server/notifications";
-import { HIFDH_PROGRAM_SLUG } from "@/lib/educationRoutes";
+import { directusServer, getAssetUrl, getSiteSettings } from "@/lib/directus";
+import { getSiteUrl } from "@/lib/utils";
+import { notifyHifdhRegistrationVisitor, notifyQuranRegistration } from "@/lib/server/notifications";
+import { HIFDH_PROGRAM_SLUG, HIFDH_PROGRAM_TITLE } from "@/lib/educationRoutes";
 import {
   CHILD_GENDER_OPTIONS,
   PAYMENT_FREQUENCY_OPTIONS,
@@ -232,6 +235,27 @@ export async function POST(request: Request) {
   } catch (notifyErr) {
     const msg = notifyErr instanceof Error ? notifyErr.message : String(notifyErr);
     console.warn(`${LOG} notificatie overgeslagen: ${msg}`);
+  }
+
+  // ── 6. Bevestiging aan de ouder (fail-soft) ────────────────
+  try {
+    const settings = await getSiteSettings();
+    await notifyHifdhRegistrationVisitor(settings, {
+      visitorEmail: d.contact_1_email,
+      programTitle: HIFDH_PROGRAM_TITLE,
+      contact: { name: d.contact_1_name, phone: d.contact_1_phone, email: d.contact_1_email },
+      children: children.map((c) => ({
+        name:      `${c.first_name} ${c.last_name}`,
+        birthDate: c.birth_date,
+        gender:    labelFor(CHILD_GENDER_OPTIONS, c.gender),
+      })),
+      paymentFrequency: labelFor(PAYMENT_FREQUENCY_OPTIONS, d.payment_frequency),
+      logoUrl: getAssetUrl(settings?.logo),
+      siteUrl: getSiteUrl(),
+    });
+  } catch (visitorErr) {
+    const msg = visitorErr instanceof Error ? visitorErr.message : String(visitorErr);
+    console.warn(`${LOG} bevestigingsmail overgeslagen: ${msg}`);
   }
 
   return NextResponse.json({ ok: true }, { status: 201 });

@@ -42,6 +42,7 @@
 import type { SiteSettings } from "@/types/directus";
 import nodemailer            from "nodemailer";
 import type { Transporter }  from "nodemailer";
+import { renderBrandedEmail, splitParagraphs, type EmailBlock } from "@/lib/server/emailLayout";
 
 // ─── Types per gebeurtenis ───────────────────────────────────
 
@@ -596,6 +597,90 @@ export async function notifyActivityRegistrationVisitor(
   });
 }
 
+// ─── Hifdh programma — bevestigingsmail aan de ouder (HTML) ──────
+//
+// Gebruikt dezelfde beheerinstellingen als de bevestiging voor het
+// algemene onderwijsformulier (schakelaar, onderwerp, intro, footer:
+// `education_confirmation_email_*`), maar verstuurt een mail in de
+// al-Ghofraan-huisstijl (HTML + platte-tekstversie). Bewust ZONDER de
+// vrije-tekst toelichtingen over het kind (privacy).
+
+export interface HifdhVisitorConfirmationData {
+  /** Ontvanger: e-mailadres van de eerste contactpersoon. */
+  visitorEmail: string;
+  programTitle: string;
+  contact: { name: string; phone: string; email: string };
+  children: Array<{ name: string; birthDate: string; gender: string }>;
+  paymentFrequency: string;
+  /** Absolute URL van het logo (site_settings.logo); leeg = zonder logo. */
+  logoUrl?: string | null;
+  /** Absolute basis-URL van de site (footerlink). */
+  siteUrl?: string | null;
+}
+
+/** "2019-03-07" → "7-3-2019"; onbekend formaat blijft ongewijzigd. */
+function formatNlDate(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return m ? `${Number(m[3])}-${Number(m[2])}-${m[1]}` : iso;
+}
+
+export async function notifyHifdhRegistrationVisitor(
+  settings: SiteSettings | null,
+  data:     HifdhVisitorConfirmationData,
+): Promise<void> {
+  await prepareVisitor(settings, "education", data.visitorEmail, () => {
+    const subject =
+      (settings?.education_confirmation_email_subject || "").trim() ||
+      "Bevestiging inschrijving Hifdh programma";
+    const introParas  = splitParagraphs(settings?.education_confirmation_email_intro);
+    const footerParas = splitParagraphs(settings?.education_confirmation_email_footer);
+    if (introParas.length === 0) {
+      introParas.push(
+        "Assalaamoe 'alaykoem,",
+        "Bedankt voor uw inschrijving bij al-Ghofraan. Hieronder vindt u een overzicht van de gegevens die u heeft ingevuld. Bewaar deze mail goed.",
+      );
+    }
+
+    const childRows = data.children.map((c, i) => ({
+      label: data.children.length === 1 ? "Kind" : `Kind ${i + 1}`,
+      value: `${c.name}\n${formatNlDate(c.birthDate)} · ${c.gender}`,
+    }));
+    const rows = [
+      { label: "Programma",         value: data.programTitle },
+      ...childRows,
+      { label: "Contactpersoon",    value: data.contact.name },
+      { label: "Telefoon",          value: data.contact.phone },
+      { label: "E-mail",            value: data.contact.email },
+      { label: "Betalingsperiode",  value: data.paymentFrequency },
+    ];
+
+    const blocks: EmailBlock[] = [
+      ...introParas.map((text): EmailBlock => ({ type: "p", text })),
+      { type: "summary", title: "Uw inschrijfgegevens", rows },
+      ...footerParas.map((text): EmailBlock => ({ type: "p", text })),
+    ];
+
+    const html = renderBrandedEmail({
+      title:   "Bevestiging inschrijving",
+      blocks,
+      logoUrl: data.logoUrl,
+      siteUrl: data.siteUrl,
+    });
+
+    const text = [
+      ...introParas,
+      [
+        "── Uw inschrijfgegevens ──",
+        "",
+        ...rows.map((r) => `${r.label.padEnd(17)}: ${r.value.replace(/\n/g, " — ")}`),
+      ].join("\n"),
+      ...footerParas,
+    ].join("\n\n");
+
+    return { subject, body: text, html };
+  });
+}
+
 // ─── Visitor internals ───────────────────────────────────────
 
 type VisitorDepartment = "education" | "activities";
@@ -617,7 +702,7 @@ async function prepareVisitor(
   settings: SiteSettings | null,
   dept:     VisitorDepartment,
   visitorEmail: string,
-  build:    () => { subject: string; body: string },
+  build:    () => { subject: string; body: string; html?: string },
 ): Promise<void> {
   try {
     // Master switch
@@ -633,7 +718,7 @@ async function prepareVisitor(
       return;
     }
 
-    const { subject, body } = build();
+    const { subject, body, html } = build();
     const fromName    = (settings.email_from_name    || "").trim() || "Al-Ghofraan";
     const fromAddress = (settings.email_from_address || "").trim();
 
@@ -643,6 +728,7 @@ async function prepareVisitor(
       fromAddress,
       subject,
       body,
+      html,
       department: dept,
     });
   } catch (err: unknown) {
@@ -656,7 +742,8 @@ interface PreparedVisitorEmail {
   fromName:    string;
   fromAddress: string;  // Directus email_from_address → Reply-To
   subject:     string;
-  body:        string;
+  body:        string;   // platte-tekstversie (fallback)
+  html?:       string;   // optionele HTML-versie (huisstijl-layout)
   department:  VisitorDepartment;
 }
 
@@ -689,6 +776,7 @@ async function dispatchVisitorEmail(email: PreparedVisitorEmail): Promise<void> 
       replyTo: replyTo,
       subject: email.subject,
       text:    email.body,
+      ...(email.html ? { html: email.html } : {}),
     });
     console.log(
       `[visitor:${email.department}] bevestigingsmail verzonden naar ${redactEmail(email.to)}`,
