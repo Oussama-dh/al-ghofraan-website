@@ -1,8 +1,8 @@
 // scripts/seed/steps/68-hifdh-letters-confirmed.mjs
 //
 // Voegt het veld `letters_confirmed` toe aan quran_registrations: de ouder
-// bevestigt in het formulier dat het kind minimaal de Arabische letters van
-// elkaar kan onderscheiden en herkennen (voorwaarde voor deelname).
+// bevestigt in het formulier (vraag vóór het formulier) dat het kind minimaal de
+// Arabische letters kan herkennen en van elkaar kan onderscheiden (voorwaarde voor deelname).
 //
 // Bewust nullable zonder default: bestaande inschrijvingen (van vóór deze
 // voorwaarde) blijven leeg = "niet gevraagd" in plaats van onterecht "nee".
@@ -27,7 +27,7 @@ export async function setupLettersConfirmedField(client) {
       width:     "half",
       interface: "boolean",
       readonly:  true,
-      note:      "Ouder bevestigde dat het kind minimaal de Arabische letters van elkaar kan onderscheiden en herkennen. Leeg = inschrijving van vóór deze voorwaarde.",
+      note:      "Ouder bevestigde dat het kind minimaal de Arabische letters kan herkennen en van elkaar kan onderscheiden. Leeg = inschrijving van vóór deze voorwaarde.",
     },
     schema: { is_nullable: true, default_value: null },
   });

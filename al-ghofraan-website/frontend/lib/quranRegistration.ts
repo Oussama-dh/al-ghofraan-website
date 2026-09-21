@@ -57,12 +57,21 @@ export const SPECIAL_CONSIDERATIONS_HINT =
 export const CONSENT_TEXT =
   "Ik verklaar dat bovenstaande gegevens naar waarheid zijn ingevuld en geef toestemming om deze gegevens te gebruiken voor de inschrijving en begeleiding binnen het onderwijs van al-Ghofraan.";
 
-/** Verplichte bevestiging van de minimale voorwaarde voor deelname (Arabische letters herkennen). */
-export function lettersConfirmationText(childCount: number): string {
-  return childCount > 1
-    ? "Ik bevestig dat mijn kinderen minimaal de Arabische letters van elkaar kunnen onderscheiden en herkennen."
-    : "Ik bevestig dat mijn kind minimaal de Arabische letters van elkaar kan onderscheiden en herkennen.";
-}
+/**
+ * Minimale voorwaarde voor deelname: het kind kan de Arabische letters herkennen
+ * en van elkaar onderscheiden. Het formulier stelt deze vraag eerst; alleen bij
+ * "Ja" verschijnt het formulier (en gaat `letters_confirmed: true` mee).
+ */
+export const LETTERS_QUESTION =
+  "Kan uw kind minimaal de Arabische letters herkennen en van elkaar onderscheiden?";
+
+export const LETTERS_NO_TITLE = "Helaas kan uw kind zich nog niet inschrijven";
+
+export const LETTERS_NO_MESSAGE =
+  "Voor deelname is het nodig dat uw kind minimaal de Arabische letters kan herkennen en van elkaar kan onderscheiden. " +
+  "Dat is nu nog niet het geval, waardoor inschrijven op dit moment helaas niet mogelijk is.\n\n" +
+  "Wij moedigen u als ouder/verzorger van harte aan om uw kind de Arabische letters te leren. " +
+  "Zodra uw kind de letters kent, bent u van harte welkom om uw kind in te schrijven, in shaa Allaah.";
 
 /** Maximum aantal kinderen in één inschrijving (misbruikpreventie, geen inhoudelijke limiet). */
 export const MAX_CHILDREN = 10;
@@ -604,7 +613,7 @@ export function validateQuranRegistration(raw: unknown, limits?: AgeLimits | nul
 
   if (r.letters_confirmed !== true)
     errors.letters_confirmed =
-      "U moet bevestigen dat uw kind minimaal de Arabische letters van elkaar kan onderscheiden en herkennen.";
+      "U moet bevestigen dat uw kind minimaal de Arabische letters kan herkennen en van elkaar kan onderscheiden.";
 
   if (r.consent !== true)
     errors.consent = "U moet de verklaring en toestemming bevestigen om de inschrijving te kunnen versturen.";

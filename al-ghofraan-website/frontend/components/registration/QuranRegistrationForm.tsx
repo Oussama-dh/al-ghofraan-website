@@ -44,7 +44,9 @@ import {
   INVOLVED_GUARDIANS_OPTIONS,
   LEVELS,
   LEVEL_EXPLANATION,
-  lettersConfirmationText,
+  LETTERS_QUESTION,
+  LETTERS_NO_TITLE,
+  LETTERS_NO_MESSAGE,
   LIMITS,
   MAX_CHILDREN,
   PAYMENT_FREQUENCY_OPTIONS,
@@ -189,7 +191,7 @@ function fieldOrder(childCount: number): string[] {
     "contact_1_phone", "contact_1_email",
     "secondary_contact_name", "secondary_contact_relation", "secondary_contact_relation_other",
     "secondary_contact_phone", "secondary_contact_email",
-    "payment_frequency", "additional_notes", "letters_confirmed", "consent",
+    "payment_frequency", "additional_notes", "consent",
   );
   return order;
 }
@@ -636,6 +638,8 @@ export default function QuranRegistrationForm({
 
   const [form, setForm] = useState<FormState>(() => makeInitial("c0"));
   const [status, setStatus] = useState<"idle" | "submitting" | "success">("idle");
+  /** Antwoord op de voorwaardevraag; het formulier verschijnt alleen bij "yes". */
+  const [lettersAnswer, setLettersAnswer] = useState<"" | "yes" | "no">("");
   const [attempted, setAttempted] = useState(false);
   const [serverErrors, setServerErrors] = useState<FieldErrors>({});
   const [banner, setBanner] = useState<string>("");
@@ -785,6 +789,15 @@ export default function QuranRegistrationForm({
     }
   }
 
+  function answerLetters(answer: "yes" | "no" | "") {
+    setLettersAnswer(answer);
+    setForm((f) => ({ ...f, letters_confirmed: answer === "yes" }));
+    // Het formulier (of de melding) neemt de plek van de vraag over: terug naar het anker.
+    requestAnimationFrame(() => {
+      document.getElementById(anchorId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   // ─── Succes-state (zelfde kaart als RegistrationForm) ──────
   if (status === "success") {
     return (
@@ -797,6 +810,48 @@ export default function QuranRegistrationForm({
       >
         <h3 className="font-display text-xl text-ink mb-2">Inschrijving ontvangen</h3>
         <p className="font-body text-taupe-dark text-sm whitespace-pre-line">{text.successText}</p>
+      </div>
+    );
+  }
+
+  // ─── Voorwaardevraag: eerst bevestigen, dan pas het formulier ──
+  if (lettersAnswer !== "yes") {
+    return (
+      <div
+        id={anchorId}
+        tabIndex={-1}
+        className={cn(formCardClass, "focus:outline-none", className)}
+      >
+        {lettersAnswer === "no" ? (
+          <div role="status">
+            <h3 className="font-display text-xl sm:text-2xl text-ink mb-3">{LETTERS_NO_TITLE}</h3>
+            <p className="font-body text-sm sm:text-base text-taupe-dark leading-relaxed whitespace-pre-line">
+              {LETTERS_NO_MESSAGE}
+            </p>
+            <button
+              type="button"
+              onClick={() => answerLetters("")}
+              className="mt-5 inline-flex min-h-[44px] items-center font-body text-sm text-slate-mosque underline hover:text-slate-dark"
+            >
+              Ik heb een ander antwoord
+            </button>
+          </div>
+        ) : (
+          <fieldset>
+            <legend className="font-display text-xl sm:text-2xl text-ink mb-1">{LETTERS_QUESTION}</legend>
+            <p className="font-body text-sm text-taupe-dark mb-5">
+              Dit is een voorwaarde voor deelname. Daarna kunt u het inschrijfformulier invullen.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button type="button" variant="primary" onClick={() => answerLetters("yes")}>
+                Ja
+              </Button>
+              <Button type="button" variant="outline" onClick={() => answerLetters("no")}>
+                Nee
+              </Button>
+            </div>
+          </fieldset>
+        )}
       </div>
     );
   }
@@ -1044,27 +1099,6 @@ export default function QuranRegistrationForm({
           onChange={(v) => set("additional_notes", v)}
           error={errors.additional_notes}
         />
-      </div>
-
-      <div className="mb-6">
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            id="letters_confirmed"
-            name="letters_confirmed"
-            type="checkbox"
-            checked={form.letters_confirmed}
-            onChange={(e) => set("letters_confirmed", e.target.checked)}
-            aria-required
-            aria-invalid={errors.letters_confirmed ? true : undefined}
-            aria-describedby={errors.letters_confirmed ? "letters_confirmed-error" : undefined}
-            className="mt-1 h-4 w-4 shrink-0 rounded border-sand-200 text-slate-mosque focus:ring-slate-mosque"
-          />
-          <span className="font-body text-sm text-taupe-dark leading-relaxed">
-            {lettersConfirmationText(form.children.length)}
-            <Required />
-          </span>
-        </label>
-        <ErrorText id="letters_confirmed" message={errors.letters_confirmed} />
       </div>
 
       <div className="space-y-3 mb-2">
