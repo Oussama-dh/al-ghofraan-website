@@ -17,6 +17,7 @@ import {
 } from "@/lib/directus";
 import FaqSection       from "@/components/sections/FaqSection";
 import { formatDate }    from "@/lib/utils";
+import { FAQ_INLINE_MAX } from "@/lib/faqGroups";
 
 interface Props {
   params: { slug: string };
@@ -45,6 +46,8 @@ export default async function EducationProgramDetailPage({ params }: Props) {
 
   // Alleen gepubliceerde FAQ's; FaqSection rendert niets bij een lege lijst.
   const faqs = await getEducationProgramFaqs(program.id);
+  // Veel vragen: aparte pagina + link i.p.v. een lange lijst onderaan.
+  const faqsOnOwnPage = faqs.length > FAQ_INLINE_MAX;
 
   const imageId =
     typeof program.image === "string" ? program.image : program.image?.id;
@@ -201,6 +204,26 @@ export default async function EducationProgramDetailPage({ params }: Props) {
             />
           )}
 
+          {/* Link naar de aparte FAQ-pagina (alleen bij veel vragen) */}
+          {faqsOnOwnPage && (
+            <div className="mb-10 p-6 bg-white border border-sand-200 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 shrink-0 rounded-lg bg-slate-mosque/10 flex items-center justify-center text-slate-mosque">
+                  <Icon name="help-circle" className="w-5 h-5" strokeWidth={1.75} />
+                </div>
+                <div>
+                  <h3 className="font-display text-xl text-ink">Vragen over dit programma?</h3>
+                  <p className="font-body text-sm text-taupe-dark mt-1">
+                    Lees de antwoorden op de veelgestelde vragen, bijvoorbeeld over de methode, de lessen en de kosten.
+                  </p>
+                </div>
+              </div>
+              <Button href={`/onderwijs/${program.slug}/veelgestelde-vragen`} variant="outline" className="shrink-0">
+                Bekijk de veelgestelde vragen
+              </Button>
+            </div>
+          )}
+
           {/* ─── Inschrijven-flow ──────────────────────────── */}
           {program.registration_enabled ? (
             showImmediately ? (
@@ -253,7 +276,7 @@ export default async function EducationProgramDetailPage({ params }: Props) {
       </section>
 
       <FaqSection
-        items={faqs.map((f) => ({
+        items={(faqsOnOwnPage ? [] : faqs).map((f) => ({
           id:        String(f.id),
           question:  f.question,
           answer:    f.answer,

@@ -316,7 +316,7 @@ export async function getEducationProgramFaqs(
           } as never,
           sort:   ["sort", "id"],
           limit:  -1,
-          fields: ["id", "question", "answer", "sort", "status", "program"] as never,
+          fields: ["id", "question", "answer", "category", "sort", "status", "program"] as never,
         })
       );
       return result as unknown as EducationProgramFaq[];

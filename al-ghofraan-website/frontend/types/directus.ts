@@ -456,6 +456,8 @@ export interface EducationProgramFaq {
   question: string;
   /** HTML (rich-text) */
   answer: string;
+  /** Optionele groep (bv. "Kosten en deelname"); vragen zonder groep komen onderaan. */
+  category?: string | null;
   sort?: number | null;
   status: "draft" | "published" | "archived";
   date_created?: string | null;
