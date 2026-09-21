@@ -1134,7 +1134,7 @@ export async function getPageContent(slug: string): Promise<PageContent | null> 
           fields: [
             "id", "slug", "title", "arabic_title", "subtitle", "intro", "body",
             "seo_title", "seo_description", "status", "icon",
-            "hero_background_image",
+            "hero_background_image", "profile_photo",
           ],
         })
       );

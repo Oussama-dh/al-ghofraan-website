@@ -94,6 +94,7 @@ import { setupHifdhFaqContent }               from "./steps/67-hifdh-faq-content
 import { setupLettersConfirmedField }         from "./steps/68-hifdh-letters-confirmed.mjs";
 import { setupEducationAgeLimits }            from "./steps/69-education-age-limits.mjs";
 import { migrateHifdhFaqLetters }             from "./steps/70-hifdh-faq-letters.mjs";
+import { setupShaykhPage }                    from "./steps/71-shaykh-page.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -213,6 +214,7 @@ const STEPS = [
   { id: "68",  label: "Hifdh: veld letters_confirmed (voorwaarde Arabische letters)",            run: setupLettersConfirmedField },
   { id: "69",  label: "Min/max leeftijd op education_programs (+ Hifdh 6 t/m 12 indien leeg)",   run: setupEducationAgeLimits },
   { id: "70",  label: "Hifdh FAQ: voorwaarde Arabische letters (alleen ongewijzigde standaardtekst)", run: migrateHifdhFaqLetters },
+  { id: "71",  label: "Pagina Shaykh Brahim Moumen (draft) + fotoveld + menu-item onder Over ons", run: setupShaykhPage },
 ];
 
 // ─── CLI-argument parsing ──────────────────────────────────────

@@ -88,6 +88,9 @@ export default async function DynamicPage({ params }: Props) {
   const intro    = page?.intro    || null;
   const body     = page?.body     || null;
   const pageIcon = page?.icon || resolveIconKey(iconMap, ICON_KEYS.pageSectionDefault);
+  // Optionele portretfoto (bv. /shaykh-brahim-moumen). <img> + getAssetUrl(), conform
+  // projectregel: geen next/image op Directus-assets.
+  const photoUrl = page?.profile_photo ? getAssetUrl(page.profile_photo) : "";
 
   const ctaSections   = sections.filter((s) => s.type === "cta");
   const otherSections = sections.filter((s) => s.type !== "cta");
@@ -130,10 +133,20 @@ export default async function DynamicPage({ params }: Props) {
       })()}
 
       {/* Page-content body (alleen als gevuld) */}
-      {(intro || body) && (
+      {(intro || body || photoUrl) && (
         <section className="bg-sand-50 py-12 lg:py-16">
           <Container narrow>
-            {pageIcon && (
+            {photoUrl ? (
+              <div className="flex justify-center mb-8">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photoUrl}
+                  alt={title}
+                  className="w-48 sm:w-56 aspect-[4/5] object-cover rounded-2xl shadow-md border border-sand-200 bg-sand-100"
+                  loading="lazy"
+                />
+              </div>
+            ) : pageIcon && (
               <div className="flex justify-center mb-6">
                 <div className="w-14 h-14 rounded-2xl bg-slate-mosque/10 flex items-center justify-center text-slate-mosque">
                   <Icon name={pageIcon} className="w-7 h-7" strokeWidth={1.75} />
