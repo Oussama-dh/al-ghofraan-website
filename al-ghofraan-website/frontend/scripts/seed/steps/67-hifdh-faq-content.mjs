@@ -38,7 +38,8 @@ const FAQ_ITEMS = [
   {
     category: CAT_PROGRAM,
     question: "Wat als mijn kind nog niet goed kan lezen of schrijven?",
-    answer: `<p>Kinderen die nog niet goed kunnen lezen en/of schrijven, kunnen eerst deelnemen aan een aparte cursus waarin zij leren <strong>de Qoraan te lezen en te schrijven</strong> volgens een bewezen methode. Zodra uw kind voldoende voorbereid is, kan het instromen in de Hifdh-klassen.</p>`,
+    answer: `<p>Kinderen die nog niet goed kunnen lezen en/of schrijven, kunnen eerst deelnemen aan een aparte cursus waarin zij leren <strong>de Qoraan te lezen en te schrijven</strong> volgens een bewezen methode. Zodra uw kind voldoende voorbereid is, kan het instromen in de Hifdh-klassen.</p>
+<p>Voor deelname aan deze cursus geldt wel een minimale voorwaarde: uw kind moet <strong>minimaal de Arabische letters van elkaar kunnen onderscheiden en herkennen</strong>. Bij de inschrijving vragen wij u dit te bevestigen.</p>`,
   },
   {
     category: CAT_PROGRAM,
