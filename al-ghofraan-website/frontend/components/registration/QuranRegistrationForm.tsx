@@ -45,6 +45,7 @@ import {
   LEVELS,
   LEVEL_EXPLANATION,
   LETTERS_QUESTION,
+  lettersConfirmationText,
   LETTERS_NO_TITLE,
   LETTERS_NO_MESSAGE,
   LIMITS,
@@ -191,7 +192,7 @@ function fieldOrder(childCount: number): string[] {
     "contact_1_phone", "contact_1_email",
     "secondary_contact_name", "secondary_contact_relation", "secondary_contact_relation_other",
     "secondary_contact_phone", "secondary_contact_email",
-    "payment_frequency", "additional_notes", "consent",
+    "payment_frequency", "additional_notes", "letters_confirmed", "consent",
   );
   return order;
 }
@@ -791,7 +792,8 @@ export default function QuranRegistrationForm({
 
   function answerLetters(answer: "yes" | "no" | "") {
     setLettersAnswer(answer);
-    setForm((f) => ({ ...f, letters_confirmed: answer === "yes" }));
+    // Het vinkje in het formulier blijft een aparte bevestiging; bij Nee/terug wordt het gewist.
+    if (answer !== "yes") setForm((f) => ({ ...f, letters_confirmed: false }));
     // Het formulier (of de melding) neemt de plek van de vraag over: terug naar het anker.
     requestAnimationFrame(() => {
       document.getElementById(anchorId)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1099,6 +1101,27 @@ export default function QuranRegistrationForm({
           onChange={(v) => set("additional_notes", v)}
           error={errors.additional_notes}
         />
+      </div>
+
+      <div className="mb-6">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            id="letters_confirmed"
+            name="letters_confirmed"
+            type="checkbox"
+            checked={form.letters_confirmed}
+            onChange={(e) => set("letters_confirmed", e.target.checked)}
+            aria-required
+            aria-invalid={errors.letters_confirmed ? true : undefined}
+            aria-describedby={errors.letters_confirmed ? "letters_confirmed-error" : undefined}
+            className="mt-1 h-4 w-4 shrink-0 rounded border-sand-200 text-slate-mosque focus:ring-slate-mosque"
+          />
+          <span className="font-body text-sm text-taupe-dark leading-relaxed">
+            {lettersConfirmationText(form.children.length)}
+            <Required />
+          </span>
+        </label>
+        <ErrorText id="letters_confirmed" message={errors.letters_confirmed} />
       </div>
 
       <div className="space-y-3 mb-2">

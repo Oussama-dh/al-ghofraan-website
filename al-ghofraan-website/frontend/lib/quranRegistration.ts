@@ -60,10 +60,18 @@ export const CONSENT_TEXT =
 /**
  * Minimale voorwaarde voor deelname: het kind kan de Arabische letters herkennen
  * en van elkaar onderscheiden. Het formulier stelt deze vraag eerst; alleen bij
- * "Ja" verschijnt het formulier (en gaat `letters_confirmed: true` mee).
+ * "Ja" verschijnt het formulier. Daarin bevestigt de ouder dit nogmaals met een
+ * verplicht vinkje (`letters_confirmed`, zie lettersConfirmationText).
  */
 export const LETTERS_QUESTION =
   "Kan uw kind minimaal de Arabische letters herkennen en van elkaar onderscheiden?";
+
+/** Tekst bij het verplichte vinkje in het formulier. */
+export function lettersConfirmationText(childCount: number): string {
+  return childCount > 1
+    ? "Ik bevestig dat mijn kinderen minimaal de Arabische letters kunnen herkennen en van elkaar kunnen onderscheiden."
+    : "Ik bevestig dat mijn kind minimaal de Arabische letters kan herkennen en van elkaar kan onderscheiden.";
+}
 
 export const LETTERS_NO_TITLE = "Helaas kan uw kind zich nog niet inschrijven";
 
