@@ -57,6 +57,13 @@ export const SPECIAL_CONSIDERATIONS_HINT =
 export const CONSENT_TEXT =
   "Ik verklaar dat bovenstaande gegevens naar waarheid zijn ingevuld en geef toestemming om deze gegevens te gebruiken voor de inschrijving en begeleiding binnen het onderwijs van al-Ghofraan.";
 
+/** Verplichte bevestiging van de minimale voorwaarde voor deelname (Arabische letters herkennen). */
+export function lettersConfirmationText(childCount: number): string {
+  return childCount > 1
+    ? "Ik bevestig dat mijn kinderen minimaal de Arabische letters van elkaar kunnen onderscheiden en herkennen."
+    : "Ik bevestig dat mijn kind minimaal de Arabische letters van elkaar kan onderscheiden en herkennen.";
+}
+
 /** Maximum aantal kinderen in één inschrijving (misbruikpreventie, geen inhoudelijke limiet). */
 export const MAX_CHILDREN = 10;
 
@@ -100,6 +107,7 @@ export const LIMITS = {
 // Alle waarden zijn `unknown` bij binnenkomst; het formulier stuurt
 // strings en booleans. Sleutels komen 1-op-1 overeen met de Directus-
 // velden, behalve `consent` (→ consent_given) en `website` (honeypot).
+// `letters_confirmed` heeft dezelfde naam in het formulier en in Directus.
 
 export type QuranRegistrationRaw = Record<string, unknown>;
 
@@ -142,6 +150,9 @@ export interface QuranRegistrationData {
   payment_frequency: PaymentFrequency;
 
   additional_notes: string | null;
+
+  /** Ouder bevestigt dat het kind/de kinderen minimaal de Arabische letters kan/kunnen herkennen. */
+  letters_confirmed: true;
 
   consent_given: true;
 
@@ -296,6 +307,50 @@ export function minBirthDateIso(now: Date = new Date()): string {
   ).padStart(2, "0")}-${String(today.getUTCDate()).padStart(2, "0")}`;
 }
 
+// ─── Leeftijd ────────────────────────────────────────────────
+
+/** Min/max leeftijd (hele jaren, inclusief) uit education_programs; leeg = geen grens. */
+export interface AgeLimits {
+  minAge?: number | null;
+  maxAge?: number | null;
+}
+
+function cleanLimit(v: unknown): number | null {
+  return typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : null;
+}
+
+/** Leeftijd in hele jaren op `todayIso` (Europe/Amsterdam); null bij ongeldige of toekomstige datum. */
+export function ageInYears(birthIso: string, todayIso: string = todayIsoAmsterdam()): number | null {
+  if (!parseIsoDate(birthIso) || birthIso > todayIso) return null;
+  const [by, bm, bd] = birthIso.split("-").map(Number);
+  const [ty, tm, td] = todayIso.split("-").map(Number);
+  let age = ty - by;
+  if (tm < bm || (tm === bm && td < bd)) age -= 1;
+  return age;
+}
+
+/** Leesbare leeftijd voor naast de geboortedatum: "7 jaar", "1 jaar", "8 maanden"; "" bij onbekend. */
+export function formatAge(birthIso: string, todayIso: string = todayIsoAmsterdam()): string {
+  const years = ageInYears(birthIso, todayIso);
+  if (years === null) return "";
+  if (years >= 1) return `${years} jaar`;
+  const [by, bm, bd] = birthIso.split("-").map(Number);
+  const [ty, tm, td] = todayIso.split("-").map(Number);
+  let months = (ty - by) * 12 + (tm - bm);
+  if (td < bd) months -= 1;
+  return months === 1 ? "1 maand" : `${Math.max(months, 0)} maanden`;
+}
+
+/** "6 t/m 12 jaar", "vanaf 6 jaar", "tot en met 12 jaar"; "" zonder grenzen. */
+export function ageRangeText(limits: AgeLimits | null | undefined): string {
+  const min = cleanLimit(limits?.minAge);
+  const max = cleanLimit(limits?.maxAge);
+  if (min !== null && max !== null) return `${min} t/m ${max} jaar`;
+  if (min !== null) return `vanaf ${min} jaar`;
+  if (max !== null) return `tot en met ${max} jaar`;
+  return "";
+}
+
 // ─── Niveau ──────────────────────────────────────────────────
 
 /** Accepteert alleen hele getallen 1..10 (number of cijfer-string). */
@@ -319,7 +374,13 @@ export function childErrorKey(index: number, field: string): string {
  * meer dan één kind is ("Vul de voornaam van kind 2 in."). Retourneert
  * null als er fouten zijn (die zijn dan aan `errors` toegevoegd).
  */
-function validateChild(rawChild: unknown, index: number, total: number, errors: FieldErrors): ChildData | null {
+function validateChild(
+  rawChild: unknown,
+  index: number,
+  total: number,
+  errors: FieldErrors,
+  limits?: AgeLimits | null,
+): ChildData | null {
   if (!rawChild || typeof rawChild !== "object" || Array.isArray(rawChild)) {
     errors[`children.${index}`] = `Kind ${index + 1} is ongeldig.`;
     return null;
@@ -348,7 +409,18 @@ function validateChild(rawChild: unknown, index: number, total: number, errors: 
     if (!dt) local[k("birth_date")] = `Vul een geldige geboortedatum in voor ${who}.`;
     else if (birthRaw > todayIsoAmsterdam()) local[k("birth_date")] = `De geboortedatum van ${who} mag niet in de toekomst liggen.`;
     else if (birthRaw < minBirthDateIso()) local[k("birth_date")] = `Controleer de geboortedatum van ${who}; deze ligt te ver in het verleden.`;
-    else birthDate = birthRaw;
+    else {
+      const age = ageInYears(birthRaw)!;
+      const min = cleanLimit(limits?.minAge);
+      const max = cleanLimit(limits?.maxAge);
+      if ((min !== null && age < min) || (max !== null && age > max)) {
+        const subject = who.charAt(0).toUpperCase() + who.slice(1);
+        local[k("birth_date")] =
+          `${subject} is ${age} jaar. Inschrijven kan voor kinderen van ${ageRangeText(limits)}.`;
+      } else {
+        birthDate = birthRaw;
+      }
+    }
   }
 
   const gender = oneOf(CHILD_GENDER_OPTIONS, c.gender);
@@ -410,7 +482,7 @@ function validateChild(rawChild: unknown, index: number, total: number, errors: 
  * is `data` volledig genormaliseerd en bevat het alleen bekende velden —
  * onbekende sleutels in `raw` worden genegeerd.
  */
-export function validateQuranRegistration(raw: unknown): ValidationResult {
+export function validateQuranRegistration(raw: unknown, limits?: AgeLimits | null): ValidationResult {
   const r: QuranRegistrationRaw =
     raw && typeof raw === "object" && !Array.isArray(raw)
       ? (raw as QuranRegistrationRaw)
@@ -519,7 +591,7 @@ export function validateQuranRegistration(raw: unknown): ValidationResult {
     errors.children = `U kunt maximaal ${MAX_CHILDREN} kinderen in één inschrijving opgeven.`;
   } else {
     rawChildren.forEach((rc, i) => {
-      const child = validateChild(rc, i, rawChildren.length, errors);
+      const child = validateChild(rc, i, rawChildren.length, errors, limits);
       if (child) children.push(child);
     });
   }
@@ -529,6 +601,10 @@ export function validateQuranRegistration(raw: unknown): ValidationResult {
   if (!payment) errors.payment_frequency = "Kies een betalingsperiode.";
 
   const additionalNotes = optionalNotes(r.additional_notes, LIMITS.additionalNotesMax, "additional_notes", errors);
+
+  if (r.letters_confirmed !== true)
+    errors.letters_confirmed =
+      "U moet bevestigen dat uw kind minimaal de Arabische letters van elkaar kan onderscheiden en herkennen.";
 
   if (r.consent !== true)
     errors.consent = "U moet de verklaring en toestemming bevestigen om de inschrijving te kunnen versturen.";
@@ -558,6 +634,7 @@ export function validateQuranRegistration(raw: unknown): ValidationResult {
 
       additional_notes: additionalNotes,
 
+      letters_confirmed: true,
       consent_given: true,
 
       children,

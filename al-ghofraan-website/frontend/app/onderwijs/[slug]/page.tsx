@@ -87,6 +87,8 @@ export default async function EducationProgramDetailPage({ params }: Props) {
         sourceTitle={program.title}
         anchorId="inschrijven"
         contentTexts={contentTexts}
+        minAge={program.min_age ?? null}
+        maxAge={program.max_age ?? null}
       />
     ) : (
     <RegistrationForm

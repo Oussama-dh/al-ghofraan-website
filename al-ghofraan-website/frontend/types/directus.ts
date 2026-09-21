@@ -409,6 +409,9 @@ export interface EducationProgram {
   location?: string | null;
   /** Vrije tekst, bv. "€ 25 per maand" — kaart "Prijs" op /onderwijs/[slug]. */
   price?: string | null;
+  /** Minimum/maximum leeftijd (hele jaren, inclusief) voor inschrijving; leeg = geen grens. */
+  min_age?: number | null;
+  max_age?: number | null;
   start_date?: string | null;
   end_date?: string | null;
   image?: string | DirectusFile | null;
@@ -1102,6 +1105,8 @@ export interface QuranRegistration {
   secondary_contact_email?: string | null;
   payment_frequency: "monthly" | "quarterly" | "semiannual" | "yearly";
   additional_notes?: string | null;
+  /** Ouder bevestigde dat het kind minimaal de Arabische letters herkent (leeg bij oudere inschrijvingen). */
+  letters_confirmed?: boolean | null;
   consent_given: boolean;
   status: RegistrationStatus;
   created_at?: string | null;

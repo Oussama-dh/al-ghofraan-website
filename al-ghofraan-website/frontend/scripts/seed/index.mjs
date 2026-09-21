@@ -91,6 +91,8 @@ import { setupEducationProgramPrice }         from "./steps/64-education-program
 import { migrateQoraanSpelling }              from "./steps/65-qoraan-spelling-migration.mjs";
 import { setupHifdhEmailSender }              from "./steps/66-hifdh-email-sender.mjs";
 import { setupHifdhFaqContent }               from "./steps/67-hifdh-faq-content.mjs";
+import { setupLettersConfirmedField }         from "./steps/68-hifdh-letters-confirmed.mjs";
+import { setupEducationAgeLimits }            from "./steps/69-education-age-limits.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -207,6 +209,8 @@ const STEPS = [
   { id: "64",  label: "Prijs-veld voor onderwijsprogramma's (education_programs.price)",        run: setupEducationProgramPrice },
   { id: "66",  label: "Eigen afzender Hifdh (Baraa'im): site_settings.hifdh_email_*",           run: setupHifdhEmailSender },
   { id: "67",  label: "Hifdh veelgestelde vragen: categorie-veld + inhoud (alleen bij eerste uitrol)", run: setupHifdhFaqContent },
+  { id: "68",  label: "Hifdh: veld letters_confirmed (voorwaarde Arabische letters)",            run: setupLettersConfirmedField },
+  { id: "69",  label: "Min/max leeftijd op education_programs (+ Hifdh 6 t/m 12 indien leeg)",   run: setupEducationAgeLimits },
 ];
 
 // ─── CLI-argument parsing ──────────────────────────────────────

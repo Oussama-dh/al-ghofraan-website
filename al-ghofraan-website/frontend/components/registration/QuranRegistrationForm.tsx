@@ -44,6 +44,7 @@ import {
   INVOLVED_GUARDIANS_OPTIONS,
   LEVELS,
   LEVEL_EXPLANATION,
+  lettersConfirmationText,
   LIMITS,
   MAX_CHILDREN,
   PAYMENT_FREQUENCY_OPTIONS,
@@ -53,6 +54,8 @@ import {
   minBirthDateIso,
   todayIsoAmsterdam,
   validateQuranRegistration,
+  formatAge,
+  ageRangeText,
   type FieldErrors,
   type Option,
 } from "@/lib/quranRegistration";
@@ -66,6 +69,9 @@ interface QuranRegistrationFormProps {
   sourceTitle: string;
   /** ID van de form voor anchor-links (#inschrijven). */
   anchorId?: string;
+  /** Minimum/maximum leeftijd van het kind in hele jaren (uit Directus); leeg = geen grens. */
+  minAge?: number | null;
+  maxAge?: number | null;
   /**
    * Beheerbare teksten uit education_programs (zelfde velden als het algemene
    * formulier). Lege waarden → fallback naar de Hifdh-standaardteksten.
@@ -122,6 +128,7 @@ interface FormState {
 
   payment_frequency: string;
   additional_notes: string;
+  letters_confirmed: boolean;
   consent: boolean;
 
   /** Honeypot — mensen laten dit leeg. */
@@ -156,6 +163,7 @@ function makeInitial(firstKey: string): FormState {
     children: [makeChild(firstKey)],
     payment_frequency: "",
     additional_notes: "",
+    letters_confirmed: false,
     consent: false,
     website: "",
   };
@@ -181,7 +189,7 @@ function fieldOrder(childCount: number): string[] {
     "contact_1_phone", "contact_1_email",
     "secondary_contact_name", "secondary_contact_relation", "secondary_contact_relation_other",
     "secondary_contact_phone", "secondary_contact_email",
-    "payment_frequency", "additional_notes", "consent",
+    "payment_frequency", "additional_notes", "letters_confirmed", "consent",
   );
   return order;
 }
@@ -444,13 +452,15 @@ function NotesField({
 
 /** Alle velden van één kind — zelfde blokstijl als een student in RegistrationForm. */
 function ChildBlock({
-  index, child, errors, today, minBirth, onChange, onRemove,
+  index, child, errors, today, minBirth, ageRange, onChange, onRemove,
 }: {
   index: number;
   child: ChildState;
   errors: FieldErrors;
   today: string;
   minBirth: string;
+  /** Leesbare toegestane leeftijden ("6 t/m 12 jaar"), leeg = geen grens. */
+  ageRange: string;
   onChange: <K extends keyof ChildState>(key: K, value: ChildState[K]) => void;
   onRemove: () => void;
 }) {
@@ -502,6 +512,11 @@ function ChildBlock({
         />
         <TextField
           id={cid(index, "birth_date")} label="Geboortedatum" required error={err("birth_date")}
+          hint={
+            formatAge(child.birth_date)
+              ? `Leeftijd: ${formatAge(child.birth_date)}`
+              : ageRange ? `Inschrijven kan voor kinderen van ${ageRange}.` : undefined
+          }
           inputProps={{
             type: "date", min: minBirth, max: today, autoComplete: "off",
             value: child.birth_date,
@@ -599,6 +614,8 @@ export default function QuranRegistrationForm({
   sourceTitle,
   anchorId = "inschrijven",
   contentTexts,
+  minAge = null,
+  maxAge = null,
   className,
 }: QuranRegistrationFormProps) {
   // Beheerbare teksten met fallback (zelfde principe als RegistrationForm).
@@ -673,9 +690,9 @@ export default function QuranRegistrationForm({
   }
 
   const clientErrors = useMemo<FieldErrors>(() => {
-    const res = validateQuranRegistration(toPayload(form));
+    const res = validateQuranRegistration(toPayload(form), { minAge, maxAge });
     return res.ok ? {} : res.errors;
-  }, [form]);
+  }, [form, minAge, maxAge]);
 
   const errors: FieldErrors = attempted ? { ...clientErrors, ...serverErrors } : serverErrors;
   const errorCount = Object.keys(errors).length;
@@ -716,7 +733,7 @@ export default function QuranRegistrationForm({
     setAttempted(true);
     setBanner("");
 
-    const local = validateQuranRegistration(toPayload(form));
+    const local = validateQuranRegistration(toPayload(form), { minAge, maxAge });
     if (!local.ok) {
       setBanner("Controleer de gemarkeerde velden en probeer het opnieuw.");
       focusFirstError(local.errors);
@@ -831,6 +848,7 @@ export default function QuranRegistrationForm({
               errors={errors}
               today={today}
               minBirth={minBirth}
+              ageRange={ageRangeText({ minAge, maxAge })}
               onChange={(k, v) => setChild(index, k, v)}
               onRemove={() => removeChild(index)}
             />
@@ -1026,6 +1044,27 @@ export default function QuranRegistrationForm({
           onChange={(v) => set("additional_notes", v)}
           error={errors.additional_notes}
         />
+      </div>
+
+      <div className="mb-6">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            id="letters_confirmed"
+            name="letters_confirmed"
+            type="checkbox"
+            checked={form.letters_confirmed}
+            onChange={(e) => set("letters_confirmed", e.target.checked)}
+            aria-required
+            aria-invalid={errors.letters_confirmed ? true : undefined}
+            aria-describedby={errors.letters_confirmed ? "letters_confirmed-error" : undefined}
+            className="mt-1 h-4 w-4 shrink-0 rounded border-sand-200 text-slate-mosque focus:ring-slate-mosque"
+          />
+          <span className="font-body text-sm text-taupe-dark leading-relaxed">
+            {lettersConfirmationText(form.children.length)}
+            <Required />
+          </span>
+        </label>
+        <ErrorText id="letters_confirmed" message={errors.letters_confirmed} />
       </div>
 
       <div className="space-y-3 mb-2">

@@ -35,6 +35,7 @@ import {
   RELATION_OPTIONS,
   labelFor,
   validateQuranRegistration,
+  type AgeLimits,
 } from "@/lib/quranRegistration";
 
 export const runtime = "nodejs";
@@ -139,29 +140,43 @@ export async function POST(request: Request) {
   const d = result.data;
 
   // ── 3b. Programma open voor inschrijving? ─────────────────
+  let ageLimits: AgeLimits = {};
   try {
     const rows = (await timeout(
       directusServer.request(
         readItems("education_programs", {
           filter: { slug: { _eq: HIFDH_PROGRAM_SLUG }, status: { _eq: "published" } } as never,
-          fields: ["id", "registration_enabled"] as never,
+          fields: ["id", "registration_enabled", "min_age", "max_age"] as never,
           limit: 1,
         }),
       ),
       DIRECTUS_TIMEOUT_MS,
-    )) as unknown as Array<{ registration_enabled?: boolean }>;
+    )) as unknown as Array<{ registration_enabled?: boolean; min_age?: number | null; max_age?: number | null }>;
     if (!rows[0] || rows[0].registration_enabled !== true) {
       return NextResponse.json(
         { error: "Inschrijven voor het Hifdh programma is momenteel gesloten." },
         { status: 403 },
       );
     }
+    ageLimits = { minAge: rows[0].min_age, maxAge: rows[0].max_age };
   } catch (err) {
     const { kind, detail } = describeError(err);
     console.error(`${LOG} programma-check mislukt (${kind}): ${detail}`);
     return NextResponse.json(
       { error: kind === "unreachable" || kind === "timeout" ? MSG_UNAVAILABLE : MSG_GENERIC },
       { status: kind === "unreachable" || kind === "timeout" ? 503 : 500 },
+    );
+  }
+
+  // ── 3c. Leeftijdsgrenzen van het programma (min/max uit Directus) ──
+  const ageResult = validateQuranRegistration(raw, ageLimits);
+  if (!ageResult.ok) {
+    return NextResponse.json(
+      {
+        error: "Controleer de gemarkeerde velden en probeer het opnieuw.",
+        fieldErrors: ageResult.errors,
+      },
+      { status: 400 },
     );
   }
 
