@@ -89,6 +89,7 @@ import { setupHifdhProgram }                  from "./steps/62-hifdh-program.mjs
 import { setupEducationProgramFaqs }          from "./steps/63-education-program-faqs.mjs";
 import { setupEducationProgramPrice }         from "./steps/64-education-program-price.mjs";
 import { migrateQoraanSpelling }              from "./steps/65-qoraan-spelling-migration.mjs";
+import { setupHifdhEmailSender }              from "./steps/66-hifdh-email-sender.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -203,6 +204,7 @@ const STEPS = [
   { id: "62",  label: "Hifdh programma in education_programs (kaart op /onderwijs)",          run: setupHifdhProgram },
   { id: "63",  label: "Veelgestelde vragen per onderwijsprogramma (education_program_faqs)",  run: setupEducationProgramFaqs },
   { id: "64",  label: "Prijs-veld voor onderwijsprogramma's (education_programs.price)",        run: setupEducationProgramPrice },
+  { id: "66",  label: "Eigen afzender Hifdh (Baraa'im): site_settings.hifdh_email_*",           run: setupHifdhEmailSender },
 ];
 
 // ─── CLI-argument parsing ──────────────────────────────────────

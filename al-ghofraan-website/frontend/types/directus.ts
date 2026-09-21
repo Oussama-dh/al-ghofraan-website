@@ -204,6 +204,9 @@ export interface SiteSettings {
   email_notifications_enabled?: boolean | null;
   email_from_name?: string | null;
   email_from_address?: string | null;
+  /** Hifdh (Baraa'im): eigen afzendernaam en Reply-To voor de ouder-bevestiging. */
+  hifdh_email_from_name?: string | null;
+  hifdh_email_reply_to?: string | null;
   notification_email_contact?: string | null;
   notification_email_education?: string | null;
   notification_email_activities?: string | null;

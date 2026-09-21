@@ -602,7 +602,8 @@ export async function notifyActivityRegistrationVisitor(
 // Gebruikt dezelfde beheerinstellingen als de bevestiging voor het
 // algemene onderwijsformulier (schakelaar, onderwerp, intro, footer:
 // `education_confirmation_email_*`), maar verstuurt een mail in de
-// al-Ghofraan-huisstijl (HTML + platte-tekstversie). Bewust ZONDER de
+// al-Ghofraan-huisstijl (HTML + platte-tekstversie), met eigen afzendernaam
+// (Baraa'im) en Reply-To uit `hifdh_email_from_name` / `hifdh_email_reply_to`. Bewust ZONDER de
 // vrije-tekst toelichtingen over het kind (privacy).
 
 export interface HifdhVisitorConfirmationData {
@@ -677,7 +678,14 @@ export async function notifyHifdhRegistrationVisitor(
       ...footerParas,
     ].join("\n\n");
 
-    return { subject, body: text, html };
+    return {
+      subject,
+      body: text,
+      html,
+      // Eigen afzender voor Baraa'im (beheerbaar in site_settings).
+      fromName: (settings?.hifdh_email_from_name || "").trim() || "Baraa'im",
+      replyTo:  (settings?.hifdh_email_reply_to  || "").trim(),
+    };
   });
 }
 
@@ -702,7 +710,7 @@ async function prepareVisitor(
   settings: SiteSettings | null,
   dept:     VisitorDepartment,
   visitorEmail: string,
-  build:    () => { subject: string; body: string; html?: string },
+  build:    () => { subject: string; body: string; html?: string; fromName?: string; replyTo?: string },
 ): Promise<void> {
   try {
     // Master switch
@@ -718,9 +726,11 @@ async function prepareVisitor(
       return;
     }
 
-    const { subject, body, html } = build();
-    const fromName    = (settings.email_from_name    || "").trim() || "Al-Ghofraan";
-    const fromAddress = (settings.email_from_address || "").trim();
+    const built = build();
+    const { subject, body, html } = built;
+    // Afzender per mailtype overschrijfbaar (bv. Baraa'im); anders de algemene instellingen.
+    const fromName    = (built.fromName || "").trim() || (settings.email_from_name || "").trim() || "Al-Ghofraan";
+    const fromAddress = (built.replyTo  || "").trim() || (settings.email_from_address || "").trim();
 
     await dispatchVisitorEmail({
       to,
