@@ -1,6 +1,7 @@
 // app/api/onderwijs/inschrijven/route.ts
 //
-// Hifdh programma-inschrijving (één gezin, 1..n kinderen). Schrijft één
+// Inschrijving kinderonderwijs (één gezin, 1..n kinderen) voor elk programma
+// met doelgroep "children" (oorspronkelijk alleen het Hifdh programma). Schrijft één
 // record naar `quran_registrations` met de kinderen als geneste
 // `children` (→ quran_registration_children), via het server-side
 // Directus-token (DIRECTUS_TOKEN) — dezelfde architectuur als /api/inschrijven.
@@ -10,9 +11,10 @@
 //   1. Body-grootte + JSON-parse (onvertrouwd)
 //   2. Honeypot (bots) → stil "succes", niets opslaan
 //   3. Volledige server-side validatie (lib/quranRegistration.ts)
-//   3b. Programma-check: Hifdh programma moet in education_programs bestaan,
-//      gepubliceerd zijn en `registration_enabled` hebben (zelfde schakelaar als
-//      het algemene onderwijsformulier: 'Inschrijven gesloten' sluit ook de API)
+//   3b. Programma-check: het programma (`program_slug` uit de body; zonder
+//      waarde het Hifdh programma, voor oude open tabbladen) moet in
+//      education_programs bestaan, gepubliceerd zijn, kinderonderwijs zijn en
+//      `registration_enabled` hebben ('Inschrijven gesloten' sluit ook de API)
 //   4. ÉÉN createItem met status "new" en geneste children. Directus voert
 //      geneste creates uit in één databasetransactie: mislukt een kind,
 //      dan wordt ook de hoofdregistratie teruggedraaid (geen halve inschrijving).
@@ -28,15 +30,17 @@ import { createItem, readItems } from "@directus/sdk";
 import { directusServer, getAssetUrl, getSiteSettings } from "@/lib/directus";
 import { getSiteUrl } from "@/lib/utils";
 import { notifyHifdhRegistrationVisitor, notifyQuranRegistration } from "@/lib/server/notifications";
-import { HIFDH_PROGRAM_SLUG, HIFDH_PROGRAM_TITLE } from "@/lib/educationRoutes";
+import { HIFDH_PROGRAM_SLUG, programAudience, requiresLettersCheck } from "@/lib/educationRoutes";
 import {
   CHILD_GENDER_OPTIONS,
   PAYMENT_FREQUENCY_OPTIONS,
   RELATION_OPTIONS,
   labelFor,
   validateQuranRegistration,
-  type AgeLimits,
+  type ProgramRules,
 } from "@/lib/quranRegistration";
+import type { EducationProgram } from "@/types/directus";
+import { describeError, timeout } from "@/lib/server/directusErrors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,52 +53,6 @@ const MSG_GENERIC =
   "Uw inschrijving kon niet worden opgeslagen. Probeer het later opnieuw of neem contact met ons op.";
 const MSG_UNAVAILABLE =
   "De inschrijving kon nu niet worden verwerkt omdat het systeem tijdelijk niet bereikbaar is. Uw ingevulde gegevens blijven op deze pagina staan; probeer het over enkele minuten opnieuw.";
-
-/** Technische samenvatting van een SDK/fetch-fout — zonder request-data. */
-function describeError(err: unknown): {
-  kind: "unreachable" | "directus" | "timeout" | "unknown";
-  detail: string;
-} {
-  if (err instanceof Error && err.name === "TimeoutError") {
-    return { kind: "timeout", detail: err.message };
-  }
-  const e = err as {
-    response?: { status?: number };
-    errors?: Array<{ message?: string; extensions?: { code?: string; field?: string; collection?: string } }>;
-    message?: string;
-    cause?: { code?: string };
-  };
-
-  if (Array.isArray(e?.errors) && e.errors.length > 0) {
-    const status = e.response?.status;
-    const codes = e.errors
-      .map((x) => `${x.extensions?.code ?? "?"}${x.extensions?.field ? `(${x.extensions.field})` : ""}`)
-      .join(",");
-    // Directus-berichten bevatten veld-/collectienamen, geen waarden.
-    return { kind: "directus", detail: `status=${status ?? "?"} codes=${codes} msg=${e.errors[0]?.message ?? ""}` };
-  }
-
-  // fetch() zonder response: DNS/ECONNREFUSED/timeout op netwerkniveau
-  if (e?.response === undefined) {
-    return {
-      kind: "unreachable",
-      detail: `${e?.message ?? "onbekend"}${e?.cause?.code ? ` cause=${e.cause.code}` : ""}`,
-    };
-  }
-  return { kind: "unknown", detail: `status=${e.response?.status ?? "?"} ${e?.message ?? ""}` };
-}
-
-function timeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  let timer: ReturnType<typeof setTimeout>;
-  const t = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => {
-      const err = new Error(`Directus-verzoek duurde langer dan ${ms} ms`);
-      err.name = "TimeoutError";
-      reject(err);
-    }, ms);
-  });
-  return Promise.race([promise, t]).finally(() => clearTimeout(timer));
-}
 
 export async function POST(request: Request) {
   if (!process.env.DIRECTUS_TOKEN) {
@@ -137,28 +95,43 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  const d = result.data;
 
   // ── 3b. Programma open voor inschrijving? ─────────────────
-  let ageLimits: AgeLimits = {};
+  const rawSlug = (raw as Record<string, unknown>).program_slug;
+  const programSlug =
+    typeof rawSlug === "string" && /^[a-z0-9-]{1,100}$/.test(rawSlug) ? rawSlug : HIFDH_PROGRAM_SLUG;
+  let rules: ProgramRules = {};
+  let programTitle = "";
   try {
     const rows = (await timeout(
       directusServer.request(
         readItems("education_programs", {
-          filter: { slug: { _eq: HIFDH_PROGRAM_SLUG }, status: { _eq: "published" } } as never,
-          fields: ["id", "registration_enabled", "min_age", "max_age"] as never,
+          filter: { slug: { _eq: programSlug }, status: { _eq: "published" } } as never,
+          fields: [
+            "id", "slug", "title", "registration_enabled", "min_age", "max_age",
+            "audience", "require_letters_check",
+          ] as never,
           limit: 1,
         }),
       ),
       DIRECTUS_TIMEOUT_MS,
-    )) as unknown as Array<{ registration_enabled?: boolean; min_age?: number | null; max_age?: number | null }>;
-    if (!rows[0] || rows[0].registration_enabled !== true) {
+    )) as unknown as EducationProgram[];
+    const program = rows[0];
+    if (!program || programAudience(program) !== "children") {
+      return NextResponse.json({ error: "Dit programma is niet gevonden." }, { status: 404 });
+    }
+    if (program.registration_enabled !== true) {
       return NextResponse.json(
-        { error: "Inschrijven voor het Hifdh programma is momenteel gesloten." },
+        { error: `Inschrijven voor ${program.title} is momenteel gesloten.` },
         { status: 403 },
       );
     }
-    ageLimits = { minAge: rows[0].min_age, maxAge: rows[0].max_age };
+    programTitle = program.title;
+    rules = {
+      minAge: program.min_age,
+      maxAge: program.max_age,
+      requireLetters: requiresLettersCheck(program),
+    };
   } catch (err) {
     const { kind, detail } = describeError(err);
     console.error(`${LOG} programma-check mislukt (${kind}): ${detail}`);
@@ -168,8 +141,8 @@ export async function POST(request: Request) {
     );
   }
 
-  // ── 3c. Leeftijdsgrenzen van het programma (min/max uit Directus) ──
-  const ageResult = validateQuranRegistration(raw, ageLimits);
+  // ── 3c. Regels van het programma (min/max leeftijd, letters-vinkje) ──
+  const ageResult = validateQuranRegistration(raw, rules);
   if (!ageResult.ok) {
     return NextResponse.json(
       {
@@ -181,6 +154,7 @@ export async function POST(request: Request) {
   }
 
   // ── 4. Opslaan (atomair: hoofdregistratie + kinderen in één request) ──
+  const d = ageResult.data;
   const { children, ...family } = d;
   let createdId: string | number | null = null;
   try {
@@ -188,6 +162,8 @@ export async function POST(request: Request) {
       directusServer.request(
         createItem("quran_registrations", {
           ...family,
+          program_slug:  programSlug,
+          program_title: programTitle,
           status: "new",
           // Directus maakt geneste O2M-items aan binnen dezelfde transactie.
           children: children.map((c, i) => ({ ...c, sort: i + 1 })),
@@ -212,6 +188,7 @@ export async function POST(request: Request) {
   try {
     const settings = await getSiteSettings();
     await notifyQuranRegistration(settings, {
+      programTitle,
       registrationId: createdId,
       submittedAt:    new Intl.DateTimeFormat("nl-NL", {
         timeZone: "Europe/Amsterdam", dateStyle: "long", timeStyle: "short",
@@ -257,7 +234,7 @@ export async function POST(request: Request) {
     const settings = await getSiteSettings();
     await notifyHifdhRegistrationVisitor(settings, {
       visitorEmail: d.contact_1_email,
-      programTitle: HIFDH_PROGRAM_TITLE,
+      programTitle,
       contact: { name: d.contact_1_name, phone: d.contact_1_phone, email: d.contact_1_email },
       children: children.map((c) => ({
         name:      `${c.first_name} ${c.last_name}`,

@@ -399,6 +399,8 @@ export interface PageSection {
 }
 
 // ─── education_programs ──────────────────────────────────────
+export type EducationAudience = "children" | "adults";
+
 export interface EducationProgram {
   id: string;
   status: "published" | "draft" | "archived";
@@ -414,6 +416,14 @@ export interface EducationProgram {
   /** Minimum/maximum leeftijd (hele jaren, inclusief) voor inschrijving; leeg = geen grens. */
   min_age?: number | null;
   max_age?: number | null;
+  /**
+   * Doelgroep → inschrijfformulier: "children" = Hifdh-formulier (kinderen,
+   * niveaus, betaling), "adults" = voornaam/achternaam/telefoon/e-mail/leeftijd.
+   * Leeg = volwassenen (behalve Hifdh, zie programAudience in lib/educationRoutes.ts).
+   */
+  audience?: EducationAudience | null;
+  /** Kinderonderwijs: eerst vragen of het kind de Arabische letters kent. */
+  require_letters_check?: boolean | null;
   start_date?: string | null;
   end_date?: string | null;
   image?: string | DirectusFile | null;
@@ -513,6 +523,9 @@ export interface Registration {
   source_slug: string;
   source_title: string;
   name: string;
+  /** Alleen bij volwassenenonderwijs; `name` bevat dan voornaam + achternaam. */
+  first_name?: string | null;
+  last_name?: string | null;
   email: string;
   phone?: string | null;
   age?: number | null;
@@ -1107,6 +1120,9 @@ export interface QuranRegistration {
   secondary_contact_email?: string | null;
   payment_frequency: "monthly" | "quarterly" | "semiannual" | "yearly";
   additional_notes?: string | null;
+  /** Kinderprogramma waarvoor is ingeschreven (snapshot bij inschrijven). */
+  program_slug?: string | null;
+  program_title?: string | null;
   /** Ouder bevestigde dat het kind minimaal de Arabische letters herkent (leeg bij oudere inschrijvingen). */
   letters_confirmed?: boolean | null;
   consent_given: boolean;

@@ -249,6 +249,7 @@ export async function getActivityRegistrationCount(
 const EDUCATION_FIELDS = [
   "id", "status", "title", "slug", "description",
   "teacher", "target_group", "schedule", "location", "price", "min_age", "max_age",
+  "audience", "require_letters_check",
   "start_date", "end_date", "image",
   "registration_enabled", "max_participants", "sort", "target_gender",
   // Beheerbare inschrijfteksten (delivery 3)

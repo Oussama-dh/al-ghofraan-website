@@ -2,7 +2,8 @@
 
 // components/registration/QuranRegistrationForm.tsx
 //
-// Inschrijfformulier Hifdh programma. Wordt door /onderwijs/[slug] getoond in
+// Inschrijfformulier kinderonderwijs (oorspronkelijk voor het Hifdh programma;
+// nu voor elk programma met doelgroep "children"). Wordt door /onderwijs/[slug] getoond in
 // dezelfde inschrijf-flow als het algemene onderwijsformulier
 // (RegistrationForm): dezelfde reveal-knop, dezelfde beheerbare teksten uit
 // education_programs, dezelfde kaart, fieldsets, kindblokken (zoals de
@@ -37,7 +38,7 @@ import {
   subHeadingClass,
   successCardClass,
 } from "./formStyles";
-import { HIFDH_PROGRAM_CTA } from "@/lib/educationRoutes";
+import { HIFDH_PROGRAM_CTA, isHifdhProgram } from "@/lib/educationRoutes";
 import {
   CHILD_GENDER_OPTIONS,
   CONSENT_TEXT,
@@ -66,7 +67,7 @@ import {
 // ─── Props (zelfde vorm als RegistrationForm waar relevant) ──
 
 interface QuranRegistrationFormProps {
-  /** Slug van het onderwijsprogramma (voor analytics). */
+  /** Slug van het onderwijsprogramma (gaat mee naar de API en analytics). */
   sourceSlug: string;
   /** Titel van het programma — getoond in de standaard-introtekst. */
   sourceTitle: string;
@@ -75,6 +76,11 @@ interface QuranRegistrationFormProps {
   /** Minimum/maximum leeftijd van het kind in hele jaren (uit Directus); leeg = geen grens. */
   minAge?: number | null;
   maxAge?: number | null;
+  /**
+   * Eerst vragen of het kind de Arabische letters kent; het formulier (met
+   * verplicht bevestigingsvinkje) verschijnt alleen bij "Ja".
+   */
+  requireLettersCheck?: boolean;
   /**
    * Beheerbare teksten uit education_programs (zelfde velden als het algemene
    * formulier). Lege waarden → fallback naar de Hifdh-standaardteksten.
@@ -89,8 +95,9 @@ interface QuranRegistrationFormProps {
   className?: string;
 }
 
-const DEFAULT_SUCCESS_TEXT =
-  "Djazaak Allaahoe khayran. De inschrijving voor het Hifdh programma is succesvol ontvangen. Wij nemen contact met u op zodra de inschrijving is beoordeeld.";
+function defaultSuccessText(title: string): string {
+  return `Djazaak Allaahoe khayran. De inschrijving voor ${title} is succesvol ontvangen. Wij nemen contact met u op zodra de inschrijving is beoordeeld.`;
+}
 
 // ─── State ───────────────────────────────────────────────────
 
@@ -204,9 +211,10 @@ function toDomId(key: string): string {
 }
 const cid = (index: number, field: string) => `child-${index}-${field}`;
 
-function toPayload(s: FormState) {
+function toPayload(s: FormState, programSlug: string) {
   return {
     ...s,
+    program_slug: programSlug,
     children: s.children.map(({ key: _key, special_considerations, ...rest }) => ({
       ...rest,
       special_considerations:
@@ -619,6 +627,7 @@ export default function QuranRegistrationForm({
   contentTexts,
   minAge = null,
   maxAge = null,
+  requireLettersCheck = false,
   className,
 }: QuranRegistrationFormProps) {
   // Beheerbare teksten met fallback (zelfde principe als RegistrationForm).
@@ -627,11 +636,11 @@ export default function QuranRegistrationForm({
     return {
       introTitle: (t.intro_title || "").trim() || "Inschrijven",
       introText: (t.intro_text || "").trim() || null,
-      buttonText: (t.button_text || "").trim() || HIFDH_PROGRAM_CTA,
-      successText: (t.success_message || "").trim() || DEFAULT_SUCCESS_TEXT,
+      buttonText: (t.button_text || "").trim() || (isHifdhProgram(sourceSlug) ? HIFDH_PROGRAM_CTA : "Inschrijven"),
+      successText: (t.success_message || "").trim() || defaultSuccessText(isHifdhProgram(sourceSlug) ? "het Hifdh programma" : sourceTitle),
       extraNote: (t.extra_note || "").trim() || null,
     };
-  }, [contentTexts]);
+  }, [contentTexts, sourceSlug, sourceTitle]);
 
   // Sleutelteller voor kinderen (client-only). Start op 1 omdat "c0" het eerste kind is.
   const nextKey = useRef(1);
@@ -694,10 +703,15 @@ export default function QuranRegistrationForm({
     setServerErrors({});
   }
 
+  const rules = useMemo(
+    () => ({ minAge, maxAge, requireLetters: requireLettersCheck }),
+    [minAge, maxAge, requireLettersCheck],
+  );
+
   const clientErrors = useMemo<FieldErrors>(() => {
-    const res = validateQuranRegistration(toPayload(form), { minAge, maxAge });
+    const res = validateQuranRegistration(toPayload(form, sourceSlug), rules);
     return res.ok ? {} : res.errors;
-  }, [form, minAge, maxAge]);
+  }, [form, sourceSlug, rules]);
 
   const errors: FieldErrors = attempted ? { ...clientErrors, ...serverErrors } : serverErrors;
   const errorCount = Object.keys(errors).length;
@@ -738,7 +752,7 @@ export default function QuranRegistrationForm({
     setAttempted(true);
     setBanner("");
 
-    const local = validateQuranRegistration(toPayload(form), { minAge, maxAge });
+    const local = validateQuranRegistration(toPayload(form, sourceSlug), rules);
     if (!local.ok) {
       setBanner("Controleer de gemarkeerde velden en probeer het opnieuw.");
       focusFirstError(local.errors);
@@ -753,7 +767,7 @@ export default function QuranRegistrationForm({
       const resp = await fetch("/api/onderwijs/inschrijven", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(toPayload(form)),
+        body: JSON.stringify(toPayload(form, sourceSlug)),
       });
       const data = (await resp.json().catch(() => ({}))) as {
         error?: string;
@@ -817,7 +831,7 @@ export default function QuranRegistrationForm({
   }
 
   // ─── Voorwaardevraag: eerst bevestigen, dan pas het formulier ──
-  if (lettersAnswer !== "yes") {
+  if (requireLettersCheck && lettersAnswer !== "yes") {
     return (
       <div
         id={anchorId}
@@ -1103,26 +1117,28 @@ export default function QuranRegistrationForm({
         />
       </div>
 
-      <div className="mb-6">
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            id="letters_confirmed"
-            name="letters_confirmed"
-            type="checkbox"
-            checked={form.letters_confirmed}
-            onChange={(e) => set("letters_confirmed", e.target.checked)}
-            aria-required
-            aria-invalid={errors.letters_confirmed ? true : undefined}
-            aria-describedby={errors.letters_confirmed ? "letters_confirmed-error" : undefined}
-            className="mt-1 h-4 w-4 shrink-0 rounded border-sand-200 text-slate-mosque focus:ring-slate-mosque"
-          />
-          <span className="font-body text-sm text-taupe-dark leading-relaxed">
-            {lettersConfirmationText(form.children.length)}
-            <Required />
-          </span>
-        </label>
-        <ErrorText id="letters_confirmed" message={errors.letters_confirmed} />
-      </div>
+      {requireLettersCheck && (
+        <div className="mb-6">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              id="letters_confirmed"
+              name="letters_confirmed"
+              type="checkbox"
+              checked={form.letters_confirmed}
+              onChange={(e) => set("letters_confirmed", e.target.checked)}
+              aria-required
+              aria-invalid={errors.letters_confirmed ? true : undefined}
+              aria-describedby={errors.letters_confirmed ? "letters_confirmed-error" : undefined}
+              className="mt-1 h-4 w-4 shrink-0 rounded border-sand-200 text-slate-mosque focus:ring-slate-mosque"
+            />
+            <span className="font-body text-sm text-taupe-dark leading-relaxed">
+              {lettersConfirmationText(form.children.length)}
+              <Required />
+            </span>
+          </label>
+          <ErrorText id="letters_confirmed" message={errors.letters_confirmed} />
+        </div>
+      )}
 
       <div className="space-y-3 mb-2">
         <label className="flex items-start gap-3 cursor-pointer">

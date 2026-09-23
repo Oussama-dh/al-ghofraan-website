@@ -92,13 +92,15 @@ export interface ActivityNotificationData {
 }
 
 /**
- * Hifdh programma-inschrijving (één gezin, 1..n kinderen). Bewust ZONDER de
+ * Inschrijving kinderonderwijs (Hifdh-formulier; één gezin, 1..n kinderen). Bewust ZONDER de
  * vrije-tekst toelichtingen (bijzonderheden, lees-/schrijftoelichting,
  * aanvullende opmerkingen): die staan alleen in Directus (privacy — het
  * gaat om informatie over kinderen). De mail meldt alleen ja/nee en
  * verwijst naar Directus.
  */
 export interface QuranRegistrationNotificationData {
+  /** Titel van het kinderprogramma (bv. "Hifdh programma"). */
+  programTitle:     string;
   /** Directus-id van het aangemaakte record (om de inschrijving terug te vinden). */
   registrationId?:  string | number | null;
   submittedAt:      string;
@@ -118,17 +120,53 @@ export interface QuranRegistrationNotificationData {
   paymentFrequency:   string;
 }
 
+/** Inschrijving volwassenenonderwijs (één persoon). */
+export interface AdultEducationNotificationData {
+  programTitle:   string;
+  registrationId?: string | number | null;
+  studentNumber?: string | null;
+  submittedAt:    string;
+  firstName:      string;
+  lastName:       string;
+  phone:          string;
+  email:          string;
+  age:            number;
+}
+
 // ─── Public API ──────────────────────────────────────────────
+
+export async function notifyAdultEducationRegistration(
+  settings: SiteSettings | null,
+  data:     AdultEducationNotificationData,
+): Promise<void> {
+  await prepare(settings, "education", data.programTitle, () => ({
+    subject: `Nieuwe inschrijving ${data.programTitle}: ${data.firstName} ${data.lastName}`,
+    body: [
+      `Er is een nieuwe inschrijving voor "${data.programTitle}" binnengekomen (volwassenenonderwijs).`,
+      "",
+      `Ontvangen  : ${data.submittedAt}`,
+      ...(data.studentNumber ? [`Studentnr. : ${data.studentNumber}`] : []),
+      ...(data.registrationId != null ? [`Referentie : #${data.registrationId} (Directus)`] : []),
+      "",
+      `Naam       : ${data.firstName} ${data.lastName}`,
+      `Leeftijd   : ${data.age}`,
+      `Telefoon   : ${data.phone}`,
+      `E-mail     : ${data.email}`,
+      "",
+      "Bekijk de inschrijving en beheer de status in Directus onder 'Registrations' (filter type=education).",
+    ].join("\n"),
+  }));
+}
 
 export async function notifyQuranRegistration(
   settings: SiteSettings | null,
   data:     QuranRegistrationNotificationData,
 ): Promise<void> {
-  await prepare(settings, "education", "hifdh-programma", () => ({
+  await prepare(settings, "education", data.programTitle, () => ({
     subject:
       data.children.length === 1
-        ? `Nieuwe inschrijving Hifdh programma: ${data.children[0].name}`
-        : `Nieuwe inschrijving Hifdh programma (${data.children.length} kinderen): ${data.contact1.name}`,
+        ? `Nieuwe inschrijving ${data.programTitle}: ${data.children[0].name}`
+        : `Nieuwe inschrijving ${data.programTitle} (${data.children.length} kinderen): ${data.contact1.name}`,
     body:    buildQuranBody(data),
   }));
 }
@@ -430,7 +468,7 @@ function buildActivityBody(d: ActivityNotificationData): string {
 function buildQuranBody(d: QuranRegistrationNotificationData): string {
   const n = d.children.length;
   const lines = [
-    "Er is een nieuwe inschrijving voor het Hifdh programma binnengekomen.",
+    `Er is een nieuwe inschrijving voor "${d.programTitle}" binnengekomen.`,
     "",
     `Ontvangen         : ${d.submittedAt}`,
     ...(d.registrationId != null ? [`Referentie        : #${d.registrationId} (Directus)`] : []),
@@ -632,7 +670,7 @@ export async function notifyHifdhRegistrationVisitor(
   await prepareVisitor(settings, "education", data.visitorEmail, () => {
     const subject =
       (settings?.education_confirmation_email_subject || "").trim() ||
-      "Bevestiging inschrijving Hifdh programma";
+      `Bevestiging inschrijving ${data.programTitle}`;
     const introParas  = splitParagraphs(settings?.education_confirmation_email_intro);
     const footerParas = splitParagraphs(settings?.education_confirmation_email_footer);
     if (introParas.length === 0) {
@@ -686,6 +724,77 @@ export async function notifyHifdhRegistrationVisitor(
       fromName: (settings?.hifdh_email_from_name || "").trim() || "Baraa'im",
       replyTo:  (settings?.hifdh_email_reply_to  || "").trim(),
     };
+  });
+}
+
+// ─── Volwassenenonderwijs — bevestigingsmail (HTML) ──────────
+//
+// Zelfde beheerinstellingen als de andere onderwijsbevestigingen
+// (`education_confirmation_email_*`) en dezelfde huisstijl als de
+// Hifdh-bevestiging, maar met de algemene afzender (niet Baraa'im).
+
+export interface AdultEducationVisitorConfirmationData {
+  visitorEmail:  string;
+  programTitle:  string;
+  firstName:     string;
+  lastName:      string;
+  phone:         string;
+  age:           number;
+  studentNumber?: string | null;
+  logoUrl?: string | null;
+  siteUrl?: string | null;
+}
+
+export async function notifyAdultEducationRegistrationVisitor(
+  settings: SiteSettings | null,
+  data:     AdultEducationVisitorConfirmationData,
+): Promise<void> {
+  await prepareVisitor(settings, "education", data.visitorEmail, () => {
+    const subject =
+      (settings?.education_confirmation_email_subject || "").trim() ||
+      `Bevestiging inschrijving ${data.programTitle}`;
+    const introParas  = splitParagraphs(settings?.education_confirmation_email_intro);
+    const footerParas = splitParagraphs(settings?.education_confirmation_email_footer);
+    if (introParas.length === 0) {
+      introParas.push(
+        "Assalaamoe 'alaykoem,",
+        "Bedankt voor uw inschrijving bij al-Ghofraan. Hieronder vindt u een overzicht van de gegevens die u heeft ingevuld. Bewaar deze mail goed.",
+      );
+    }
+
+    const rows = [
+      { label: "Programma", value: data.programTitle },
+      { label: "Naam",      value: `${data.firstName} ${data.lastName}` },
+      { label: "Leeftijd",  value: `${data.age} jaar` },
+      { label: "Telefoon",  value: data.phone },
+      { label: "E-mail",    value: data.visitorEmail },
+      ...(data.studentNumber ? [{ label: "Studentnummer", value: data.studentNumber }] : []),
+    ];
+
+    const blocks: EmailBlock[] = [
+      ...introParas.map((text): EmailBlock => ({ type: "p", text })),
+      { type: "summary", title: "Uw inschrijfgegevens", rows },
+      ...footerParas.map((text): EmailBlock => ({ type: "p", text })),
+    ];
+
+    const html = renderBrandedEmail({
+      title:   "Bevestiging inschrijving",
+      blocks,
+      logoUrl: data.logoUrl,
+      siteUrl: data.siteUrl,
+    });
+
+    const text = [
+      ...introParas,
+      [
+        "── Uw inschrijfgegevens ──",
+        "",
+        ...rows.map((r) => `${r.label.padEnd(14)}: ${r.value}`),
+      ].join("\n"),
+      ...footerParas,
+    ].join("\n\n");
+
+    return { subject, body: text, html };
   });
 }
 

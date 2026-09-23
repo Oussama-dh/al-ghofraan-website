@@ -168,8 +168,11 @@ export interface QuranRegistrationData {
 
   additional_notes: string | null;
 
-  /** Ouder bevestigt dat het kind/de kinderen minimaal de Arabische letters kan/kunnen herkennen. */
-  letters_confirmed: true;
+  /**
+   * Ouder bevestigt dat het kind/de kinderen minimaal de Arabische letters kan/kunnen
+   * herkennen; null = het programma stelt deze vraag niet (require_letters_check uit).
+   */
+  letters_confirmed: true | null;
 
   consent_given: true;
 
@@ -330,6 +333,12 @@ export function minBirthDateIso(now: Date = new Date()): string {
 export interface AgeLimits {
   minAge?: number | null;
   maxAge?: number | null;
+}
+
+/** Programma-instellingen voor de validatie (uit education_programs). */
+export interface ProgramRules extends AgeLimits {
+  /** true = vinkje "kind kent de Arabische letters" is verplicht (require_letters_check). */
+  requireLetters?: boolean;
 }
 
 function cleanLimit(v: unknown): number | null {
@@ -499,7 +508,7 @@ function validateChild(
  * is `data` volledig genormaliseerd en bevat het alleen bekende velden —
  * onbekende sleutels in `raw` worden genegeerd.
  */
-export function validateQuranRegistration(raw: unknown, limits?: AgeLimits | null): ValidationResult {
+export function validateQuranRegistration(raw: unknown, limits?: ProgramRules | null): ValidationResult {
   const r: QuranRegistrationRaw =
     raw && typeof raw === "object" && !Array.isArray(raw)
       ? (raw as QuranRegistrationRaw)
@@ -619,7 +628,8 @@ export function validateQuranRegistration(raw: unknown, limits?: AgeLimits | nul
 
   const additionalNotes = optionalNotes(r.additional_notes, LIMITS.additionalNotesMax, "additional_notes", errors);
 
-  if (r.letters_confirmed !== true)
+  const requireLetters = limits?.requireLetters === true;
+  if (requireLetters && r.letters_confirmed !== true)
     errors.letters_confirmed =
       "U moet bevestigen dat uw kind minimaal de Arabische letters kan herkennen en van elkaar kan onderscheiden.";
 
@@ -651,7 +661,7 @@ export function validateQuranRegistration(raw: unknown, limits?: AgeLimits | nul
 
       additional_notes: additionalNotes,
 
-      letters_confirmed: true,
+      letters_confirmed: requireLetters ? true : null,
       consent_given: true,
 
       children,

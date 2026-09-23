@@ -5,15 +5,14 @@ import { notFound }      from "next/navigation";
 import Container         from "@/components/ui/Container";
 import Button            from "@/components/ui/Button";
 import { Icon }          from "@/lib/icons";
-import RegistrationForm  from "@/components/registration/RegistrationForm";
 import RegistrationFormReveal from "@/components/registration/RegistrationFormReveal";
 import QuranRegistrationForm from "@/components/registration/QuranRegistrationForm";
-import { isHifdhProgram } from "@/lib/educationRoutes";
+import AdultRegistrationForm from "@/components/registration/AdultRegistrationForm";
+import { programAudience, requiresLettersCheck } from "@/lib/educationRoutes";
 import {
   getEducationProgramBySlug,
   getEducationProgramFaqs,
   getAssetUrl,
-  getSiteSettings,
 } from "@/lib/directus";
 import FaqSection       from "@/components/sections/FaqSection";
 import { formatDate }    from "@/lib/utils";
@@ -37,10 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function EducationProgramDetailPage({ params }: Props) {
-  const [program, settings] = await Promise.all([
-    getEducationProgramBySlug(params.slug),
-    getSiteSettings(),
-  ]);
+  const program = await getEducationProgramBySlug(params.slug);
 
   if (!program) notFound();
 
@@ -53,15 +49,10 @@ export default async function EducationProgramDetailPage({ params }: Props) {
     typeof program.image === "string" ? program.image : program.image?.id;
   const imageUrl = imageId ? getAssetUrl(imageId) : "";
 
-  // ─── Flow-toggles met veilige defaults ──────────────────
-  // Bij vermissing uit Directus (oud record, leeg veld) gebruiken
-  // we dezelfde defaults als de DB-defaults uit seed-stap 11c:
-  //   show_registration_form_immediately = false
-  //   require_terms_acceptance           = true
-  //   allow_multiple_students            = true
-  const showImmediately      = program.show_registration_form_immediately === true;
-  const requireTerms         = program.require_terms_acceptance !== false;
-  const allowMultipleStudents = program.allow_multiple_students !== false;
+  // Reveal-knop of direct zichtbaar formulier (seed-stap 11c; leeg = reveal).
+  const showImmediately = program.show_registration_form_immediately === true;
+  // Doelgroep bepaalt het formulier (seed-stap 72).
+  const forChildren = programAudience(program) === "children";
 
   // Knoptekst: prefereer beheerbare tekst → fallback "Inschrijven"
   const inschrijfButtonText =
@@ -70,9 +61,9 @@ export default async function EducationProgramDetailPage({ params }: Props) {
   // Het inschrijfformulier — wordt gebruikt in beide takken (direct of na
   // reveal). We renderen het hier één keer als JSX-tree zodat de
   // RegistrationFormReveal-wrapper hem als children kan ontvangen.
-  // Hifdh programma gebruikt dezelfde pagina en dezelfde inschrijf-flow (reveal,
-  // teksten, gesloten-state), maar met het Hifdh-formulier (meerdere kinderen,
-  // niveaus, betaling) i.p.v. het algemene RegistrationForm.
+  // Kinderonderwijs: het Hifdh-formulier (meerdere kinderen, niveaus,
+  // betaling). Volwassenenonderwijs: voornaam, achternaam, telefoon,
+  // e-mail en leeftijd.
   const contentTexts = {
     intro_title:     program.registration_intro_title,
     intro_text:      program.registration_intro_text,
@@ -81,7 +72,7 @@ export default async function EducationProgramDetailPage({ params }: Props) {
     extra_note:      program.registration_extra_note,
   };
   const formNode = program.registration_enabled ? (
-    isHifdhProgram(program.slug) ? (
+    forChildren ? (
       <QuranRegistrationForm
         sourceSlug={program.slug}
         sourceTitle={program.title}
@@ -89,20 +80,17 @@ export default async function EducationProgramDetailPage({ params }: Props) {
         contentTexts={contentTexts}
         minAge={program.min_age ?? null}
         maxAge={program.max_age ?? null}
+        requireLettersCheck={requiresLettersCheck(program)}
       />
     ) : (
-    <RegistrationForm
-      type="education"
-      sourceSlug={program.slug}
-      sourceTitle={program.title}
-      targetGender={program.target_gender ?? null}
-      anchorId="inschrijven"
-      contentTexts={contentTexts}
-      termsUrl={settings?.registration_terms_url ?? null}
-      termsLabel={settings?.registration_terms_label ?? null}
-      requireTermsAcceptance={requireTerms}
-      allowMultipleStudents={allowMultipleStudents}
-    />
+      <AdultRegistrationForm
+        sourceSlug={program.slug}
+        sourceTitle={program.title}
+        anchorId="inschrijven"
+        contentTexts={contentTexts}
+        minAge={program.min_age ?? null}
+        maxAge={program.max_age ?? null}
+      />
     )
   ) : null;
 
@@ -238,7 +226,7 @@ export default async function EducationProgramDetailPage({ params }: Props) {
                     </h3>
                     <p className="font-body text-sm text-taupe-dark mt-1">
                       Vul het formulier hieronder in.
-                      {allowMultipleStudents && " U kunt meerdere kinderen tegelijk inschrijven."}
+                      {forChildren && " U kunt meerdere kinderen tegelijk inschrijven."}
                     </p>
                   </div>
                   <Button href="#inschrijven" variant="primary" className="shrink-0">
