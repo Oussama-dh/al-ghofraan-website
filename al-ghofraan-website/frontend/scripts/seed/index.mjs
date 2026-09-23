@@ -96,6 +96,7 @@ import { setupEducationAgeLimits }            from "./steps/69-education-age-lim
 import { migrateHifdhFaqLetters }             from "./steps/70-hifdh-faq-letters.mjs";
 import { setupShaykhPage }                    from "./steps/71-shaykh-page.mjs";
 import { setupEducationAudience }             from "./steps/72-education-audience.mjs";
+import { setupRegistrationsPerProgram }       from "./steps/73-registrations-per-program.mjs";
 import { setupEmailFields }         from "./steps/04c-email-fields.mjs";
 import { setupFollowupFields }      from "./steps/12b-followup-fields.mjs";
 import { setupTargetGender }        from "./steps/01h-target-gender.mjs";
@@ -217,6 +218,7 @@ const STEPS = [
   { id: "70",  label: "Hifdh FAQ: voorwaarde Arabische letters (alleen ongewijzigde standaardtekst)", run: migrateHifdhFaqLetters },
   { id: "71",  label: "Pagina Shaykh Brahim Moumen (draft) + fotoveld + menu-item onder Over ons", run: setupShaykhPage },
   { id: "72",  label: "Doelgroep onderwijsprogramma (kinderen/volwassenen) + programma op Hifdh-inschrijvingen", run: setupEducationAudience },
+  { id: "73",  label: "Inschrijvingen per programma: adult_registrations + programma-koppeling + bladwijzers", run: setupRegistrationsPerProgram },
 ];
 
 // ─── CLI-argument parsing ──────────────────────────────────────

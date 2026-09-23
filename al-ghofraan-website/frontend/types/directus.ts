@@ -523,9 +523,6 @@ export interface Registration {
   source_slug: string;
   source_title: string;
   name: string;
-  /** Alleen bij volwassenenonderwijs; `name` bevat dan voornaam + achternaam. */
-  first_name?: string | null;
-  last_name?: string | null;
   email: string;
   phone?: string | null;
   age?: number | null;
@@ -1120,7 +1117,9 @@ export interface QuranRegistration {
   secondary_contact_email?: string | null;
   payment_frequency: "monthly" | "quarterly" | "semiannual" | "yearly";
   additional_notes?: string | null;
-  /** Kinderprogramma waarvoor is ingeschreven (snapshot bij inschrijven). */
+  /** Kinderprogramma waarvoor is ingeschreven (M2O, seed-stap 73). */
+  program?: number | EducationProgram | null;
+  /** Snapshot bij inschrijven (seed-stap 72). */
   program_slug?: string | null;
   program_title?: string | null;
   /** Ouder bevestigde dat het kind minimaal de Arabische letters herkent (leeg bij oudere inschrijvingen). */
@@ -1131,6 +1130,23 @@ export interface QuranRegistration {
   updated_at?: string | null;
   /** O2M naar quran_registration_children (bij nested create: array van kind-objecten zonder id). */
   children?: Array<number | Partial<QuranRegistrationChild>>;
+}
+
+/** Inschrijving volwassenenonderwijs (seed-stap 73), één persoon per record. */
+export interface AdultRegistration {
+  id: number;
+  program?: number | EducationProgram | null;
+  program_title?: string | null;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  email: string;
+  age: number;
+  consent_given: boolean;
+  notes?: string | null;
+  status: RegistrationStatus;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export interface DirectusSchema {
@@ -1148,6 +1164,7 @@ export interface DirectusSchema {
   registrations: Registration[];
   quran_registrations: QuranRegistration[];
   quran_registration_children: QuranRegistrationChild[];
+  adult_registrations: AdultRegistration[];
   donations: Donation[];
   donation_campaigns: DonationCampaign[];
   articles: Article[];

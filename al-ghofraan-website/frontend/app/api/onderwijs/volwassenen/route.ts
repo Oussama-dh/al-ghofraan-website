@@ -2,16 +2,15 @@
 //
 // Inschrijving volwassenenonderwijs (education_programs.audience = "adults"):
 // één persoon met voornaam, achternaam, telefoon, e-mail en leeftijd.
-// Schrijft één record naar `registrations` (type "education") via het
-// server-side Directus-token, zoals /api/inschrijven. De Public-rol heeft
-// geen rechten op die collectie.
+// Schrijft één record naar `adult_registrations` (seed-stap 73) via het
+// server-side Directus-token. De Public-rol heeft geen rechten op die collectie.
 //
 // Flow:
 //   1. Body-grootte + JSON-parse (onvertrouwd)
 //   2. Honeypot (bots) → stil "succes", niets opslaan
 //   3. Programma-check: gepubliceerd, volwassenenonderwijs, inschrijven open
 //   4. Validatie inclusief min/max leeftijd van het programma (lib/adultRegistration.ts)
-//   5. Studentnummer + opslaan
+//   5. Opslaan
 //   6. Fail-soft admin-mail en bevestigingsmail
 //
 // Logging: technische details, nooit namen, telefoonnummers of e-mailadressen.
@@ -27,7 +26,6 @@ import {
 import { describeError, timeout } from "@/lib/server/directusErrors";
 import { programAudience } from "@/lib/educationRoutes";
 import { validateAdultRegistration } from "@/lib/adultRegistration";
-import { generateStudentNumbers } from "@/lib/studentNumber";
 import type { EducationProgram } from "@/types/directus";
 
 export const runtime = "nodejs";
@@ -123,32 +121,20 @@ export async function POST(request: Request) {
   const d = result.data;
 
   // ── 5. Opslaan ─────────────────────────────────────────────
-  let studentNumber: string | null = null;
-  try {
-    [studentNumber] = await generateStudentNumbers(1);
-  } catch (err) {
-    // Geen blokkade: de inschrijving is belangrijker dan het nummer.
-    console.warn(`${LOG} studentnummer genereren mislukt: ${describeError(err).detail}`);
-  }
-
   let createdId: string | number | null = null;
   try {
     const created = await timeout(
       directusServer.request(
-        createItem("registrations", {
-          type:              "education",
-          source_collection: "education_programs",
-          source_id:         String(program.id),
-          source_slug:       program.slug,
-          source_title:      program.title,
-          name:              `${d.first_name} ${d.last_name}`,
-          first_name:        d.first_name,
-          last_name:         d.last_name,
-          email:             d.email,
-          phone:             d.phone,
-          age:               d.age,
-          status:            "new",
-          student_number:    studentNumber,
+        createItem("adult_registrations", {
+          program:       program.id,
+          program_title: program.title,
+          first_name:    d.first_name,
+          last_name:     d.last_name,
+          phone:         d.phone,
+          email:         d.email,
+          age:           d.age,
+          consent_given: true,
+          status:        "new",
         } as never),
       ),
       DIRECTUS_TIMEOUT_MS,
@@ -164,7 +150,6 @@ export async function POST(request: Request) {
     await notifyAdultEducationRegistration(settings, {
       programTitle:   program.title,
       registrationId: createdId,
-      studentNumber,
       submittedAt: new Intl.DateTimeFormat("nl-NL", {
         timeZone: "Europe/Amsterdam", dateStyle: "long", timeStyle: "short",
       }).format(new Date()),
@@ -181,7 +166,6 @@ export async function POST(request: Request) {
       lastName:      d.last_name,
       phone:         d.phone,
       age:           d.age,
-      studentNumber,
       logoUrl: getAssetUrl(settings?.logo),
       siteUrl: getSiteUrl(),
     });

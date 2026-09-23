@@ -124,7 +124,6 @@ export interface QuranRegistrationNotificationData {
 export interface AdultEducationNotificationData {
   programTitle:   string;
   registrationId?: string | number | null;
-  studentNumber?: string | null;
   submittedAt:    string;
   firstName:      string;
   lastName:       string;
@@ -145,7 +144,6 @@ export async function notifyAdultEducationRegistration(
       `Er is een nieuwe inschrijving voor "${data.programTitle}" binnengekomen (volwassenenonderwijs).`,
       "",
       `Ontvangen  : ${data.submittedAt}`,
-      ...(data.studentNumber ? [`Studentnr. : ${data.studentNumber}`] : []),
       ...(data.registrationId != null ? [`Referentie : #${data.registrationId} (Directus)`] : []),
       "",
       `Naam       : ${data.firstName} ${data.lastName}`,
@@ -153,7 +151,7 @@ export async function notifyAdultEducationRegistration(
       `Telefoon   : ${data.phone}`,
       `E-mail     : ${data.email}`,
       "",
-      "Bekijk de inschrijving en beheer de status in Directus onder 'Registrations' (filter type=education).",
+      `Bekijk de inschrijving en beheer de status in Directus onder 'Inschrijvingen volwassenenonderwijs' (of op het programma "${data.programTitle}").`,
     ].join("\n"),
   }));
 }
@@ -501,7 +499,7 @@ function buildQuranBody(d: QuranRegistrationNotificationData): string {
     `Aanvullende opmerkingen: ${d.hasAdditionalNotes ? "Ja" : "Nee"}`,
     "",
     "Om privacyredenen staan toelichtingen en opmerkingen niet in deze mail.",
-    "Bekijk de volledige inschrijving (inclusief de kinderen) en beheer de status in Directus onder 'Hifdh inschrijvingen'.",
+    `Bekijk de volledige inschrijving (inclusief de kinderen) en beheer de status in Directus onder 'Inschrijvingen kinderonderwijs' (of op het programma "${d.programTitle}").`,
   );
   return lines.join("\n");
 }
@@ -740,7 +738,6 @@ export interface AdultEducationVisitorConfirmationData {
   lastName:      string;
   phone:         string;
   age:           number;
-  studentNumber?: string | null;
   logoUrl?: string | null;
   siteUrl?: string | null;
 }
@@ -768,7 +765,6 @@ export async function notifyAdultEducationRegistrationVisitor(
       { label: "Leeftijd",  value: `${data.age} jaar` },
       { label: "Telefoon",  value: data.phone },
       { label: "E-mail",    value: data.visitorEmail },
-      ...(data.studentNumber ? [{ label: "Studentnummer", value: data.studentNumber }] : []),
     ];
 
     const blocks: EmailBlock[] = [

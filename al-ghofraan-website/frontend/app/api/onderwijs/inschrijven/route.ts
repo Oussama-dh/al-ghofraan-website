@@ -102,6 +102,7 @@ export async function POST(request: Request) {
     typeof rawSlug === "string" && /^[a-z0-9-]{1,100}$/.test(rawSlug) ? rawSlug : HIFDH_PROGRAM_SLUG;
   let rules: ProgramRules = {};
   let programTitle = "";
+  let programId: string | number = "";
   try {
     const rows = (await timeout(
       directusServer.request(
@@ -127,6 +128,7 @@ export async function POST(request: Request) {
       );
     }
     programTitle = program.title;
+    programId = program.id;
     rules = {
       minAge: program.min_age,
       maxAge: program.max_age,
@@ -162,6 +164,7 @@ export async function POST(request: Request) {
       directusServer.request(
         createItem("quran_registrations", {
           ...family,
+          program:       programId,
           program_slug:  programSlug,
           program_title: programTitle,
           status: "new",

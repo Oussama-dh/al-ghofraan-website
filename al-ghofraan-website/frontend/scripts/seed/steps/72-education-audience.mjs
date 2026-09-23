@@ -6,7 +6,7 @@
 //   children → het Hifdh-formulier (Baraa'im): 1..n kinderen, niveaus,
 //              contactpersonen, betaling → quran_registrations
 //   adults   → kort formulier: voornaam, achternaam, telefoon, e-mail,
-//              leeftijd → registrations (type "education")
+//              leeftijd → adult_registrations (stap 73)
 //
 // Velden:
 //   education_programs.audience              — keuze (verplicht in Directus)
@@ -14,7 +14,6 @@
 //                                              letters herkennen?" (alleen zichtbaar
 //                                              bij kinderonderwijs)
 //   quran_registrations.program_slug/_title  — voor welk programma de inschrijving is
-//   registrations.first_name / last_name     — volwassenenformulier
 //
 // Idempotent en niet-destructief (zelfde patroon als stap 62/65/69):
 //   - Hifdh ("hifdhprogramma") krijgt audience=children ALLEEN als het veld leeg is.
@@ -151,7 +150,7 @@ export async function setupEducationAudience(client) {
   try {
     const preset = (
       await client.get(
-        `/presets?filter[collection][_eq]=${QURAN}&filter[role][_null]=true&filter[user][_null]=true&limit=1`,
+        `/presets?filter[collection][_eq]=${QURAN}&filter[role][_null]=true&filter[user][_null]=true&filter[bookmark][_null]=true&limit=1`,
       )
     )?.data?.[0];
     const fields = preset?.layout_options?.tabular?.fields;
@@ -166,19 +165,6 @@ export async function setupEducationAudience(client) {
     }
   } catch (err) {
     console.warn(`  ⚠ ${QURAN}: preset bijwerken mislukt (${err.message})`);
-  }
-
-  // ── registrations: voor- en achternaam (volwassenen) ───────
-  for (const [field, note] of [
-    ["first_name", "Voornaam — ingevuld bij volwassenenonderwijs"],
-    ["last_name",  "Achternaam — ingevuld bij volwassenenonderwijs"],
-  ]) {
-    await ensureField(client, "registrations", {
-      field,
-      type: "string",
-      meta: { width: "half", interface: "input", note },
-      schema: { is_nullable: true },
-    });
   }
 
   console.log("✓ Stap 72 voltooid");
