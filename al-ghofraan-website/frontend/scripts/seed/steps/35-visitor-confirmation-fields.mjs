@@ -47,7 +47,7 @@ import { ensureField } from "../lib/helpers.mjs";
 // {{programma}} in te zetten — die structuur staat vast in de code.
 
 const EDUCATION_DEFAULT_INTRO =
-  "Assalamu alaikum,\n" +
+  "Assalamoe alaikoem,\n" +
   "\n" +
   "Bedankt voor uw inschrijving bij Al-Ghofraan. Hieronder vindt u " +
   "een overzicht van de gegevens die u heeft ingevuld. Bewaar deze " +
@@ -64,7 +64,7 @@ const EDUCATION_DEFAULT_FOOTER =
   "DawahCommissie Al-Ghofraan";
 
 const ACTIVITIES_DEFAULT_INTRO =
-  "Assalamu alaikum,\n" +
+  "Assalamoe alaikoem,\n" +
   "\n" +
   "Bedankt voor uw inschrijving voor deze activiteit. Hieronder " +
   "vindt u een overzicht van de gegevens die u heeft ingevuld. " +
