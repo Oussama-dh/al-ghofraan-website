@@ -220,7 +220,7 @@ const STEPS = [
   { id: "71",  label: "Pagina Shaykh Brahim Moumen (draft) + fotoveld + menu-item onder Over ons", run: setupShaykhPage },
   { id: "72",  label: "Doelgroep onderwijsprogramma (kinderen/volwassenen) + programma op Hifdh-inschrijvingen", run: setupEducationAudience },
   { id: "73",  label: "Inschrijvingen per programma: adult_registrations + programma-koppeling + bladwijzers", run: setupRegistrationsPerProgram },
-  { id: "74",  label: "Bevestigingsmails: begroeting Assalamoe alaikoem (alleen ongewijzigde standaardtekst)", run: migrateGreetingSpelling },
+  { id: "74",  label: "Bevestigingsmails: begroeting Assalamoe 'alaykoem (alleen ongewijzigde standaardtekst)", run: migrateGreetingSpelling },
 ];
 
 // ─── CLI-argument parsing ──────────────────────────────────────

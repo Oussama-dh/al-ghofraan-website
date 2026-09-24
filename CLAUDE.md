@@ -93,6 +93,6 @@ There is no CI/CD. The VPS is reached with `ssh alghofraan-vps`; the git checkou
 
 ## Conventions
 
-- **Spelling:** write the Qur'an as **Qoraan** in all visible Dutch text (UI, CMS content, emails, seed content), never Quraan/Qur'aan. Arabic transliteration uses **oe**, not u (Soerah, Hifdh oel-Qoraan, Moeraja'ah, Assalamoe alaikoem). Slugs, field names and collection names are not renamed for spelling (e.g. the slug `quraan-recitatie-beginners` stays).
+- **Spelling:** write the Qur'an as **Qoraan** in all visible Dutch text (UI, CMS content, emails, seed content), never Quraan/Qur'aan. Arabic transliteration uses **oe**, not u (Soerah, Hifdh oel-Qoraan, Moeraja'ah, Assalamoe 'alaykoem). Slugs, field names and collection names are not renamed for spelling (e.g. the slug `quraan-recitatie-beginners` stays).
 - Editors' content in Directus is authoritative. Do not overwrite it from code or seeds unless a value exactly matches a known old default.
 - Commit, push and deploy only when the user explicitly asks; this applies to each step separately.

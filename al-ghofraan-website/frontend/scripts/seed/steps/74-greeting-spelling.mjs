@@ -2,7 +2,7 @@
 //
 // Zet de begroeting in de standaard-intro van de bezoeker-bevestigingsmails
 // (stap 35) om naar de Nederlandse transliteratie: "Assalamu alaikum" wordt
-// "Assalamoe alaikoem" (conventie: oe, niet u).
+// "Assalamoe 'alaykoem" (conventie: oe, niet u).
 //
 // Veilig en idempotent:
 //   - Alleen als de intro (witruimte genegeerd) EXACT de oude standaardtekst van
@@ -12,7 +12,7 @@
 //   - Staat de nieuwe tekst er al, dan gebeurt er niets. Een tweede run is een no-op.
 
 const OLD_GREETING = "Assalamu alaikum,\n";
-const NEW_GREETING = "Assalamoe alaikoem,\n";
+const NEW_GREETING = "Assalamoe 'alaykoem,\n";
 
 const EDUCATION_BODY =
   "\n" +
@@ -34,7 +34,7 @@ const FIELDS = [
 const ws = (s) => String(s || "").replace(/\s+/g, " ").trim();
 
 export async function migrateGreetingSpelling(client) {
-  console.log("\n🔤 Stap 74 · Bevestigingsmails: begroeting Assalamoe alaikoem");
+  console.log("\n🔤 Stap 74 · Bevestigingsmails: begroeting Assalamoe 'alaykoem");
 
   const settings = (await client.get("/items/site_settings"))?.data;
   if (!settings) {
