@@ -655,6 +655,10 @@ export interface HifdhVisitorConfirmationData {
   siteUrl?: string | null;
 }
 
+/** Vaste regel onder de inschrijfgegevens in de onderwijsbevestigingen. */
+const LESSONS_START_NOTICE =
+  "Wij nemen contact met u op zodra bekend is wanneer de lessen beginnen.";
+
 /** "2019-03-07" → "7-3-2019"; onbekend formaat blijft ongewijzigd. */
 function formatNlDate(iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
@@ -673,7 +677,7 @@ export async function notifyHifdhRegistrationVisitor(
     const footerParas = splitParagraphs(settings?.education_confirmation_email_footer);
     if (introParas.length === 0) {
       introParas.push(
-        "Assalaamoe 'alaykoem,",
+        "Assalamoe 'alaykoem,",
         "Bedankt voor uw inschrijving bij al-Ghofraan. Hieronder vindt u een overzicht van de gegevens die u heeft ingevuld. Bewaar deze mail goed.",
       );
     }
@@ -694,6 +698,7 @@ export async function notifyHifdhRegistrationVisitor(
     const blocks: EmailBlock[] = [
       ...introParas.map((text): EmailBlock => ({ type: "p", text })),
       { type: "summary", title: "Uw inschrijfgegevens", rows },
+      { type: "p", text: LESSONS_START_NOTICE },
       ...footerParas.map((text): EmailBlock => ({ type: "p", text })),
     ];
 
@@ -711,6 +716,7 @@ export async function notifyHifdhRegistrationVisitor(
         "",
         ...rows.map((r) => `${r.label.padEnd(17)}: ${r.value.replace(/\n/g, " — ")}`),
       ].join("\n"),
+      LESSONS_START_NOTICE,
       ...footerParas,
     ].join("\n\n");
 
@@ -754,7 +760,7 @@ export async function notifyAdultEducationRegistrationVisitor(
     const footerParas = splitParagraphs(settings?.education_confirmation_email_footer);
     if (introParas.length === 0) {
       introParas.push(
-        "Assalaamoe 'alaykoem,",
+        "Assalamoe 'alaykoem,",
         "Bedankt voor uw inschrijving bij al-Ghofraan. Hieronder vindt u een overzicht van de gegevens die u heeft ingevuld. Bewaar deze mail goed.",
       );
     }
@@ -770,6 +776,7 @@ export async function notifyAdultEducationRegistrationVisitor(
     const blocks: EmailBlock[] = [
       ...introParas.map((text): EmailBlock => ({ type: "p", text })),
       { type: "summary", title: "Uw inschrijfgegevens", rows },
+      { type: "p", text: LESSONS_START_NOTICE },
       ...footerParas.map((text): EmailBlock => ({ type: "p", text })),
     ];
 
@@ -787,6 +794,7 @@ export async function notifyAdultEducationRegistrationVisitor(
         "",
         ...rows.map((r) => `${r.label.padEnd(14)}: ${r.value}`),
       ].join("\n"),
+      LESSONS_START_NOTICE,
       ...footerParas,
     ].join("\n\n");
 
