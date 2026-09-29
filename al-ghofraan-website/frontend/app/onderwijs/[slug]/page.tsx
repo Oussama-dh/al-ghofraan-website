@@ -242,6 +242,7 @@ export default async function EducationProgramDetailPage({ params }: Props) {
                   buttonLabel={inschrijfButtonText}
                   anchorId="inschrijven"
                   slug={program.slug}
+                  audience={forChildren ? "children" : "adults"}
                 >
                   {formNode}
                 </RegistrationFormReveal>

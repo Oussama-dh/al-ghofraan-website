@@ -794,6 +794,7 @@ export default function QuranRegistrationForm({
       trackEvent("activity_signup_complete", {
         activity_slug: sourceSlug,
         category:      "education",
+        audience:      "children",
       });
     } catch {
       setBanner("Er ging iets mis met de verbinding. Controleer uw internetverbinding en probeer het opnieuw. Uw gegevens zijn bewaard op deze pagina.");
@@ -808,6 +809,14 @@ export default function QuranRegistrationForm({
     setLettersAnswer(answer);
     // Het vinkje in het formulier blijft een aparte bevestiging; bij Nee/terug wordt het gewist.
     if (answer !== "yes") setForm((f) => ({ ...f, letters_confirmed: false }));
+    // GA4 — hoeveel ouders bij de lettersvraag afhaken ("no") of doorgaan ("yes").
+    // "" is de terugknop en telt niet als antwoord.
+    if (answer) {
+      trackEvent("letters_check_answer", {
+        activity_slug: sourceSlug,
+        answer,
+      });
+    }
     // Het formulier (of de melding) neemt de plek van de vraag over: terug naar het anker.
     requestAnimationFrame(() => {
       document.getElementById(anchorId)?.scrollIntoView({ behavior: "smooth", block: "start" });

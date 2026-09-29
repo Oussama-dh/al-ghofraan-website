@@ -32,6 +32,8 @@ interface Props {
    * (slug is een publieke identifier, geen persoonsgegeven).
    */
   slug?: string;
+  /** Doelgroep van het programma — gaat mee als `audience` in het GA4-event. */
+  audience?: "children" | "adults";
   /** Het inschrijfformulier (server-rendered, lui geactiveerd). */
   children: ReactNode;
 }
@@ -40,6 +42,7 @@ export default function RegistrationFormReveal({
   buttonLabel,
   anchorId = "inschrijven",
   slug,
+  audience,
   children,
 }: Props) {
   const [revealed, setRevealed] = useState(false);
@@ -51,6 +54,7 @@ export default function RegistrationFormReveal({
     trackEvent("activity_signup_start", {
       activity_slug: slug,
       category:      "education",
+      audience,
     });
     // Zachtjes scrollen naar het formulier zodra het in de DOM staat.
     // requestAnimationFrame zorgt dat we wachten op de re-render.

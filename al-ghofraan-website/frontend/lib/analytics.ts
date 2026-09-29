@@ -5,6 +5,7 @@ export type AnalyticsEventName =
   | "activity_view"
   | "activity_signup_start"
   | "activity_signup_complete"
+  | "letters_check_answer"
   | "contact_click"
   | "agenda_click"
   | "video_click";
@@ -27,6 +28,7 @@ const ALLOWED_EVENTS = new Set<AnalyticsEventName>([
   "activity_view",
   "activity_signup_start",
   "activity_signup_complete",
+  "letters_check_answer",
   "contact_click",
   "agenda_click",
   "video_click",

@@ -229,6 +229,7 @@ export default function AdultRegistrationForm({
       trackEvent("activity_signup_complete", {
         activity_slug: sourceSlug,
         category:      "education",
+        audience:      "adults",
       });
     } catch {
       setBanner("Er ging iets mis met de verbinding. Controleer uw internetverbinding en probeer het opnieuw. Uw gegevens zijn bewaard op deze pagina.");
